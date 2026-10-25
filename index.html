@@ -176,7 +176,7 @@ dt { color: var(--muted); } dd { margin: 0; text-align: right; font-family: var(
 .kvt { fill: var(--kv); } .burst { fill: none; stroke: var(--ffn); stroke-width: 2; }
 .leg.att { fill: var(--attn); } .leg.lin { fill: var(--lin); } .leg.kvt { fill: var(--kv); } .leg.ff { fill: none; stroke: var(--ffn); stroke-width: 1.6; }
 .burst, .lane, .lcol, .lstripe { pointer-events: none; }
-.ptext { font: 500 12px var(--mono); fill: var(--st-ink); white-space: pre; } .phl { fill: var(--st-ink); fill-opacity: 0.16; } .cut { stroke: var(--score); stroke-width: 1.5; }
+.ptext { font: 500 12px var(--mono); fill: var(--st-ink); white-space: pre; } .ptext.r-sys { fill: var(--sysc); } .ptext.r-tpl, .ptext.r-early { fill: var(--st-ink3); } .phl { fill: var(--st-ink); fill-opacity: 0.16; } .cut { stroke: var(--score); stroke-width: 1.5; }
 .gate { fill: var(--st-2); stroke: var(--st-rail); } .gateflash { fill: var(--score); }
 .phone { fill: var(--st-panel); stroke: var(--st-rail); stroke-width: 1.5; }
 .bub.sys { fill: none; stroke: var(--sysc); stroke-width: 1; stroke-dasharray: 3 3; } .dtext.sys { fill: var(--sysc); }
@@ -534,7 +534,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
     const emb = rowIds.map(id => m.embedding(id, 12)), mx = Math.max(1e-9, ...emb.flat().map(Math.abs));
     return { real: true, chat, sys, cmp, cmpRec, nP: rows.length, nTok, rows: rows.concat(genIds.map((_, k) => ({ pos: [nTok + k], kind: 'gen' }))), allIds: ids.concat(genIds),
       prompt, T, prev: tok.piece(ids[nTok - 1]), steps, recs, rowRecs, cut: false,
-      segs: rows.map((rw, i) => (rw.pos.length === 1 ? tok.decode([ids[rw.pos[0]]], true).replace(/\n/g, '⏎') : `[${labels[i]}]`)),
+      segs: rows.map((rw, i) => (rw.pos.length === 1 ? tok.decode([ids[rw.pos[0]]], true).replace(/\n/g, '⏎') : labels[i])),
       all: labels, ids: rowIds, embeds: emb, bars: emb.map(e => e.map(v => v / mx)),
       gen: genIds.map(id => tok.decode([id], true).replace(/\n/g, '⏎')),
       ms: ms.reduce((a, b) => a + b, 0) / ms.length };
@@ -599,7 +599,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
   // ---- board geometry: lanes (one per token) running left to right through every layer ----
   // Each layer is a thin column with two stations: "talk" (attention: tokens share information) and
   // "think" (feed-forward: each token works alone). Both add onto the ball (the residual stream).
-  const VBW = 980, TOP = 124, ROW0 = 168, RH = 27, SCW = 44, DEVW = 128, TOKX = DEVW + 26, TOKW = 92, EMBW = 56;
+  const VBW = 980, TOP = 124, ROW0 = 176, RH = 27, SCW = 44, DEVW = 128, TOKX = DEVW + 26, TOKW = 92, EMBW = 56;
   const TBL = { x: TOKX, y: 24, w: 90, h: 40 }; // the embedding table drawing, top left of the machine
   const vocabSize = () => (isReal() ? RM().V : 248320);
   const rowY = i => ROW0 + i * RH;
@@ -667,8 +667,8 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
       el('rect', { x: x + 0.6, y: top, width: G.LW - 1.2, height: 4, class: 'lstripe' + (full ? ' full' : ' lin') }, g);
       if (!full) S.mem[l] = el('rect', { x: G.talkX(l) - Math.max(1.5, G.LW * 0.25), y: top + 8, width: Math.max(3, G.LW * 0.5), height: 5, rx: 1, class: 'mem', 'fill-opacity': 0.25 }, g);
       // the knobs: one dial for the talk weights, one for the think weights (the needle is one real weight, or made up in toy mode)
-      const kr = Math.min(G.LW * 0.22, 8), ky = top + 26, kg = el('g', { class: 'knob' }, g);
-      [[G.talkX(l), 'q'], [G.thinkX(l), 'gate']].forEach(([kx, mat]) => {
+      const stack = G.LW < 40, kr = stack ? Math.min(G.LW * 0.36, 8) : Math.min(G.LW * 0.22, 9), kc = G.lx(l) + G.LW / 2, kg = el('g', { class: 'knob' }, g);
+      (stack ? [[kc, top + 18, 'q'], [kc, top + 18 + 2 * kr + 4, 'gate']] : [[G.talkX(l), top + 26, 'q'], [G.thinkX(l), top + 26, 'gate']]).forEach(([kx, ky, mat]) => {
         const v = knobValue(l, mat), a = v * 0.75 * Math.PI - Math.PI / 2;
         el('circle', { cx: kx, cy: ky, r: kr }, kg);
         el('line', { x1: kx, y1: ky, x2: kx + Math.cos(a) * kr * 0.9, y2: ky + Math.sin(a) * kr * 0.9 }, kg);
@@ -759,15 +759,16 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
     const packet = el('g', { style: 'opacity:0' }, dyn);
     el('rect', { x: -9, y: -6, width: 18, height: 12, rx: 3, class: 'pkt' }, packet); el('path', { d: 'M-9 -6 L0 1 L9 -6', class: 'pktl' }, packet);
 
-    const CW = 7.2, tx0 = G.x0 + 64, ty = TOP - 22, gText = el('g', {}, dyn), segEls = [], cuts = [];
+    const GAP = 4, tx0 = G.x0 + 64, ty = TOP - 22, gText = el('g', {}, dyn), segEls = [], cuts = [];
+    const nch = D.segs.reduce((a, sg) => a + sg.length, 0), CW = Math.min(7.2, (G.x1 - tx0 - GAP * D.segs.length) / Math.max(1, nch)), fs = (CW / 0.6).toFixed(2); // IBM Plex Mono: a character is 0.6 em wide
     let chars = 0;
     if (D.cut) { el('text', { x: tx0 - 14, y: ty, class: 'ptext', fill: 'var(--muted)' }, gText, '…'); }
     D.segs.forEach((sg, i) => {
-      const x = tx0 + chars * CW, w = Math.max(CW, sg.length * CW);
-      if (i) cuts.push(el('line', { x1: x, x2: x, y1: ty - 13, y2: ty + 4, class: 'cut', style: 'opacity:0' }, gText));
+      const x = tx0 + chars * CW + i * GAP, w = Math.max(CW, sg.length * CW), rk = D.rows && D.rows[i], cls = 'ptext' + (rk && rk.pos.length > 1 ? ' r-' + rk.kind : '');
+      if (i) cuts.push(el('line', { x1: x - GAP / 2, x2: x - GAP / 2, y1: ty - 13, y2: ty + 4, class: 'cut', style: 'opacity:0' }, gText));
       const hl = el('rect', { x, y: ty - 12, width: w, height: 16, rx: 3, class: 'phl', style: 'opacity:0' }, gText);
-      const ghost = el('text', { x, y: ty, class: 'ptext', style: 'opacity:0', 'fill-opacity': 0.35 }, gText, sg);
-      const t1 = el('text', { x, y: ty, class: 'ptext', style: 'opacity:0' }, gText, sg);
+      const ghost = el('text', { x, y: ty, class: cls, style: `opacity:0;font-size:${fs}px`, 'fill-opacity': 0.35 }, gText, sg);
+      const t1 = el('text', { x, y: ty, class: cls, style: `opacity:0;font-size:${fs}px` }, gText, sg);
       segEls.push({ el: t1, ghost, hl });
       chars += sg.length;
     });
