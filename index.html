@@ -118,6 +118,7 @@ dt { color: var(--muted); } dd { margin: 0; text-align: right; font-family: var(
 .out { font: 500 13px var(--mono); } .outp { fill: var(--muted); } .outg { fill: var(--accent); }
 .guess { font: 600 11px var(--mono); fill: var(--accent); paint-order: stroke; stroke: var(--band); stroke-width: 4px; stroke-linejoin: round; }
 .hl { fill: none; stroke: var(--ink); stroke-width: 1.5; pointer-events: none; }
+.ball, .arc, .guess, .kvm, .bar, .win, .die, .fly { pointer-events: none; }
 /* Zoom dialog */
 dialog#zoom { width: min(600px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); box-sizing: border-box; overflow: auto;
   border: 1px solid var(--line); border-radius: 14px; background: var(--panel); color: var(--ink); padding: 20px; }
@@ -345,7 +346,7 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
     const all = toks.concat(steps.map(s => s.c[s.pick].w));
     return { real: false, nP, all, offset: 0, prompt, T, prev: lastWord(prompt), steps,
       ids: all.map(w => hash(w.toLowerCase()) % 248320),
-      bars: all.map(w => Array.from({ length: 8 }, (_, b) => (hash(w + '#' + b) % 24 - 11) / 11)),
+      bars: all.map(w => Array.from({ length: 12 }, (_, b) => (hash(w + '#' + b) % 24 - 11) / 11)),
       gen: steps.map(s => ' ' + s.c[s.pick].w) };
   }
 
@@ -369,7 +370,7 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
       if (k < 5) { res = await m.step(st, cands[pick].id, true); recs.push(res.rec); rowRecs.push(res.rec); ms.push(res.ms); onStatus(++done, total); }
     }
     const shown = ids.slice(shownFrom), nP = shown.length, genIds = steps.map(s => s.c[s.pick].id), allIds = shown.concat(genIds);
-    const emb = allIds.map(id => m.embedding(id, 8)), mx = Math.max(1e-9, ...emb.flat().map(Math.abs));
+    const emb = allIds.map(id => m.embedding(id, 12)), mx = Math.max(1e-9, ...emb.flat().map(Math.abs));
     return { real: true, nP, offset: shownFrom, prompt, T, prev: tok.piece(ids[ids.length - 1]), steps, recs, rowRecs,
       all: allIds.map(id => tok.piece(id)), ids: allIds, embeds: emb, bars: emb.map(e => e.map(v => v / mx)),
       gen: genIds.map(id => tok.decode([id]).replace(/\n/g, '⏎')),
@@ -412,7 +413,7 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
   }
   const STAGES = [
     ['Tokenize', 'Your text is cut into word pieces called tokens, one per row. Each gets an ID number from a vocabulary of about 250,000.'],
-    ['Embed', 'Each token turns into a ball: a list of a few thousand numbers, looked up in a table. Eight of them are drawn as bars.'],
+    ['Embed', 'Each token ID picks one row of a huge learned table (the embedding table, top left). That row is a list of a few thousand numbers: the ball. The numbers mean nothing one by one, but tokens used in similar ways get similar rows. The strip shows the first 12 (teal positive, pink negative); in toy mode they are made up.'],
     ['Read the prompt', 'All rows move through the layers at the same time, step by step, left to right. Layer 1 uses linear attention (one fixed memory); every 4th layer, like layer 4, uses full attention (lines to every earlier token, keys and values kept in the KV cache). Point at any square to see what it does.'],
     ['Score', 'The last row\'s ball comes out as a score for every token in the vocabulary. The dice only choose among the top five, as many apps do.'],
     ['Roll', 'A weighted dice roll picks one. Temperature sets how loaded the dice are. The winner becomes a new row.'],
@@ -420,21 +421,23 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
   ];
   const STAGES_REAL = [
     ['Tokenize', 'The model\'s own tokenizer cuts your text into pieces it learned from data (49,152 of them), one per row. A dot (·) means the piece starts with a space; the number is its real ID.'],
-    ['Embed', 'Each token becomes a ball: a list of 576 numbers. The bars are its first 8 real values (up is positive, down is negative).'],
+    ['Embed', 'Each token ID picks one row of the model\'s embedding table (top left): 49,152 rows, one per token, each 576 numbers learned in training. That row is the ball. The numbers mean nothing one by one, but tokens used in similar ways get similar rows: point at a strip to see which tokens are closest.'],
     ['Read the prompt', 'All rows move through the 30 layers at the same time, step by step, left to right. Layer 1 is drawn step by step; every layer here uses full attention. The lines are the model\'s real attention. The word above the last ball is what the model would say if it stopped there. Point at any square for its real numbers.'],
     ['Score', 'The last row becomes a real score for each of the 49,152 tokens. The top five are shown, and the dice only choose among them.'],
     ['Roll', 'A weighted dice roll picks one. Temperature sets how loaded the dice are. The winner becomes a new row.'],
     ['Repeat', 'Only the new row moves now. Each layer reads the keys and values it cached for earlier rows (teal) instead of redoing them, but all 269 MB of weights are read again for every new token.'],
   ];
   const DONE = ['Done', 'Six new tokens, six passes. A real model keeps going until it writes an end-of-text token or hits a length limit. Press Replay, or type a new prompt.'];
-  const S = { mode: 'dense', speed: 1, data: null, llm: null, loading: null, wantReal: false, hover: null, pinned: false, mem: [] };
+  const S = { mode: 'dense', speed: 1, data: null, llm: null, loading: null, wantReal: false, hover: null, pinned: false, mem: [], nb: {} };
   let tl = null, CAPS = [], INFOS = [], LENS = [], PASSES = [], STEPLOG = [], SECS = [], G = null;
   const isReal = () => S.mode === 'real';
 
   STAGES.forEach(([t], i) => { const li = document.createElement('li'); li.textContent = (i + 1) + ' ' + t; $('#stages').appendChild(li); });
 
   // ---- board geometry: columns left to right ----
-  const VBW = 1000, ROW0 = 118, RH = 27, SCW = 210, TOKX = 14, TOKW = 92, EMBW = 40;
+  const VBW = 1000, ROW0 = 118, RH = 27, SCW = 210, TOKX = 14, TOKW = 92, EMBW = 56;
+  const TBL = { x: 14, y: 24, w: 90, h: 40 }; // the embedding table drawing, top left
+  const vocabSize = () => (isReal() ? 49152 : 248320);
   const rowY = i => ROW0 + i * RH;
   function layoutSections() {
     const real = isReal(), moe = S.mode === 'moe', M = MODELS[S.mode], L = M.layers;
@@ -470,6 +473,11 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
     el('rect', { x: 2, y: 2, width: VBW - 4, height: G.vbH - 4, rx: 16, class: 'board' }, g);
     el('text', { x: TOKX + 4, y: 104, class: 'lbl' }, g, 'TOKENS');
     el('text', { x: TOKX + TOKW + 2, y: 104, class: 'lbl' }, g, 'EMBED');
+    el('text', { x: TBL.x, y: 16, class: 'lbl' }, g, 'EMBEDDING TABLE');
+    el('rect', { x: TBL.x, y: TBL.y, width: TBL.w, height: TBL.h, rx: 3, class: 'sec' }, g);
+    for (let k = 1; k < 12; k++) el('line', { x1: TBL.x + 2, x2: TBL.x + TBL.w - 2, y1: TBL.y + k * TBL.h / 12, y2: TBL.y + k * TBL.h / 12, stroke: 'var(--line)', 'stroke-width': 0.5 }, g);
+    el('text', { x: TBL.x, y: TBL.y + TBL.h + 11, class: 'tiny' }, g, isReal() ? '49,152 rows × 576' : `248,320 rows × ${MODELS[S.mode].dims.d.toLocaleString('en-US')}`);
+    el('text', { x: TBL.x, y: TBL.y + TBL.h + 21, class: 'tiny' }, g, 'one row per token');
     S.mem = [];
     SECS.forEach((s, si) => {
       el('rect', { x: s.x - 3, y: 100, width: s.w + 6, height: rowY(N - 1) + 18 - 100, rx: 8, class: 'sec' + (s.kind === 'linear' ? ' lin' : s.kind === 'full' && s.type !== 'gap' ? ' full' : '') }, g);
@@ -507,11 +515,17 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
       el('rect', { x: TOKX, y: y - 11, width: 58, height: 22, rx: 5, class: i >= nP ? 'chip gen' : 'chip' }, rg);
       el('text', { x: TOKX + 29, y: y + 4, 'text-anchor': 'middle', class: 'chiptxt' }, rg, short(all[i]));
       el('text', { x: TOKX + 62, y: y + 3, class: 'tiny' }, rg, String(D.ids[i]));
+      el('rect', { x: TOKX - 1, y: y - 12, width: TOKW - 2, height: 24, class: 'cell', 'fill-opacity': 0, 'data-row': i, 'data-sec': -3, 'data-col': 0 }, rg);
+      // the embedding: the first 12 numbers of the token's row, as a strip (teal positive, pink negative)
       const bs = [];
-      for (let b = 0; b < 8; b++) {
-        const v = D.bars[i][b], h = Math.max(0.6, Math.abs(v) * 9);
-        bs.push([el('rect', { x: embX - 15 + b * 4, y, width: 3, height: 0, fill: color(i) }, rg), { y: v > 0 ? y - h : y, h }]);
+      for (let b = 0; b < 12; b++) {
+        const v = D.bars[i][b];
+        bs.push([el('rect', { x: embX - 24 + b * 4, y: y - 7, width: 3.4, height: 14, rx: 0.6, fill: v >= 0 ? 'var(--kv)' : 'var(--accent)', style: 'opacity:0' }, rg), 0.15 + 0.85 * Math.abs(v)]);
       }
+      const rowLineY = TBL.y + 2 + (D.ids[i] % vocabSize()) / vocabSize() * (TBL.h - 4);
+      const look = [el('rect', { x: TBL.x + 1, y: rowLineY - 1.2, width: TBL.w - 2, height: 2.4, fill: color(i), style: 'opacity:0' }, rg),
+        el('path', { d: `M${TBL.x + TBL.w} ${rowLineY} C${embX - 22} ${rowLineY} ${embX - 30} ${y} ${embX - 25} ${y}`, fill: 'none', stroke: color(i), 'stroke-width': 1.4, style: 'opacity:0' }, rg)];
+      el('rect', { x: embX - 27, y: y - 10, width: 54, height: 20, class: 'cell', 'fill-opacity': 0, 'data-row': i, 'data-sec': -2, 'data-col': 0 }, rg);
       // squares: one per step per row (and one for each gap / last layer)
       const rc = [], rk = [];
       SECS.forEach((s, si) => {
@@ -526,8 +540,8 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
           if (s.type === 'last') rk[si] = el('rect', { x: s.x + 2, y: y - 9, width: s.w - 4, height: 18, rx: 3, class: 'kvm', style: 'opacity:0' }, rg);
         }
       });
-      rows.push({ g: rg, bars: bs }); cells.push(rc); kvm.push(rk);
-      ball.push(el('circle', { cx: embX, cy: y, r: 0, fill: color(i), class: 'ball' }, gBalls));
+      rows.push({ g: rg, bars: bs, look }); cells.push(rc); kvm.push(rk);
+      ball.push(el('circle', { cx: TOKX + TOKW + EMBW + 1, cy: y, r: 0, fill: color(i), class: 'ball' }, gBalls));
     }
     const out = el('text', { x: TOKX + 4, y: G.outY, class: 'out' }, dyn);
     el('tspan', { class: 'outp' }, out, D.prompt.length > 60 ? '…' + D.prompt.slice(-59) : D.prompt);
@@ -568,7 +582,10 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
     }
     function light(rect, t, s) { tl.to(rect, { attr: { 'fill-opacity': 0.8 }, duration: 0.1 * s }, t); tl.to(rect, { attr: { 'fill-opacity': 0.3 }, duration: 0.3 * s }, t + 0.38 * s); }
     function embed(i, t) {
-      rows[i].bars.forEach(([rc, sp], b) => tl.to(rc, { attr: { height: sp.h, y: sp.y }, duration: 0.35 }, t + b * 0.02));
+      const [rowHl, line] = rows[i].look;
+      tl.to(rowHl, { opacity: 1, duration: 0.15 }, t); tl.to(line, { opacity: 0.85, duration: 0.15 }, t + 0.08);
+      rows[i].bars.forEach(([rc, op], b) => tl.to(rc, { opacity: op, duration: 0.2 }, t + 0.18 + b * 0.015));
+      tl.to([rowHl, line], { opacity: 0, duration: 0.3 }, t + 0.75);
       tl.to(ball[i], { attr: { r: 6 }, duration: 0.3, ease: 'back.out(2)' }, t + 0.3);
     }
     function pass(p, cols, focus, t, s) {
@@ -723,6 +740,21 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
     const D = S.data, real = D.real, M = MODELS[S.mode], dims = M.dims;
     let where, title, text, nums = null;
     const who = row != null ? `“${D.all[row]}”` : '';
+    if (si === -3) {
+      const id = D.ids[row];
+      return { where: 'Tokens · ' + who, title: `Token ${who}: ID ${id}`, text: real
+        ? `The tokenizer learned 49,152 pieces from data and cuts your text into them. ${who} is piece number ${id}. A dot (·) means the piece starts with a space; long or rare words are split into several pieces.`
+        : `In toy mode this page splits words with a simple rule and makes up the ID. A real tokenizer learns its pieces from data (Qwen3.6 has about 250,000).` };
+    }
+    if (si === -2) {
+      const id = D.ids[row], dims = MODELS[S.mode].dims;
+      const text = `The model looks up row ${id.toLocaleString('en-US')} of its embedding table (${real ? '49,152' : 'about 250,000'} rows, one per token): a list of ${dims.d.toLocaleString('en-US')} numbers learned in training. That list is the ball the layers work on. No single number means anything readable; what matters is that tokens used in similar ways end up with similar lists.`;
+      if (!real) return { where: 'Embed · ' + who, title: `Embed ${who}: look up row ${id}`, text, nums: 'Toy mode: the strip is made up. Pick "Real: SmolLM2-135M" to see real rows and which tokens are closest.' };
+      const e = D.embeds[row], nb = S.nb[id] || (S.nb[id] = S.llm.neighbors(id, 5));
+      return { where: 'Embed · ' + who, title: `Embed ${who}: look up row ${id}`, text,
+        nums: 'first 12 of its 576 numbers:\n' + [e.slice(0, 6), e.slice(6, 12)].map(r => r.map(v => (v >= 0 ? ' ' : '−') + Math.abs(v).toFixed(3)).join(' ')).join('\n') + ' …' +
+          '\n\nmost similar rows (1 = same direction):\n' + nb.map(n => `  ${S.llm.tok.piece(n.id).padEnd(14)} ${n.sim.toFixed(2)}`).join('\n') };
+    }
     if (si === -1) {
       where = 'Next-token scores'; title = 'Scores, softmax and the dice';
       text = real ? 'After the last layer, a final norm and the output matrix (the embedding table, reused) turn the ball into one score for each of the 49,152 tokens. The top five are kept, softmax turns them into chances, and a weighted dice roll picks one. Click the board\'s Zoom button to see the softmax worked out.'
@@ -778,10 +810,7 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
     let cur = null; for (const e of STEPLOG) if (e[0] <= time) cur = e;
     const D = S.data;
     if (st <= 1 || !cur) {
-      const dims = MODELS[S.mode].dims;
-      showInspect(st === 0
-        ? { where: 'Tokens', title: 'Tokenize', text: D.real ? 'The real tokenizer splits the text into pieces from its 49,152-piece vocabulary. Each row shows the piece and its ID.' : 'The text is split into tokens (made-up splits in toy mode). Each row shows the token and an ID.' }
-        : { where: 'Embed', title: 'Embed', text: `Each ID picks one row of the embedding table: ${dims.d.toLocaleString('en-US')} numbers that start the ball. The 8 bars are ${D.real ? 'its first 8 real values' : 'made-up stand-ins'}.` }, true);
+      showInspect(inspect(st === 0 ? -3 : -2, 0, D.nP - 1), true);
       return;
     }
     if (st === 6) { showInspect({ where: 'Finished', title: 'Done', text: 'Point at any square to see what it does' + (D.real ? ' and its real numbers.' : '.') }, true); return; }
@@ -790,6 +819,7 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
     showInspect(inspect(si, ci, row), true);
   }
   function drawHl(h) {
+    if (h.si === -2 || h.si === -3) { const x = h.si === -3 ? TOKX - 2 : TOKX + TOKW + EMBW / 2 - 27; el('rect', { x, y: rowY(h.row) - 12, width: h.si === -3 ? TOKW - 1 : 54, height: 24, rx: 5, class: 'hl' }, $('#sel')); return; }
     if (h.si < 0) return;
     const s = SECS[h.si], x = s.type === 'layer' ? s.cols[h.ci].x - G.stepW / 2 + 1 : s.x + 1, w = s.type === 'layer' ? G.stepW - 2 : s.w - 2;
     el('rect', { x, y: rowY(h.row) - 10, width: w, height: 20, rx: 4, class: 'hl' }, $('#sel'));
@@ -950,13 +980,13 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
       const prods = ball.map((b, i) => b * wts[i]);
       const sum = prods.reduce((a, b) => a + b, 0);
       const M = MODELS[S.mode];
-      $('#zLead').textContent = `The ball for “${Z.word}” is a list of ${M.hidden.toLocaleString('en-US')} numbers in this model. Here are 4 of them, taken from the bars drawn for it (by this layer the real numbers would have changed). A neuron holds 4 numbers of its own, called weights, which were fixed when the model was trained. Multiply each pair:`;
+      $('#zLead').textContent = `The ball for “${Z.word}” is a list of ${M.hidden.toLocaleString('en-US')} numbers in this model. Here are 4 of them, taken from the strip drawn for it (by this layer the real numbers would have changed). A neuron holds 4 numbers of its own, called weights, which were fixed when the model was trained. Multiply each pair:`;
       fillTable($('#zDot'), ['', 'ball', '× weight', '= product'], ball.map((b, i) => ['#' + (i + 1), f1(b), f1(wts[i]), f2(prods[i])]));
       $('#zSum').textContent = 'add them: ' + prods.map((p, i) => (i ? (p < 0 ? ' − ' : ' + ') + f2(Math.abs(p)) : f2(p))).join('') + ' = ' + f2(sum);
       $('#zAfter').textContent = `That one number, ${f2(sum)}, is this neuron's output. It is called a dot product: it is large when the ball's numbers line up with the neuron's weights. Real models then bend it (negative results get squeezed toward 0). ` + (moe
         ? 'Each expert in this model has 512 neurons (about 3,000 dot products counting gate, up and down). The router sends each token to 8 of the 256 experts plus 1 shared one, and only their weights are read from memory.'
         : 'A layer of this model has about 40,000 dot products like this (17,408 neurons, each with gate, up and down weights), about 270 million weights per layer. The GPU works them all at once, and every weight is read from memory for every token.');
-      $('#zNote').textContent = 'Small made-up numbers, real arithmetic. The ball\'s numbers are the bars drawn for it on the board and the neuron\'s weights are invented. The scores come from this page\'s toy word table. Change the temperature and zoom in again to watch them move.';
+      $('#zNote').textContent = 'Small made-up numbers, real arithmetic. The ball\'s numbers are the strip drawn for it on the board and the neuron\'s weights are invented. The scores come from this page\'s toy word table. Change the temperature and zoom in again to watch them move.';
     }
     zoomSoftmax(Z, real);
     $('#zoom').showModal();

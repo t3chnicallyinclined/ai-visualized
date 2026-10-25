@@ -204,8 +204,17 @@
       return { logits, rec, ms: performance.now() - t0 - lensMs };
     }
     const embedding = (id, n = 8) => Array.from(E.subarray(id * D, id * D + n));
+    // Tokens whose embedding rows point the same way as this one (cosine similarity over all 576 numbers).
+    let rowNorms = null;
+    function neighbors(id, k = 5) {
+      if (!rowNorms) { rowNorms = new Float32Array(V); for (let r = 0; r < V; r++) { let s = 0; const o = r * D; for (let c = 0; c < D; c++) s += E[o + c] * E[o + c]; rowNorms[r] = Math.sqrt(s) || 1; } }
+      const sims = new Float32Array(V), o = id * D;
+      for (let r = 0; r < V; r++) { let s = 0; const q = r * D; for (let c = 0; c < D; c++) s += E[o + c] * E[q + c]; sims[r] = s / (rowNorms[id] * rowNorms[r]); }
+      sims[id] = -2;
+      return topk(sims, k).map(i => ({ id: i, sim: sims[i] }));
+    }
     const neuron = (l, n) => ({ gate: layers[l].gate.subarray(n * D, n * D + D), up: layers[l].up.subarray(n * D, n * D + D) }); // one feed-forward neuron's two weight rows
-    return { cfg, tok, step, newState, lens, embedding, neuron, D, L, H, KVH, HD, F, V, kvBytesPerToken, weightBytes, name: 'SmolLM2-135M' };
+    return { cfg, tok, step, newState, lens, embedding, neighbors, neuron, D, L, H, KVH, HD, F, V, kvBytesPerToken, weightBytes, name: 'SmolLM2-135M' };
   }
 
   // Top-k sampling as the page teaches it: keep the top k scores, divide by the temperature, softmax, roll.
