@@ -53,7 +53,6 @@ Switch the model to **MoE** and the feed-forward block splits into experts. A sm
 Click any token's strip (or **Explore embeddings**) to see what embedding really is:
 
 - **The table**: the real rows around the token's ID as a heat map (teal positive, pink negative), with its row sliding out to become the ball. Neighbouring IDs mean nothing; an ID is just a position in the vocabulary.
-- **Meaning map**: 223 everyday words placed by their real SmolLM2 rows, flattened from 576 dimensions to 2 with t-SNE (computed once from the real rows and stored in the page, so it works in toy mode too). Colours, numbers, days, animals, feelings and fighting words form their own neighbourhoods. Your prompt's tokens drop onto it.
 - **Nearest tokens**: the 8 most similar rows out of all 49,152, with cosine similarity worked out for the closest.
 - **Compare two**: any two words, their rows side by side, the pairwise products and the similarity (·cat/·dog 0.59, ·cat/·car 0.26, ·happy/·sad 0.49: opposites are used in the same places).
 
