@@ -49,13 +49,20 @@
       cache.set(word, parts);
       return parts;
     }
+    // special tokens (like the chat template's <|im_start|>) are matched whole and never split
+    const special = new Map(tj.added_tokens.filter(a => a.special).map(a => [a.content, a.id]));
+    const specialRe = special.size ? new RegExp('(' + [...special.keys()].map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')') : null;
     function encode(text) {
       const ids = [];
-      // pre-tokenizer 1: every digit is its own piece; pre-tokenizer 2: the GPT-2 split, applied inside each piece
-      const pieces = text.split(/(\p{N})/u).filter(s => s.length);
-      for (const piece of pieces) for (const m of piece.match(SPLIT) || []) {
-        const mapped = Array.from(utf8.encode(m), b => enc[b]).join('');
-        for (const p of bpe(mapped)) ids.push(vocab[p]);
+      for (const chunk of specialRe ? text.split(specialRe) : [text]) {
+        if (!chunk) continue;
+        if (special.has(chunk)) { ids.push(special.get(chunk)); continue; }
+        // pre-tokenizer 1: every digit is its own piece; pre-tokenizer 2: the GPT-2 split, applied inside each piece
+        const pieces = chunk.split(/(\p{N})/u).filter(s => s.length);
+        for (const piece of pieces) for (const m of piece.match(SPLIT) || []) {
+          const mapped = Array.from(utf8.encode(m), b => enc[b]).join('');
+          for (const p of bpe(mapped)) ids.push(vocab[p]);
+        }
       }
       return ids;
     }
