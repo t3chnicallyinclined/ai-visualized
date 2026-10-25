@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LLM Plinko</title>
+<meta name="description" content="See how a large language model works: type a prompt and watch it get tokenized, fall through transformer layers, and come out one token at a time.">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: prompt bar on top, the Plinko board (SVG) on the left, a control + memory panel on the right; stacks on phones. */
+:root {
+  --bg: #eceef6; --panel: #ffffff; --board: #dde1ef; --band: #e8ebf5; --line: #b4bbd5;
+  --peg: #94741f; --ink: #1a1c2d; --muted: #5a5f80; --accent: #cf356b; --kv: #17889c; --wt: #5650c4;
+  --display: 'Bricolage Grotesque', 'Segoe UI', system-ui, sans-serif;
+  --body: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e0f1f; --panel: #171a30; --board: #1b1e39; --band: #22264a; --line: #3a4170;
+    --peg: #d9b45a; --ink: #eceefa; --muted: #9ca2c8; --accent: #ff6699; --kv: #4fd3e3; --wt: #8f88ff;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e0f1f; --panel: #171a30; --board: #1b1e39; --band: #22264a; --line: #3a4170;
+  --peg: #d9b45a; --ink: #eceefa; --muted: #9ca2c8; --accent: #ff6699; --kv: #4fd3e3; --wt: #8f88ff;
+  color-scheme: dark;
+}
+html, body { background: var(--bg); color: var(--ink); }
+body { margin: 0; font: 15px/1.5 var(--body); }
+[hidden] { display: none !important; }
+#stage { max-width: 1280px; margin: 0 auto; padding-block: 24px 40px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 18px; }
+header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 18px; }
+h1 { font: 800 clamp(28px, 4vw, 40px)/1 var(--display); margin: 0; letter-spacing: -0.02em; }
+header p { margin: 0; color: var(--muted); max-width: 62ch; text-wrap: pretty; }
+form { display: flex; gap: 10px; flex-wrap: wrap; }
+#prompt { flex: 1 1 280px; min-width: 0; font: 500 17px var(--mono); padding: 13px 16px; border-radius: 10px;
+  border: 1.5px solid var(--line); background: var(--panel); color: var(--ink); }
+#prompt:focus-visible, button:focus-visible, input[type=range]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button { font: 600 14px var(--body); border-radius: 9px; border: 1.5px solid var(--line); background: var(--panel); color: var(--ink);
+  padding: 9px 14px; cursor: pointer; }
+button:hover { border-color: var(--accent); }
+#drop { background: var(--accent); border-color: var(--accent); color: #fff; padding: 12px 22px; font-size: 15px; }
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 20px; align-items: start; }
+@media (max-width: 920px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+.boardwrap { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+svg#board { width: 100%; height: auto; display: block; }
+.transport { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+#scrub { flex: 1 1 160px; min-width: 0; accent-color: var(--accent); }
+.speed { display: flex; gap: 4px; }
+.speed button { padding: 6px 9px; font: 500 12px var(--mono); }
+.speed button[aria-pressed="true"], .seg button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+aside { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.eyebrow { font: 600 11px var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin: 0; }
+#capTitle { font: 800 24px/1.1 var(--display); margin: 0; color: var(--accent); }
+#capText { margin: 0; text-wrap: pretty; }
+ol.stages { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 6px; }
+ol.stages li { font: 500 12px var(--mono); padding: 3px 8px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); }
+ol.stages li.on { border-color: var(--accent); color: var(--accent); }
+.seg { display: flex; gap: 6px; flex-wrap: wrap; }
+.seg button { flex: 1 1 auto; font-size: 13px; }
+.row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+label { font-weight: 600; font-size: 14px; }
+#temp { width: 100%; accent-color: var(--accent); }
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.vram { display: flex; height: 22px; border-radius: 6px; overflow: hidden; border: 1px solid var(--line); background: var(--band); }
+.vram span { display: block; height: 100%; }
+#segW { background: var(--wt); } #segKV { background: var(--kv); min-width: 2px; }
+.legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+dl { margin: 0; display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; font-size: 13.5px; }
+dt { color: var(--muted); } dd { margin: 0; text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.note { font-size: 13px; color: var(--muted); margin: 0; text-wrap: pretty; }
+/* SVG board */
+.board { fill: var(--board); } .band { fill: var(--band); stroke: var(--line); }
+.divider { stroke: var(--line); stroke-dasharray: 3 4; } .peg { fill: var(--peg); }
+.expert { fill: var(--wt); stroke: var(--line); } .flash { fill: var(--wt); } .kv { fill: var(--kv); }
+.arc { fill: none; stroke: var(--accent); stroke-width: 1.7; } .ball { stroke: var(--band); stroke-width: 2; }
+.chip { fill: var(--panel); stroke: var(--line); } .chip.gen { stroke: var(--accent); stroke-width: 1.6; }
+.bin { fill: none; stroke: var(--line); } .bar { fill: var(--wt); }
+.win { fill: none; stroke: var(--accent); stroke-width: 2.5; } .die { fill: var(--accent); }
+.lbl { font: 600 10px var(--mono); letter-spacing: 0.12em; fill: var(--muted); }
+.tiny { font: 9px var(--mono); fill: var(--muted); }
+.bandname { font: 700 14px var(--display); fill: var(--ink); }
+.chiptxt { font: 500 11px var(--mono); fill: var(--ink); }
+.pct { font: 600 12px var(--mono); fill: var(--ink); }
+.word { font: 500 13px var(--mono); fill: var(--ink); }
+.fly { font: 600 13px var(--mono); fill: var(--accent); }
+.out { font: 500 13px var(--mono); } .outp { fill: var(--muted); } .outg { fill: var(--accent); }
+</style>
+</head>
+<body>
+
+<div id="stage" data-composition-id="plinko" data-start="0" data-duration="36" data-width="1920" data-height="1080">
+  <header>
+    <h1>LLM Plinko</h1>
+    <p>Type a prompt and press Enter. Watch it get cut into tokens, fall through the layers, and come out as the next word, one token at a time.</p>
+  </header>
+
+  <form id="promptForm" autocomplete="off">
+    <input id="prompt" type="text" maxlength="120" value="the fighter blocked the fireball and" aria-label="Prompt">
+    <button id="drop" type="submit">Drop it</button>
+  </form>
+
+  <div class="layout">
+    <div class="boardwrap">
+      <svg id="board" viewBox="0 0 900 1030" role="img" aria-label="Plinko board showing tokens falling through model layers">
+        <g id="static"></g><g id="dyn"></g>
+      </svg>
+      <div class="transport">
+        <button id="play" type="button">Play</button>
+        <input id="scrub" type="range" min="0" max="1000" value="1000" aria-label="Scrub timeline">
+        <div class="speed" role="group" aria-label="Speed">
+          <button type="button" data-speed="0.5" aria-pressed="false">0.5×</button>
+          <button type="button" data-speed="1" aria-pressed="true">1×</button>
+          <button type="button" data-speed="2" aria-pressed="false">2×</button>
+        </div>
+      </div>
+    </div>
+
+    <aside>
+      <div class="card" aria-live="polite">
+        <p class="eyebrow" id="capStep">Step 1 of 6</p>
+        <h2 id="capTitle">Tokenize</h2>
+        <p id="capText"></p>
+        <ol class="stages" id="stages"></ol>
+      </div>
+
+      <div class="card">
+        <p class="eyebrow">Model</p>
+        <div class="seg" role="group" aria-label="Model">
+          <button type="button" data-mode="dense" aria-pressed="true">Dense 27B</button>
+          <button type="button" data-mode="moe" aria-pressed="false">MoE 35B-A3B</button>
+        </div>
+        <div class="row"><label for="temp">Temperature</label><span class="mono" id="tempVal">0.7</span></div>
+        <input id="temp" type="range" min="0" max="1.5" step="0.1" value="0.7">
+        <p class="note">At 0 the top score always wins. Higher makes the dice less loaded: more variety, more odd picks.</p>
+      </div>
+
+      <div class="card">
+        <p class="eyebrow">Example GPU: RTX 3090 · 24 GB VRAM</p>
+        <div class="vram" aria-hidden="true"><span id="segW"></span><span id="segKV"></span></div>
+        <div class="legend"><span><i style="background:var(--wt)"></i>Weights</span><span><i style="background:var(--kv)"></i>KV cache</span><span><i style="background:var(--band);border:1px solid var(--line)"></i>Free</span></div>
+        <dl>
+          <dt>Model</dt><dd id="mName"></dd>
+          <dt>Weights in VRAM</dt><dd id="mW"></dd>
+          <dt>Tokens in KV cache</dt><dd id="kvTok">0</dd>
+          <dt>KV cache size</dt><dd id="kvSize">0 MB</dd>
+          <dt>Weights read so far</dt><dd id="read">0 GB</dd>
+          <dt>Tokens written</dt><dd id="gen">0 of 6</dd>
+        </dl>
+        <p class="note" id="ceil"></p>
+        <p class="note" id="kv32"></p>
+      </div>
+
+      <p class="note">Toy model. The board shows how a real LLM is wired, but the next-token scores come from a tiny word table built into this page, not a real model. Memory figures are rough.</p>
+    </aside>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script>
+(function () {
+  const $ = s => document.querySelector(s);
+  const NS = 'http://www.w3.org/2000/svg';
+  function el(tag, attrs, parent, text) {
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (text != null) e.textContent = text;
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+  function hash(s) { let h = 2166136261 >>> 0; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; } return h >>> 0; }
+  function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+
+  // ---- toy next-word model: a bigram table over a short built-in text ----
+  const CORPUS = `the ball drops through the board and hits every peg on the way down. the model reads your prompt and guesses the next token.
+  the next token is picked by a roll of the dice. the fighter blocked the fireball and then he countered with a super.
+  the player pressed the button and the character jumped over the fireball. the gpu reads every weight from memory for every new token.
+  the weights are fixed numbers that decide where the ball goes. the board has sixty layers and billions of pegs.
+  the game is a fighting game with rollback netcode. the match starts when both players press start. a token is a small piece of a word.
+  the cache keeps the work for every earlier token. the dice decide which slot wins. the answer comes out one word at a time.
+  he blocked the super and then he jumped. the fighter countered with a fireball and the match was over.`;
+  const WORDS = CORPUS.toLowerCase().match(/[a-z']+|[.,]/g);
+  const BIG = {}, UNI = {};
+  WORDS.forEach((w, i) => {
+    UNI[w] = (UNI[w] || 0) + 1;
+    if (i + 1 < WORDS.length) { const f = BIG[w] || (BIG[w] = {}); f[WORDS[i + 1]] = (f[WORDS[i + 1]] || 0) + 1; }
+  });
+  const UNI_TOP = Object.entries(UNI).sort((a, b) => b[1] - a[1]);
+  function candidates(last, T) {
+    const f = BIG[last] || {};
+    let list = Object.entries(f);
+    for (const [w, c] of UNI_TOP) { if (list.length >= 5) break; if (!f[w]) list.push([w, 0.06 * c]); }
+    list.sort((a, b) => b[1] - a[1]); list = list.slice(0, 5);
+    const logit = list.map(([, c]) => Math.log(c));
+    let p;
+    if (T < 0.05) p = logit.map((_, i) => (i === 0 ? 1 : 0));
+    else { const e = logit.map(l => Math.exp((l - logit[0]) / T)); const s = e.reduce((a, b) => a + b, 0); p = e.map(x => x / s); }
+    return list.map(([w], i) => ({ w, p: p[i] }));
+  }
+  function sample(c, r, T) {
+    if (T < 0.05) return 0;
+    let u = r(), acc = 0;
+    for (let i = 0; i < c.length; i++) { acc += c[i].p; if (u <= acc) return i; }
+    return c.length - 1;
+  }
+  function tokenize(text) {
+    const parts = text.trim().match(/[A-Za-z']+|\d+|[^\sA-Za-z\d]/g) || [];
+    const out = [];
+    for (const p of parts) {
+      if (p.length > 7 && /[A-Za-z]/.test(p)) { const cut = Math.ceil(p.length / 2); out.push(p.slice(0, cut), p.slice(cut)); }
+      else out.push(p);
+    }
+    return out;
+  }
+  function lastWord(text) { const m = text.toLowerCase().match(/[a-z']+|[.,]/g); return m ? m[m.length - 1] : 'the'; }
+  const short = w => (w.length > 5 ? w.slice(0, 4) + '…' : w);
+  const shortW = w => (w.length > 10 ? w.slice(0, 9) + '…' : w);
+  const fmtPct = p => (p >= 0.995 ? '100%' : p < 0.005 ? '<1%' : Math.round(p * 100) + '%');
+
+  // ---- board ----
+  const BANDS = [
+    { n: 'Layer 1', y: 170, h: 170 },
+    { n: 'Layer 2', y: 350, h: 170 },
+    { n: '57 more layers, same pattern', y: 530, h: 56, gap: true },
+    { n: 'Layer 60', y: 596, h: 170 },
+  ];
+  const MODELS = {
+    dense: { label: 'Qwen3.6-27B · dense', weights: 16.8, active: 16.8, kvMB: 0.25, rep: '~31' },
+    moe: { label: 'Qwen3.6-35B-A3B · MoE', weights: 19.0, active: 1.9, kvMB: 0.1, rep: '~107' },
+  };
+  const STAGES = [
+    ['Tokenize', 'Your text is cut into word pieces called tokens. Each one gets an ID number from a vocabulary of about 150,000.'],
+    ['Embed', 'Each token turns into a ball: a list of a few thousand numbers that works like a meaning fingerprint. Eight of them are drawn as bars.'],
+    ['Read the prompt', 'All your tokens drop at once. In every layer, attention lets a token look back at earlier ones (the arcs, shown for the last token), then the feed-forward pegs push it. Each token leaves its work behind in the KV cache (the teal marks).'],
+    ['Score', 'The last ball comes out as a score for every possible next token. The top five are shown.'],
+    ['Roll', 'A weighted dice roll picks one. Temperature sets how loaded the dice are.'],
+    ['Repeat', 'The new token drops alone. It reads the cached work of every earlier token instead of redoing it, but every active weight is read from VRAM again. One full pass per token.'],
+  ];
+  const S = { mode: 'dense', speed: 1, flash: [], experts: [] };
+  let tl = null, CAPS = [], INFOS = [];
+
+  STAGES.forEach(([t], i) => { const li = document.createElement('li'); li.textContent = (i + 1) + ' ' + t; $('#stages').appendChild(li); });
+
+  function drawStatic() {
+    const g = $('#static'); g.innerHTML = '';
+    S.flash = []; S.experts = [];
+    el('rect', { x: 50, y: 4, width: 760, height: 1022, rx: 18, class: 'board' }, g);
+    el('text', { x: 66, y: 21, class: 'lbl' }, g, 'TOKENS');
+    el('text', { x: 66, y: 98, class: 'lbl' }, g, 'EMBEDDINGS');
+    BANDS.forEach((b, bi) => {
+      el('rect', { x: 60, y: b.y, width: 740, height: b.h, rx: 10, class: 'band' }, g);
+      if (b.gap) {
+        el('text', { x: 430, y: b.y + b.h / 2 + 4, 'text-anchor': 'middle', class: 'lbl' }, g, '⋮   ' + b.n.toUpperCase() + '   ⋮');
+        S.flash.push(null); S.experts.push(null); return;
+      }
+      el('text', { x: 72, y: b.y + 19, class: 'bandname' }, g, b.n);
+      el('text', { x: 788, y: b.y + 18, 'text-anchor': 'end', class: 'lbl' }, g, 'ATTENTION');
+      el('text', { x: 788, y: b.y + 76, 'text-anchor': 'end', class: 'lbl' }, g, S.mode === 'moe' ? 'EXPERTS · ROUTER PICKS 2 ↓' : 'FEED-FORWARD ↓');
+      el('line', { x1: 72, x2: 788, y1: b.y + 82, y2: b.y + 82, class: 'divider' }, g);
+      if (S.mode === 'moe') {
+        const ex = [];
+        for (let e = 0; e < 8; e++) {
+          const x = 66 + e * 91;
+          ex.push(el('rect', { x, y: b.y + 88, width: 85, height: 74, rx: 6, class: 'expert', 'fill-opacity': 0.07 }, g));
+          el('text', { x: x + 42, y: b.y + 158, 'text-anchor': 'middle', class: 'tiny' }, g, 'expert ' + (e + 1));
+        }
+        S.experts.push(ex); S.flash.push(null);
+      } else {
+        S.flash.push(el('rect', { x: 66, y: b.y + 88, width: 728, height: 74, rx: 6, class: 'flash', style: 'opacity:0' }, g));
+        S.experts.push(null);
+      }
+      [b.y + 100, b.y + 124, b.y + 148].forEach((y, r) => {
+        for (let m = -9; m <= 9; m++) {
+          const x = 430 + m * 44 + (r === 1 ? 0 : 22);
+          if (x < 72 || x > 788) continue;
+          el('circle', { cx: x, cy: y, r: 3, class: 'peg' }, g);
+        }
+      });
+    });
+    el('text', { x: 66, y: 784, class: 'lbl' }, g, 'NEXT-TOKEN SCORES');
+    for (let k = 0; k < 5; k++) el('rect', { x: 70 + k * 146, y: 792, width: 136, height: 140, rx: 8, class: 'bin' }, g);
+    el('text', { x: 66, y: 984, class: 'lbl' }, g, 'OUTPUT');
+  }
+
+  function build() {
+    const M = MODELS[S.mode];
+    const prompt = ($('#prompt').value.trim() || 'the fighter blocked the fireball and').slice(0, 120);
+    const T = parseFloat($('#temp').value);
+    if (tl) tl.kill();
+    S.flash.forEach(f => f && gsap.set(f, { opacity: 0 }));
+    S.experts.forEach(ex => ex && ex.forEach(r => r.setAttribute('fill-opacity', 0.07)));
+    const dyn = $('#dyn'); dyn.innerHTML = '';
+
+    let toks = tokenize(prompt); if (!toks.length) toks = ['?'];
+    if (toks.length > 9) toks = toks.slice(-9);
+    const nP = toks.length, NG = 6, N = nP + NG;
+    const r = rng(hash(prompt + '|' + T));
+    let last = lastWord(prompt);
+    const steps = [];
+    for (let k = 0; k < NG; k++) { const c = candidates(last, T); const pick = sample(c, r, T); steps.push({ c, pick }); last = c[pick].w; }
+    const all = toks.concat(steps.map(s => s.c[s.pick].w));
+    const X = i => 430 + (i - (N - 1) / 2) * 44;
+    const color = i => `hsl(${hash(all[i] + i) % 360} 68% 56%)`;
+
+    const gChips = el('g', {}, dyn), gBars = el('g', {}, dyn), gKv = el('g', {}, dyn),
+      gArcs = el('g', {}, dyn), gBins = el('g', {}, dyn), gBalls = el('g', {}, dyn);
+    const chip = [], bars = [], ball = [], kv = [];
+    for (let i = 0; i < N; i++) {
+      const cg = el('g', { style: 'opacity:0' }, gChips);
+      el('rect', { x: X(i) - 20, y: 28, width: 40, height: 26, rx: 5, class: i >= nP ? 'chip gen' : 'chip' }, cg);
+      el('text', { x: X(i), y: 45, 'text-anchor': 'middle', class: 'chiptxt' }, cg, short(all[i]));
+      el('text', { x: X(i), y: 68, 'text-anchor': 'middle', class: 'tiny' }, cg, String(hash(all[i].toLowerCase()) % 151936));
+      chip.push(cg);
+      const bs = [];
+      for (let b = 0; b < 8; b++) bs.push([el('rect', { x: X(i) - 15 + b * 4, y: 134, width: 3, height: 0, fill: color(i) }, gBars), 4 + hash(all[i] + '#' + b) % 24]);
+      bars.push(bs);
+      kv.push(BANDS.map(bd => (bd.gap ? null : el('rect', { x: X(i) - 6, y: bd.y + 70, width: 12, height: 5, rx: 1.5, class: 'kv', style: 'opacity:0' }, gKv))));
+      ball.push(el('circle', { cx: X(i), cy: 150, r: 0, fill: color(i), class: 'ball' }, gBalls));
+    }
+    const out = el('text', { x: 66, y: 1008, class: 'out' }, dyn);
+    el('tspan', { class: 'outp' }, out, prompt.length > 44 ? '…' + prompt.slice(-43) : prompt);
+    const outW = steps.map(s => el('tspan', { class: 'outg', 'fill-opacity': 0 }, out, ' ' + s.c[s.pick].w));
+
+    tl = gsap.timeline({ paused: true, onUpdate: sync, onComplete: setPlayLabel });
+    CAPS = []; INFOS = [];
+    const mark = (st, t) => CAPS.push([t, st]);
+    const info = (o, t) => INFOS.push([t, o]);
+
+    function attn(f) {
+      const s = [];
+      for (let j = 0; j < f; j++) s.push(-0.18 * (f - j) + (hash(all[f] + '>' + all[j]) % 100) / 100 * 1.6 + (all[j].toLowerCase() === all[f].toLowerCase() ? 1.5 : 0));
+      const e = s.map(Math.exp), mx = Math.max(1e-9, ...e);
+      return e.map(x => x / mx);
+    }
+    function arc(xf, xj, ya, by) {
+      const cy = Math.max(by + 24, ya - 24 - Math.abs(xf - xj) * 0.12);
+      return `M${xf} ${ya} Q${(xf + xj) / 2} ${cy} ${xj} ${ya}`;
+    }
+    function embed(i, t) {
+      bars[i].forEach(([rc, h], b) => tl.to(rc, { attr: { height: h, y: 134 - h }, duration: 0.35 }, t + b * 0.02));
+      tl.to(ball[i], { attr: { r: 9 }, duration: 0.3, ease: 'back.out(2)' }, t + 0.3);
+    }
+    function pass(cols, focus, t, s) {
+      const w = attn(focus);
+      BANDS.forEach((b, bi) => {
+        if (b.gap) { cols.forEach(c => tl.to(ball[c], { attr: { cy: b.y + b.h - 8, cx: X(c) }, duration: 0.35 * s, ease: 'none' }, t)); t += 0.35 * s; return; }
+        const ya = b.y + 58;
+        cols.forEach(c => tl.to(ball[c], { attr: { cy: ya, cx: X(c) }, duration: 0.3 * s, ease: 'power1.in' }, t));
+        t += 0.3 * s;
+        for (let j = 0; j < focus; j++) {
+          const p = el('path', { d: arc(X(focus), X(j), ya, b.y), class: 'arc', style: 'opacity:0' }, gArcs);
+          tl.to(p, { opacity: 0.15 + 0.85 * w[j], duration: 0.2 * s }, t);
+          tl.to(p, { opacity: 0, duration: 0.3 * s }, t + 0.6 * s);
+          if (!cols.includes(j)) { tl.to(kv[j][bi], { opacity: 1, duration: 0.12 * s }, t); tl.to(kv[j][bi], { opacity: 0.5, duration: 0.3 * s }, t + 0.5 * s); }
+        }
+        cols.forEach(c => tl.to(kv[c][bi], { opacity: 0.5, duration: 0.2 * s }, t + 0.3 * s));
+        t += 0.7 * s;
+        if (S.mode === 'moe') {
+          const h = hash(all[focus] + '@' + bi), e1 = h % 8, e2 = (e1 + 1 + ((h >>> 4) % 7)) % 8;
+          [e1, e2].forEach(e => { const rc = S.experts[bi][e]; tl.to(rc, { attr: { 'fill-opacity': 0.55 }, duration: 0.12 * s }, t); tl.to(rc, { attr: { 'fill-opacity': 0.07 }, duration: 0.35 * s }, t + 0.55 * s); });
+        } else {
+          tl.to(S.flash[bi], { opacity: 0.35, duration: 0.12 * s }, t); tl.to(S.flash[bi], { opacity: 0, duration: 0.35 * s }, t + 0.5 * s);
+        }
+        const ry = [b.y + 100, b.y + 124, b.y + 148];
+        cols.forEach(c => {
+          ry.forEach((y, rI) => {
+            const h = hash(all[c] + '/' + bi + '/' + rI);
+            const dx = rI === 1 ? (h & 1 ? 13 : -13) : (h % 7) - 3;
+            tl.to(ball[c], { attr: { cy: y, cx: X(c) + dx }, duration: 0.16 * s, ease: 'sine.inOut' }, t + rI * 0.16 * s);
+          });
+          tl.to(ball[c], { attr: { cy: b.y + b.h - 8, cx: X(c) }, duration: 0.14 * s }, t + 0.48 * s);
+        });
+        t += 0.66 * s;
+      });
+      return t;
+    }
+    function score(k, src, t) {
+      mark(3, t);
+      const st = steps[k], g = el('g', {}, gBins);
+      tl.to(ball[src], { attr: { cy: 778, cx: 430, r: 6 }, duration: 0.45, ease: 'power2.in' }, t);
+      tl.to(ball[src], { opacity: 0, duration: 0.2 }, t + 0.45);
+      t += 0.5;
+      const bins = st.c.map((cd, i) => {
+        const bx = 70 + i * 146, h = Math.max(2, cd.p * 118);
+        const bar = el('rect', { x: bx + 28, y: 930, width: 80, height: 0, rx: 3, class: 'bar' }, g);
+        const pct = el('text', { x: bx + 68, y: 922 - h, 'text-anchor': 'middle', class: 'pct', style: 'opacity:0' }, g, fmtPct(cd.p));
+        const wd = el('text', { x: bx + 68, y: 954, 'text-anchor': 'middle', class: 'word', style: 'opacity:0' }, g, shortW(cd.w));
+        tl.to(bar, { attr: { height: h, y: 930 - h }, duration: 0.45, ease: 'power2.out' }, t + i * 0.05);
+        tl.to([pct, wd], { opacity: 1, duration: 0.3 }, t + 0.2 + i * 0.05);
+        return bx + 68;
+      });
+      t += 0.85;
+      mark(4, t);
+      const die = el('circle', { cx: 430, cy: 772, r: 7, class: 'die', style: 'opacity:0' }, g);
+      tl.to(die, { opacity: 1, duration: 0.15 }, t);
+      const rr = rng(hash(all.join(' ') + k));
+      const hops = [Math.floor(rr() * 5), Math.floor(rr() * 5), Math.floor(rr() * 5), st.pick];
+      hops.forEach((hb, i) => {
+        const tt = t + 0.15 + i * 0.24;
+        tl.to(die, { attr: { cx: bins[hb] }, duration: 0.24, ease: 'none' }, tt);
+        tl.to(die, { attr: { cy: 758 }, duration: 0.12, ease: 'power1.out' }, tt);
+        tl.to(die, { attr: { cy: 800 }, duration: 0.12, ease: 'power1.in' }, tt + 0.12);
+      });
+      t += 0.15 + hops.length * 0.24;
+      tl.to(die, { attr: { cy: 918 }, duration: 0.35, ease: 'bounce.out' }, t);
+      const win = el('rect', { x: 73 + st.pick * 146, y: 795, width: 130, height: 134, rx: 7, class: 'win', style: 'opacity:0' }, g);
+      tl.to(win, { opacity: 1, duration: 0.2 }, t + 0.25);
+      t += 0.6;
+      const col = nP + k;
+      const fly = el('text', { x: bins[st.pick], y: 954, 'text-anchor': 'middle', class: 'fly', style: 'opacity:0' }, g, short(st.c[st.pick].w));
+      tl.to(fly, { opacity: 1, duration: 0.1 }, t);
+      tl.to(fly, { attr: { x: X(col), y: 45 }, duration: 0.7, ease: 'power2.inOut' }, t);
+      tl.to(fly, { opacity: 0, duration: 0.15 }, t + 0.7);
+      tl.to(chip[col], { opacity: 1, duration: 0.2 }, t + 0.65);
+      tl.to(outW[k], { attr: { 'fill-opacity': 1 }, duration: 0.2 }, t + 0.65);
+      t += 0.85;
+      info({ gen: k + 1 }, t - 0.2);
+      tl.to(g, { opacity: 0, duration: 0.3 }, t);
+      return t + 0.35;
+    }
+
+    let t = 0;
+    mark(0, t); info({ kv: 0, read: 0, gen: 0 }, t);
+    for (let i = 0; i < nP; i++) tl.to(chip[i], { opacity: 1, duration: 0.3 }, t + i * 0.09);
+    t += nP * 0.09 + 0.6;
+    mark(1, t);
+    for (let i = 0; i < nP; i++) embed(i, t + i * 0.05);
+    t += nP * 0.05 + 0.9;
+    mark(2, t); info({ kv: nP, read: M.weights }, t);
+    t = pass([...Array(nP).keys()], nP - 1, t, 1);
+    for (let i = 0; i < nP - 1; i++) tl.to(ball[i], { opacity: 0, duration: 0.3 }, t);
+    t = score(0, nP - 1, t);
+    for (let k = 1; k < NG; k++) {
+      const c = nP + k - 1;
+      mark(5, t); info({ kv: c + 1, read: M.weights + k * M.active }, t);
+      embed(c, t); t += 0.55;
+      t = pass([c], c, t, 0.42);
+      t = score(k, c, t);
+    }
+    tl.timeScale(S.speed);
+    window.__timelines = window.__timelines || {};
+    window.__timelines.plinko = tl;
+    $('#stage').setAttribute('data-duration', tl.duration().toFixed(2));
+    renderModel();
+  }
+
+  // ---- panel ----
+  function setStage(st) {
+    $('#capStep').textContent = 'Step ' + (st + 1) + ' of 6';
+    $('#capTitle').textContent = STAGES[st][0];
+    let txt = STAGES[st][1];
+    if (st === 2 && S.mode === 'moe') txt += ' In this model a router sends each token to only 2 of the experts (real models: about 8 of 128).';
+    $('#capText').textContent = txt;
+    document.querySelectorAll('#stages li').forEach((li, i) => li.classList.toggle('on', i === st));
+  }
+  function renderModel() {
+    const M = MODELS[S.mode];
+    $('#mName').textContent = M.label;
+    $('#mW').textContent = M.weights.toFixed(1) + ' GB';
+    $('#segW').style.width = (M.weights / 24 * 100) + '%';
+    $('#ceil').textContent = `Writing speed: each new token reads ${M.active} GB of active weights. 936 GB/s ÷ ${M.active} GB ≈ ${Math.round(936 / M.active)} tokens/s at most. Guides report ${M.rep} on a 3090.`;
+    $('#kv32').textContent = `The KV cache grows with every token. At 32,000 tokens it would be about ${(32000 * M.kvMB / 1024).toFixed(1)} GB.`;
+  }
+  function sync() {
+    const time = tl.time() + 1e-6;
+    let st = 0; for (const [tt, s] of CAPS) if (tt <= time) st = s;
+    setStage(st);
+    const o = { kv: 0, read: 0, gen: 0 }; for (const [tt, v] of INFOS) if (tt <= time) Object.assign(o, v);
+    const M = MODELS[S.mode], mb = o.kv * M.kvMB;
+    $('#kvTok').textContent = o.kv;
+    $('#kvSize').textContent = mb.toFixed(1) + ' MB';
+    $('#read').textContent = o.read.toFixed(1) + ' GB';
+    $('#gen').textContent = o.gen + ' of 6';
+    $('#segKV').style.width = (mb / 1024 / 24 * 100) + '%';
+    $('#scrub').value = Math.round(tl.progress() * 1000);
+    setPlayLabel();
+  }
+  function setPlayLabel() {
+    $('#play').textContent = tl.isActive() ? 'Pause' : tl.progress() >= 1 ? 'Replay' : 'Play';
+  }
+  function settle() { build(); tl.progress(1); sync(); }
+
+  $('#promptForm').addEventListener('submit', e => { e.preventDefault(); build(); tl.play(0); setPlayLabel(); });
+  $('#play').addEventListener('click', () => {
+    if (tl.progress() >= 1) tl.play(0); else if (tl.isActive()) tl.pause(); else tl.play();
+    setPlayLabel();
+  });
+  $('#scrub').addEventListener('input', e => { tl.pause(); tl.progress(e.target.value / 1000); setPlayLabel(); });
+  document.querySelectorAll('.speed button').forEach(b => b.addEventListener('click', () => {
+    S.speed = parseFloat(b.dataset.speed); tl.timeScale(S.speed);
+    document.querySelectorAll('.speed button').forEach(x => x.setAttribute('aria-pressed', x === b));
+  }));
+  document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => {
+    S.mode = b.dataset.mode;
+    document.querySelectorAll('.seg button').forEach(x => x.setAttribute('aria-pressed', x === b));
+    drawStatic(); settle();
+  }));
+  $('#temp').addEventListener('input', e => { $('#tempVal').textContent = parseFloat(e.target.value).toFixed(1); });
+  $('#temp').addEventListener('change', settle);
+
+  drawStatic();
+  settle();
+})();
+</script>
+</body>
+</html>
