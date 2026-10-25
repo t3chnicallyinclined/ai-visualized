@@ -45,7 +45,7 @@ Click any token's strip (or **Explore embeddings**) to see what embedding really
 
 ### The token cloud (what you can and cannot read inside a model)
 
-The board and the cloud share one dark stage: the ball leaves the last layer on the right and lands in the cloud. The cloud is a map of the model's whole vocabulary (for SmolLM2-135M-Instruct 48,822 of its 49,152 tokens; byte fragments and special tokens left out), laid out once with openTSNE over the real embedding rows (`prep/cloud_layout.py`, seed 42, reproducible), so tokens with similar rows sit together. A flat map can't keep every neighbour: on average 1.7 of a token's 10 true nearest tokens are among its 10 nearest dots, and the page says so. With the real model, after every layer every token lights up by the chance the ball would give it if it stopped there (the logit lens: a full softmax over all 49,152 tokens, brightness on a log scale). In **3D** the map lies down like a floor and that chance becomes height. A dashed line hops between the single most likely token after each layer (it never averages two places), the ball on the board takes that token's map colour, and at the end the five candidates are ringed and the dice hops between them. Toy mode shows 2,000 common tokens of the same map and only marks the toy's words, with a TOY SCORES badge. The cloud is interactive: hover, click (closest tokens by the real 576 numbers), search, zoom, drag. The explorer's **Thought path** tab adds a layer slider and a chart of a token's chance after every layer.
+The board and the cloud share one dark stage: the ball leaves the last layer on the right and lands in the cloud. The cloud is a map of the model's whole vocabulary (for SmolLM2-135M-Instruct 48,822 of its 49,152 tokens; byte fragments and special tokens left out), laid out once with openTSNE over the real embedding rows (`prep/cloud_layout.py`, seed 42, reproducible), so tokens with similar rows sit together. A flat map can't keep every neighbour: on average 1.7 of a token's 10 true nearest tokens are among its 10 nearest dots, and the page says so. With the real model, after every layer every token lights up by the chance the ball would give it if it stopped there (the logit lens: a full softmax over all 49,152 tokens, brightness on a log scale). In **3D** the map lies down like a floor and that chance becomes height. A dashed line hops between the single most likely token after each layer (it never averages two places), the ball on the board takes that token's map colour, and at the end the five candidates are ringed and the dice hops between them.  The cloud is interactive: hover, click (closest tokens by their real embedding rows), search, zoom, drag. The explorer's **Thought path** tab adds a layer slider and a chart of a token's chance after every layer.
 
 ### What the parameters are
 
@@ -80,7 +80,7 @@ Every parameter is a knob, set once in training and never moved while the model 
 
 On the first visit (and with **Take the tour**) the page plays one token and stops at the start of every step, with Back, Next and End tour in the narrator bar. On phones the board scrolls itself to keep the action in view, and the narrator bar (with a play button) stays on screen.
 
-Every parameter is a knob, set once in training and never moved while the model runs; no prompt can turn one. On the board each layer shows two dials (its talk and think weights), whose needles are real weights; they light up while the layer is read. In **What are the parameters?** every weight is a square, and zoomed in each one becomes a knob with its exact value.
+Every parameter is a knob, set once in training and never moved while the model runs; no prompt can turn one. On the board each layer column is its knob bank (see below). In **What are the parameters?** every weight is a square, and zoomed in each one becomes a knob with its exact value.
 
 ### Zoom into a neuron
 
@@ -102,7 +102,8 @@ Everything on the page comes from the two real models, computed in your browser 
 
 Ideas for making this a better teaching tool. Contributions welcome.
 
-- [x] Zoom into one peg: a real dot product and a softmax worked out step by step
+- [x] Zoom into one neuron: a real dot product and a softmax worked out step by step
+- [x] Look inside a layer: every step with the model's own numbers
 - [ ] Attention up close: queries, keys and values for one token
 - [x] Training: a real (tiny) training run where you watch the knobs turn and the loss fall
 - [ ] Quantization: what squeezing weights to 4 bits does
