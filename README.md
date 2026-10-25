@@ -20,7 +20,7 @@ Read the board left to right. Each token gets a **lane**, and the lanes run thro
 - **Talk (attention):** it compares itself with the earlier tokens and blends in information from the ones that match. This is the only place tokens share information. Pink lines show who it listens to, and its ball takes on their colours. Its key and value stay behind in that layer's **KV cache** (a teal tick). In linear-attention layers it reads and updates one fixed memory instead.
 - **Think (feed-forward):** it works alone. Thousands of neurons check the ball for patterns and a few fire strongly; the burst shows how much was added.
 
-Both add onto the ball rather than replacing it. Point at any lane in any layer and the narrator under the stage explains it; **Show the math** lists the exact steps inside that station (norm, query/key/value, scores, softmax, mix, add; or norm, gate and up, SiLU, down, add), with the real numbers in real model mode.
+Both add onto the ball rather than replacing it. Point at any lane in any layer and the fixed-size narrator bar at the bottom of the stage explains it (click it for the full text); **Show the math** lists the exact steps inside that station (norm, query/key/value, scores, softmax, mix, add; or norm, gate and up, SiLU, down, add), with the real numbers in real model mode.
 
 A strip above the board shows the whole process, in order, and lights up each step as it runs (click one to jump to it):
 
@@ -60,6 +60,10 @@ Click any token's strip (or **Explore embeddings**) to see what embedding really
 ### The token cloud (what you can and cannot read inside a model)
 
 The board and the cloud share one dark stage: the ball leaves the last layer on the right and lands in the cloud. The cloud is a map of SmolLM2-135M's whole vocabulary (48,836 of its 49,152 tokens; byte fragments and special tokens left out), laid out once with openTSNE over the real embedding rows (`prep/cloud_layout.py`, seed 42, reproducible), so tokens with similar rows sit together. A flat map can't keep every neighbour: on average 1.8 of a token's 10 true nearest tokens are among its 10 nearest dots, and the page says so. With the real model, after every layer every token lights up by the chance the ball would give it if it stopped there (the logit lens: a full softmax over all 49,152 tokens, brightness on a log scale). In **3D** the map lies down like a floor and that chance becomes height. A dashed line hops between the single most likely token after each layer (it never averages two places), the ball on the board takes that token's map colour, and at the end the five candidates are ringed and the dice hops between them. Toy mode shows 2,000 common tokens of the same map and only marks the toy's words, with a TOY SCORES badge. The cloud is interactive: hover, click (closest tokens by the real 576 numbers), search, zoom, drag. The explorer's **Thought path** tab adds a layer slider and a chart of a token's chance after every layer.
+
+### What the parameters are
+
+**What are the parameters?** opens every weight grid of SmolLM2-135M drawn to scale (134,515,008 numbers; area = count): the embedding table, then 30 layers of attention (q, k, v, o) and feed-forward (gate, up, down). With the real model loaded each pixel is a real weight, and clicking a grid shows its corner one number per pixel plus the actual values. It looks like static, which is the honest picture: no single number is readable. The token cloud is not the parameters; it is a picture of one grid (the embedding table, 21% of them).
 
 What the cloud is not: the dots are the vocabulary's coordinates, not stored knowledge. A model's knowledge lives in its weights, spread across every layer, not in places you can point at, and nothing is searched: at the end the ball is compared with every token at once. Its memory of the conversation is the KV cache. The path is the thinking; where it ends is the prediction.
 

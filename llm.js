@@ -228,7 +228,7 @@
       return topk(sims, k).map(i => ({ id: i, sim: sims[i] }));
     }
     const neuron = (l, n) => ({ gate: layers[l].gate.subarray(n * D, n * D + D), up: layers[l].up.subarray(n * D, n * D + D) }); // one feed-forward neuron's two weight rows
-    return { cfg, tok, step, newState, setWatch, WATCH_FLOOR, lens, embedding, neighbors, neuron, D, L, H, KVH, HD, F, V, kvBytesPerToken, weightBytes, name: 'SmolLM2-135M' };
+    return { cfg, tok, step, newState, setWatch, WATCH_FLOOR, lens, embedding, neighbors, neuron, mats: { E, layers, normW }, D, L, H, KVH, HD, F, V, kvBytesPerToken, weightBytes, name: 'SmolLM2-135M' };
   }
 
   // Top-k sampling as the page teaches it: keep the top k scores, divide by the temperature, softmax, roll.

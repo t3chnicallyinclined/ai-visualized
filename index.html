@@ -57,10 +57,10 @@ button:hover { border-color: var(--ink); }
 .realload .note { flex: 1 1 320px; }
 .prog { flex: 1 1 200px; height: 8px; border-radius: 4px; background: var(--band); border: 1px solid var(--line); overflow: hidden; }
 .prog span { display: block; height: 100%; width: 0; background: var(--ink); }
-.pipe { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; }
+.pipe { grid-column: 1 / -1; margin: 0; padding: 0 0 2px; list-style: none; display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 4px 6px; align-items: center; scrollbar-width: thin; }
 .pipe li { display: flex; align-items: center; gap: 6px; }
 .pipe li:not(:last-child)::after { content: '→'; color: var(--muted); font-size: 13px; }
-.pipe button { font: 500 12px var(--mono); padding: 4px 9px; border-radius: 99px; color: var(--muted); }
+.pipe button { font: 500 12px var(--mono); padding: 4px 9px; border-radius: 99px; color: var(--muted); white-space: nowrap; }
 .pipe button.done { color: var(--ink); }
 .pipe button.on { color: var(--bg); background: var(--ink); border-color: var(--ink); }
 /* the stage: dark in both themes, so light on it always means the model's real activity */
@@ -73,7 +73,8 @@ svg#board { width: 100%; height: auto; display: block; min-width: 860px; }
 .swipe { display: none; } @media (max-width: 900px) { .swipe { display: block; } }
 .cloudp { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .chead { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
-#cTitle { font: 700 15px/1.3 var(--display); margin: 0; color: var(--st-ink); text-wrap: pretty; }
+#cTitle { font: 700 15px/1.3 var(--display); margin: 0; color: var(--st-ink); text-wrap: pretty; height: 2.6em; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+#cInfo { min-height: 4.5em; }
 .badge { font: 600 11px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--st-bg); background: var(--score); border-radius: 4px; padding: 2px 6px; white-space: nowrap; }
 .cloudcv { width: 100%; display: block; border-radius: 10px; touch-action: none; cursor: grab; background: var(--st-bg); border: 1px solid var(--st-rail); }
 .cbar { display: flex; gap: 6px; flex-wrap: wrap; } .cbar input { flex: 1 1 120px; min-width: 0; font: 500 13px var(--mono); padding: 6px 9px; border-radius: 8px; border: 1.5px solid var(--line); background: var(--panel); color: var(--ink); }
@@ -91,12 +92,31 @@ svg#board { width: 100%; height: auto; display: block; min-width: 860px; }
 #scrub { flex: 1 1 160px; min-width: 0; accent-color: var(--ink); }
 .speed { display: flex; gap: 4px; }
 .speed button { padding: 6px 9px; font: 500 12px var(--mono); }
-/* the narrator: the one place that says what is happening */
+/* the narrator bar: fixed height inside the stage, so nothing jumps; the full text opens in a dialog */
+.nbar { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto auto auto; column-gap: 14px; row-gap: 2px;
+  height: 92px; box-sizing: border-box; overflow: hidden; text-align: left; padding: 10px 14px; border-radius: 10px; background: var(--st-2); border: 1px solid var(--st-rail); color: var(--st-ink); font: inherit; cursor: pointer; }
+.nbar:hover { border-color: var(--st-ink2); }
+.nb-step { grid-column: 1; font: 600 11px var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--st-ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nb-title { grid-column: 1; font: 700 16px/1.2 var(--display); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nb-text { grid-column: 1; font-size: 13.5px; line-height: 1.4; color: var(--st-ink2); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.nb-more { grid-column: 2; grid-row: 1 / 4; align-self: center; font: 600 13px var(--body); border: 1.5px solid var(--st-rail); border-radius: 8px; padding: 6px 12px; }
+@media (max-width: 600px) { .nbar { height: 112px; } .nb-text { -webkit-line-clamp: 3; } .nb-more { grid-row: 1; align-self: start; } }
+dialog.dlg { width: min(640px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); box-sizing: border-box; overflow: auto;
+  border: 1px solid var(--line); border-radius: 14px; background: var(--panel); color: var(--ink); padding: 20px; }
+dialog.dlg.wide { width: min(940px, calc(100vw - 32px)); }
+dialog.dlg::backdrop { background: rgb(10 12 30 / 0.55); }
+dialog.dlg h2 { font: 800 22px/1.15 var(--display); margin: 6px 0 10px; }
+dialog.dlg p { margin: 0 0 10px; text-wrap: pretty; }
+.pcv { width: 100%; display: block; border-radius: 10px; background: var(--st-bg); margin-bottom: 8px; }
+#pCv { cursor: pointer; }
+.plegend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+.plegend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+/* the narrator dialog */
 .narr { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; display: flex; flex-direction: column; gap: 6px; }
 .eyebrow { font: 600 11px var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin: 0; }
-#capTitle { font: 800 24px/1.1 var(--display); margin: 0; }
+#capTitle { font: 800 24px/1.1 var(--display); margin: 4px 0 8px; }
 #capText { margin: 0; text-wrap: pretty; max-width: 95ch; }
-#nowLine { margin: 0; font-size: 14px; color: var(--muted); text-wrap: pretty; max-width: 95ch; } #nowLine b { color: var(--ink); }
+#nowLine { margin: 0 0 10px; font-size: 14px; color: var(--muted); text-wrap: pretty; max-width: 95ch; } #nowLine b { color: var(--ink); }
 #math summary { cursor: pointer; font-weight: 600; font-size: 14px; }
 #math summary .eyebrow { display: inline; margin-left: 8px; }
 #iTitle { font: 700 16px/1.25 var(--display); margin: 8px 0 4px; }
@@ -217,9 +237,8 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
     <p class="note" id="realStatus" aria-live="polite"></p>
   </div>
 
-  <ol class="pipe" id="pipe" aria-label="The steps, in order"></ol>
-
   <div class="stage">
+    <ol class="pipe" id="pipe" aria-label="The steps, in order"></ol>
     <div class="boardscroll">
       <svg id="board" viewBox="0 0 1000 560" role="img" aria-label="Board: your device on the left; on the machine, each row is a token and each column a layer, read left to right; the ball leaves on the right into the token cloud">
         <g id="static"></g><g id="dyn"></g><g id="sel"></g>
@@ -236,6 +255,12 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
       <p class="note" id="cInfo"></p>
       <details class="cnote"><summary>What am I looking at?</summary><p class="note" id="cNote"></p></details>
     </section>
+    <button class="nbar" id="nbar" type="button" aria-live="polite" aria-label="What is happening now: open for the full explanation">
+      <span class="nb-step" id="bStep">Step 1 of 10</span>
+      <span class="nb-title" id="bTitle">Type</span>
+      <span class="nb-text" id="bText"></span>
+      <span class="nb-more">More</span>
+    </button>
   </div>
 
   <div class="transport">
@@ -248,18 +273,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
     </div>
     <button id="zoomBtn" type="button" title="Or click any think station">Zoom into a neuron</button>
     <button id="embBtn" type="button" title="Or click any token's strip">Explore embeddings</button>
-  </div>
-
-  <div class="narr" aria-live="polite">
-    <p class="eyebrow" id="capStep">Step 1 of 10</p>
-    <h2 id="capTitle">Type</h2>
-    <p id="capText"></p>
-    <p id="nowLine"></p>
-    <details id="math"><summary>Show the math <span class="eyebrow" id="iWhere"></span></summary>
-      <h3 id="iTitle"></h3>
-      <p id="iText"></p>
-      <pre id="iNums" hidden></pre>
-    </details>
+    <button id="parBtn" type="button">What are the parameters?</button>
   </div>
 
   <details class="hwd">
@@ -298,6 +312,34 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
 
   <p class="note" id="modeNote"></p>
 </div>
+
+<dialog id="narrDlg" class="dlg" aria-labelledby="capTitle">
+<div class="zhead"><p class="eyebrow" id="capStep">Step 1 of 10</p><button id="nClose" type="button">Close</button></div>
+  <h2 id="capTitle">Type</h2>
+  <p id="capText"></p>
+  <p id="nowLine"></p>
+  <details id="math" open><summary>Show the math <span class="eyebrow" id="iWhere"></span></summary>
+    <h3 id="iTitle"></h3>
+    <p id="iText"></p>
+    <pre id="iNums" hidden></pre>
+  </details>
+</dialog>
+
+<dialog id="params" class="dlg wide" aria-labelledby="pTitle">
+  <div class="zhead"><p class="eyebrow">Parameters</p><button id="pClose" type="button">Close</button></div>
+  <h2 id="pTitle">What the parameters are</h2>
+  <p id="pLead"></p>
+  <div class="plegend" id="pLegend"></div>
+  <canvas id="pCv" class="pcv" aria-label="Every weight matrix of SmolLM2-135M drawn to scale: area is the number of parameters"></canvas>
+  <p class="note" id="pInfo">Point at a block to see what it is; click it to look closer.</p>
+  <div id="pDetail" hidden>
+    <h3 class="eh3" id="pDTitle"></h3>
+    <canvas id="pZoom" class="pcv"></canvas>
+    <p class="note" id="pDText"></p>
+    <pre class="enums" id="pDNums"></pre>
+  </div>
+  <p class="note" id="pNote"></p>
+</dialog>
 
 <dialog id="zoom" aria-labelledby="zTitle">
   <div class="zhead"><p class="eyebrow" id="zWhere"></p><button id="zClose" type="button">Close</button></div>
@@ -950,8 +992,8 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
   }
   function showInspect(o, live) {
     // pointing at a station takes over the narrator; while playing, the narrator keeps the step and adds one "now" line
-    if (!live) { $('#capStep').textContent = 'Pointing at · ' + o.where; $('#capTitle').textContent = o.title; $('#capText').textContent = o.text; $('#nowLine').textContent = ''; }
-    else { const b = document.createElement('b'); b.textContent = o.title + ': '; $('#nowLine').replaceChildren(b, o.text); }
+    if (!live) { $('#capStep').textContent = 'Pointing at · ' + o.where; $('#capTitle').textContent = o.title; $('#capText').textContent = o.text; $('#nowLine').textContent = ''; S.now = ''; }
+    else { const b = document.createElement('b'); b.textContent = o.title + ': '; $('#nowLine').replaceChildren(b, o.text); S.now = o.title; }
     $('#iWhere').textContent = o.where;
     $('#iTitle').textContent = o.title; $('#iText').textContent = o.text;
     $('#iNums').hidden = !o.nums; if (o.nums) $('#iNums').textContent = o.nums;
@@ -1023,8 +1065,15 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
     $('#gen').textContent = o.gen + ' of 6';
     syncInspector(time, st);
     syncLayers(time);
+    syncBar();
     $('#scrub').value = Math.round(tl.progress() * 1000);
     setPlayLabel();
+  }
+  function syncBar() { // the stage's narrator bar: one line of where, one title, two lines of text
+    const step = $('#capStep').textContent + (S.now && !S.hover ? ' · ' + S.now : '');
+    if ($('#bStep').textContent !== step) $('#bStep').textContent = step;
+    if ($('#bTitle').textContent !== $('#capTitle').textContent) $('#bTitle').textContent = $('#capTitle').textContent;
+    if ($('#bText').textContent !== $('#capText').textContent) $('#bText').textContent = $('#capText').textContent;
   }
   function syncLayers(time) {
     let cur = null; for (const e of STEPLOG) if (e[0] <= time) cur = e;
@@ -1578,7 +1627,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
   new ResizeObserver(() => cardView.render()).observe($('#cloudCv'));
   const C_NOTE_REAL = () => `Each dot is one of the model's tokens (${CM ? CM.tokens.toLocaleString('en-US') : '48,836'} of its 49,152; byte fragments and special tokens are left out), placed by t-SNE over its real embedding row so similar tokens sit together. Nearby means similar; far apart only means "not similar". A flat map can't keep every neighbour: on average ${CM ? Math.round(CM.recall10 * 10) : 2} of a token's 10 nearest tokens in the real 576 numbers are among its 10 nearest dots. ` +
     'The light after each layer is the logit lens: the model\'s final norm and output table applied to the ball as it is after that layer, giving every one of the 49,152 tokens a chance (a full softmax; brightness on a log scale from one in a million to 100%). Early layers aren\'t built to be read this way, so their readings are noisy. In 3D, height is the chance itself. ' +
-    'The dashed line hops between the single most likely token after each layer, and the ball on the board takes that token\'s map colour. A token can also score high partly because its row is long, not only because it points the same way. The dots are the vocabulary\'s coordinates, not stored knowledge: that lives in the weights.';
+    'The dashed line hops between the single most likely token after each layer, and the ball on the board takes that token\'s map colour. A token can also score high partly because its row is long, not only because it points the same way. The dots are the vocabulary\'s coordinates, not stored knowledge: that lives in the parameters, and this map is a picture of just one of their grids (press "What are the parameters?").';
   const C_NOTE_TOY = 'The map is the real one from SmolLM2-135M (2,000 common tokens of it shown here), not from the toy. Toy mode reads nothing from a model, so there is no light and no path: the cloud only marks the prompt\'s tokens and the toy word table\'s five candidates, where they exist on the map. Pick "Real: SmolLM2-135M" to see the ball\'s real readings light up all 49,152 tokens.';
   function syncCloud(time) {
     const D = S.data, real = D.real;
@@ -1634,6 +1683,142 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
     mk('p', 'note', 'What this is and is not: the dots are the vocabulary\'s coordinates, not stored knowledge. The model\'s knowledge lives in its weights, spread across every layer; its memory of this conversation is the KV cache. The path is the thinking; where it ends is the prediction.', box);
   }
 
+  // ---- the parameters: every weight grid of SmolLM2-135M, drawn to scale (area = how many numbers it holds) ----
+  // With the real model loaded, each pixel shows one real weight (warm = positive, blue = negative), sampled evenly.
+  const PSEG = [['q', 'q', 'attention: query', 'attn'], ['k', 'k', 'attention: key', 'attn'], ['v', 'v', 'attention: value', 'attn'], ['o', 'o', 'attention: output', 'attn'],
+    ['gate', 'gate', 'feed-forward: gate', 'ffn'], ['up', 'up', 'feed-forward: up', 'ffn'], ['down', 'down', 'feed-forward: down', 'ffn']];
+  const PSH = { V: 49152, D: 576, L: 30, q: [576, 576], k: [192, 576], v: [192, 576], o: [576, 576], gate: [1536, 576], up: [1536, 576], down: [576, 1536] };
+  const P_LAYER = PSEG.reduce((a, [k]) => a + PSH[k][0] * PSH[k][1], 0), P_NORMS = (2 * PSH.L + 1) * PSH.D;
+  const P_TOTAL = PSH.V * PSH.D + PSH.L * P_LAYER + P_NORMS; // 134,515,008
+  const KIND_RGB = { emb: [157, 144, 255], attn: [255, 92, 138], ffn: [242, 169, 59] };
+  const PV = { lay: null, base: document.createElement('canvas'), hover: null, scales: {} };
+  const fmtN = v => v.toLocaleString('en-US'), fmtM = v => (v / 1e6).toFixed(1) + 'M';
+  const pMat = b => (b.key === 'E' ? S.llm.mats.E : S.llm.mats.layers[b.l][b.key]);
+  function pScale(b) { // the 99th percentile of |weight| in this grid, from 4,096 evenly spaced samples
+    const id = b.l + ':' + b.key; if (PV.scales[id]) return PV.scales[id];
+    const m = pMat(b), n = 4096, step = Math.floor(m.length / n), a = new Float32Array(n);
+    for (let i = 0; i < n; i++) a[i] = Math.abs(m[i * step]);
+    a.sort(); return (PV.scales[id] = a[Math.floor(n * 0.99)] || 1);
+  }
+  function pLayout(W) {
+    const gut = 30, bw = W - gut - 6, hL = W < 520 ? 9 : 12, blocks = [];
+    let y = 26;
+    const eh = Math.round(PSH.V * PSH.D / P_LAYER * hL); // same scale as the layers
+    blocks.push({ x: gut, y, w: bw, h: eh, key: 'E', rows: PSH.V, cols: PSH.D, l: -1, kind: 'emb', label: 'embedding table' });
+    y += eh + 34;
+    const headY = y - 5;
+    for (let l = 0; l < PSH.L; l++) {
+      let x = gut;
+      PSEG.forEach(([k, short, label, kind]) => { const w = bw * PSH[k][0] * PSH[k][1] / P_LAYER; blocks.push({ x, y, w, h: hL, key: k, short, rows: PSH[k][0], cols: PSH[k][1], l, kind, label }); x += w; });
+      y += hL + 2;
+    }
+    return { blocks, H: y + 4, headY, gut, bw, hL, W };
+  }
+  function drawParams() {
+    const cv = $('#pCv'), W = cv.clientWidth || 600, dpr = Math.min(2, devicePixelRatio || 1), lay = PV.lay = pLayout(W), real = !!S.llm;
+    cv.width = Math.round(W * dpr); cv.height = Math.round(lay.H * dpr); cv.style.height = lay.H + 'px';
+    const base = PV.base; base.width = cv.width; base.height = cv.height;
+    const c = base.getContext('2d'), img = c.createImageData(cv.width, cv.height), px = img.data, bg = hexRgb(css('--st-bg')), pos = [239, 228, 204], neg = [111, 134, 201];
+    for (let i = 0; i < px.length; i += 4) { px[i] = bg[0]; px[i + 1] = bg[1]; px[i + 2] = bg[2]; px[i + 3] = 255; }
+    lay.blocks.forEach(b => {
+      const x0 = Math.round(b.x * dpr), x1 = Math.round((b.x + b.w) * dpr) - 1, y0 = Math.round(b.y * dpr), y1 = Math.round((b.y + b.h) * dpr);
+      const m = real ? pMat(b) : null, sc = real ? pScale(b) : 0, kc = KIND_RGB[b.kind];
+      for (let y = y0; y < y1; y++) {
+        const r = Math.min(b.rows - 1, Math.floor((y - y0 + 0.5) / (y1 - y0) * b.rows));
+        for (let x = x0; x < x1; x++) {
+          const o = (y * cv.width + x) * 4;
+          let col, a;
+          if (m) { const v = m[r * b.cols + Math.min(b.cols - 1, Math.floor((x - x0 + 0.5) / (x1 - x0) * b.cols))] / sc; a = Math.min(1, Math.abs(v)) ** 0.7; col = v >= 0 ? pos : neg; }
+          else { col = kc; a = 0.3; }
+          px[o] = bg[0] + (col[0] - bg[0]) * a; px[o + 1] = bg[1] + (col[1] - bg[1]) * a; px[o + 2] = bg[2] + (col[2] - bg[2]) * a;
+        }
+      }
+    });
+    c.putImageData(img, 0, 0);
+    // labels on top
+    c.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const ink = css('--st-ink'), ink2 = css('--st-ink2');
+    c.font = '600 11px "IBM Plex Mono", monospace'; c.textBaseline = 'alphabetic'; c.fillStyle = ink;
+    const e = lay.blocks[0];
+    c.fillText(`EMBEDDING TABLE · ${fmtN(PSH.V)} rows × ${PSH.D} = ${fmtM(PSH.V * PSH.D)} (${Math.round(PSH.V * PSH.D / P_TOTAL * 100)}%) · the token cloud is this grid`, e.x, e.y - 8);
+    c.fillText(`30 LAYERS · ${fmtM(P_LAYER)} each`, e.x, lay.headY - 13);
+    c.font = '500 10px "IBM Plex Mono", monospace'; c.fillStyle = ink2;
+    lay.blocks.slice(1, 8).forEach(b => { if (b.w > 14) { c.textAlign = 'center'; c.fillText(b.short, b.x + b.w / 2, lay.headY); } });
+    c.textAlign = 'right';
+    lay.blocks.filter(b => b.key === 'q' && (b.l === 0 || (b.l + 1) % 5 === 0)).forEach(b => c.fillText(String(b.l + 1), lay.gut - 5, b.y + b.h - 2));
+    c.textAlign = 'left';
+    // kind outlines: attention pink, feed-forward amber
+    lay.blocks.forEach(b => { if (b.key === 'q' || b.key === 'gate') { c.fillStyle = rgbStr(KIND_RGB[b.kind]); c.fillRect(b.x, b.y, 1.5, b.h); } });
+    renderParams();
+  }
+  function renderParams() {
+    const cv = $('#pCv'), c = cv.getContext('2d'), dpr = Math.min(2, devicePixelRatio || 1);
+    c.setTransform(1, 0, 0, 1, 0, 0); c.drawImage(PV.base, 0, 0);
+    const b = PV.hover; if (!b) return;
+    c.setTransform(dpr, 0, 0, dpr, 0, 0); c.strokeStyle = css('--st-ink'); c.lineWidth = 1.5; c.strokeRect(b.x + 0.5, b.y + 0.5, b.w - 1, b.h - 1);
+  }
+  const pWhere = b => (b.key === 'E' ? 'Embedding table' : `Layer ${b.l + 1} · ${b.label}`);
+  const P_WHAT = {
+    E: 'One row per token: row 260 is “·the”. The board looks a row up at Embed; the token cloud places each row as a dot; and because SmolLM2 ties its tables, the final ball is compared with these same rows at Unembed.',
+    q: 'Each row turns the ball (576 numbers) into one number of the query, by a dot product. 9 heads of 64 rows each: what this token is looking for.',
+    k: 'Each row makes one number of the key: what this token offers to later tokens. Only 3 heads (192 rows): each is shared by 3 query heads. The keys are what the KV cache keeps.',
+    v: 'Each row makes one number of the value: what this token passes on when another token attends to it. 3 shared heads, kept in the KV cache.',
+    o: 'Mixes the 9 heads\' blended values back into the ball\'s 576 numbers, which are then added onto the ball.',
+    gate: 'Each row is one of the layer\'s 1,536 neurons: 576 weights multiplied with the ball and added up. SiLU of this, times "up", decides how strongly the neuron fires.',
+    up: 'A second set of 576 weights per neuron. Its dot product with the ball is multiplied by SiLU(gate).',
+    down: 'Each column is one neuron\'s way of writing back: 576 numbers it adds onto the ball, scaled by how strongly it fired.',
+  };
+  function pAt(e) { const r = $('#pCv').getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top; return PV.lay && PV.lay.blocks.find(b => x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h + 2) || null; }
+  $('#pCv').addEventListener('pointermove', e => {
+    const b = pAt(e); if (b === PV.hover) return; PV.hover = b; renderParams();
+    $('#pInfo').textContent = b ? `${pWhere(b)}: ${fmtN(b.rows)} × ${fmtN(b.cols)} = ${fmtN(b.rows * b.cols)} numbers. Click to look closer.` : 'Point at a block to see what it is; click it to look closer.';
+  });
+  $('#pCv').addEventListener('click', e => { const b = pAt(e); if (b) pDetail(b); });
+  function pDetail(b) {
+    $('#pDetail').hidden = false;
+    $('#pDTitle').textContent = `${pWhere(b)}: ${fmtN(b.rows)} × ${fmtN(b.cols)} = ${fmtN(b.rows * b.cols)} numbers`;
+    const cv = $('#pZoom');
+    if (!S.llm) {
+      cv.hidden = true; $('#pDNums').hidden = true;
+      $('#pDText').textContent = P_WHAT[b.key] + ' Pick "Real: SmolLM2-135M" (a 269 MB download) to see the actual numbers.';
+      $('#pDetail').scrollIntoView({ behavior: 'smooth', block: 'nearest' }); return;
+    }
+    // a crop at one number per pixel: the top-left corner of the grid
+    const m = pMat(b), sc = pScale(b), rows = Math.min(b.rows, 192), cols = Math.min(b.cols, 576);
+    const W = cv.clientWidth || 600, k = Math.max(1, Math.floor(W / cols)), dpr = 1;
+    cv.hidden = false; cv.width = cols * k; cv.height = rows * k; cv.style.width = Math.min(W, cols * k) + 'px'; cv.style.height = (rows * k * Math.min(W, cols * k) / (cols * k)) + 'px';
+    const c = cv.getContext('2d'), img = c.createImageData(cols * k, rows * k), px = img.data, bg = hexRgb(css('--st-bg'));
+    for (let y = 0; y < rows * k; y++) for (let x = 0; x < cols * k; x++) {
+      const v = m[Math.floor(y / k) * b.cols + Math.floor(x / k)] / sc, a = Math.min(1, Math.abs(v)) ** 0.7, col = v >= 0 ? [239, 228, 204] : [111, 134, 201], o = (y * cols * k + x) * 4;
+      px[o] = bg[0] + (col[0] - bg[0]) * a; px[o + 1] = bg[1] + (col[1] - bg[1]) * a; px[o + 2] = bg[2] + (col[2] - bg[2]) * a; px[o + 3] = 255;
+    }
+    c.putImageData(img, 0, 0);
+    $('#pDText').textContent = `${P_WHAT[b.key]} Above: the top-left ${rows} × ${cols} corner, one number per pixel (warm positive, blue negative, brighter = bigger).`;
+    const row = r => Array.from(m.subarray(r * b.cols, r * b.cols + 6), v => (v >= 0 ? ' ' : '−') + Math.abs(v).toFixed(4)).join(' ');
+    $('#pDNums').hidden = false;
+    $('#pDNums').textContent = `the first 6 numbers of the first 4 rows${b.key === 'E' ? ' (tokens 0–3)' : ''}:\n` + [0, 1, 2, 3].map(row).join('\n') + '\n…';
+    $('#pDetail').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+  function openParams() {
+    if (tl.isActive()) { tl.pause(); setPlayLabel(); }
+    const real = !!S.llm;
+    $('#pLead').textContent = `A model's parameters are the numbers it learned in training, and nothing else is stored: no sentences, no list of facts. SmolLM2-135M has ${fmtN(P_TOTAL)} of them, kept in grids (matrices). Below, every grid is drawn to scale, so area is the number of parameters` +
+      (real ? ', and each pixel is a real weight from the model in your browser.' : '; pick "Real: SmolLM2-135M" to fill them with the real weights.') +
+      ' Up close they look like static, and that is real: no single number means anything you could read; what the model knows is in the patterns across millions of them. The token cloud is not the parameters: it is a picture of one grid, the embedding table, with each of its rows squashed to a dot. The other four fifths live in the 30 layers, and every one of them is read for every new token.';
+    $('#pLegend').innerHTML = '';
+    [['attention (q, k, v, o)', KIND_RGB.attn], ['feed-forward (gate, up, down)', KIND_RGB.ffn], ...(real ? [['positive', [239, 228, 204]], ['negative', [111, 134, 201]]] : [['embedding', KIND_RGB.emb]])].forEach(([t, rgb]) => {
+      const sp = document.createElement('span'), i = document.createElement('i'); i.style.background = rgbStr(rgb); sp.append(i, t); $('#pLegend').appendChild(sp);
+    });
+    $('#pDetail').hidden = true; PV.hover = null;
+    $('#params').showModal();
+    requestAnimationFrame(() => {
+      drawParams();
+      const shown = Math.round(($('#pCv').width * $('#pCv').height) * 0.85);
+      $('#pNote').textContent = `How to read it: the grids hold ${fmtM(P_TOTAL)} numbers and this picture has about ${(shown / 1e6).toFixed(1)} million pixels, so each pixel shows one number out of roughly ${Math.round(P_TOTAL / shown)}, picked evenly. The norm weights (${fmtN(P_NORMS)} numbers, one short list per norm) are too thin to see. ` +
+        `Bigger models are the same kinds of grids, only more and larger: Qwen3.6-27B has about 27 billion parameters, about ${Math.round(27e9 / P_TOTAL)} times this picture.`;
+    });
+  }
+
   // ---- pointing and clicking: token chips and strips are cells; in the layers the pointer picks lane, layer, station ----
   function pick(e) {
     const c = e.target.closest && e.target.closest('.cell');
@@ -1658,6 +1843,11 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
     if (h.si === -2) openEmb(h.row);
   });
   $('#zoomBtn').addEventListener('click', () => openZoom(0));
+  $('#nbar').addEventListener('click', () => $('#narrDlg').showModal());
+  $('#nClose').addEventListener('click', () => $('#narrDlg').close());
+  $('#parBtn').addEventListener('click', openParams);
+  $('#pClose').addEventListener('click', () => $('#params').close());
+  ['#narrDlg', '#params'].forEach(d => $(d).addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.close(); }));
   $('#zClose').addEventListener('click', () => $('#zoom').close());
   $('#zoom').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.close(); });
 
