@@ -15,16 +15,16 @@ No install, no build step, no account. Plain HTML and JavaScript you can read. T
 
 ## What you are looking at
 
-Read the board left to right. Each token gets a **lane**, and the lanes run through **every layer** of the model (6 for TinyStories 15M, 30 for SmolLM2-135M-Instruct). In each layer a token does two things:
+Read the board top to bottom, like Plinko. Each token gets a **lane** running down the board, and the lanes fall through **every layer** of the model (each layer is a band holding that layer's real weights) (6 for TinyStories 15M, 30 for SmolLM2-135M-Instruct). In each layer a token does two things:
 
 - **Talk (attention):** it compares itself with the earlier tokens and blends in information from the ones that match. This is the only place tokens share information. Pink lines show who it listens to (the model's real attention). Its key and value stay behind in that layer's **KV cache** (a teal tick).
 - **Think (feed-forward):** it works alone. Hundreds of neurons check the ball for patterns and some fire strongly; the burst shows how much was added.
 
 Both add onto the ball rather than replacing it. Point at any lane in any layer and the fixed-size narrator bar at the bottom of the stage explains it (click it for the full text); **Show the math** lists the exact steps inside that station (norm, query/key/value, scores, softmax, mix, add; or norm, gate and up, SiLU, down, add), with the model's real numbers.
 
-A strip above the board shows the whole process, in order, and lights up each step as it runs (click one to jump to it):
+A strip at the top of the stage shows the whole process, in order, and lights up each step as it runs (click one to jump to it):
 
-1. **Type**: you type a message on your device (the column on the far left).
+1. **Type**: you type a message on your device (the box at the top of the board).
 2. **Send**: a chat app wraps it in a chat template (with its system prompt) and sends it over HTTPS to a server with a GPU. Here nothing is sent: the model runs in your browser tab, and the page says so.
 3. **Tokenize**: the text is cut into pieces the model knows, and each piece is looked up in the vocabulary to get its ID.
 4. **Embed**: each ID picks one row of a big learned table; that row of numbers is the ball. It carries no word order.
@@ -68,9 +68,9 @@ With either one, everything on the board is the model's actual output: tokens an
 
 ### Knobs, and what a layer does to the ball
 
-Every parameter is a knob, set once in training and never moved while the model runs; no prompt can turn one. On the board each layer column is drawn as that layer's knob bank: its real weights (the talk grids on the left half, the think grids on the right), the same knobs for every token, lit while the ball is multiplied through them. The ball is a list of numbers, not a single value: the last ball carries a strip of its first 16 real numbers, and a + marks each change being added onto it (the residual stream).
+Every parameter is a knob, set once in training and never moved while the model runs; no prompt can turn one. On the board each layer band is drawn as that layer's knob bank: its real weights (the talk grids on the top half, the think grids on the bottom), the same knobs for every token, lit while the ball is multiplied through them. The ball is a list of numbers, not a single value: the last ball carries a strip of its first 16 real numbers, and a + marks each change being added onto it (the residual stream).
 
-**Look inside a layer** (or click any layer on the board) opens one token's ball going through that layer step by step, with the model's own numbers: the ball arriving, the RMS norm (with its own knobs), query/key/value = knobs × ball, the rotation by position, attention over every earlier token (all heads), the output knobs, the + onto the ball, then the feed-forward gate and up knobs, the neurons firing, the down knobs and the second +. Each "knobs × ball" step is the real knob grid: the ball across the top, one output per row on the right; **Multiply, row by row** animates it, pointing at a row shows that row's dot product, and the page recomputes every product from the real weights and confirms it matches the model's own numbers.
+**Look inside a layer** (or click any layer band on the board) opens one token's ball going through that layer step by step, with the model's own numbers: the ball arriving, the RMS norm (with its own knobs), query/key/value = knobs × ball, the rotation by position, attention over every earlier token (all heads), the output knobs, the + onto the ball, then the feed-forward gate and up knobs, the neurons firing, the down knobs and the second +. Each "knobs × ball" step is the real knob grid: the ball across the top, one output per row on the right; **Multiply, row by row** animates it, pointing at a row shows that row's dot product, and the page recomputes every product from the real weights and confirms it matches the model's own numbers.
 
 ### Training: how the knobs get set
 
@@ -80,7 +80,7 @@ Every parameter is a knob, set once in training and never moved while the model 
 
 On the first visit (and with **Take the tour**) the page plays one token and stops at the start of every step, with Back, Next and End tour in the narrator bar. On phones the board scrolls itself to keep the action in view, and the narrator bar (with a play button) stays on screen.
 
-Every parameter is a knob, set once in training and never moved while the model runs; no prompt can turn one. On the board each layer column is its knob bank (see below). In **What are the parameters?** every weight is a square, and zoomed in each one becomes a knob with its exact value.
+Every parameter is a knob, set once in training and never moved while the model runs; no prompt can turn one. On the board each layer band is its knob bank (see below). In **What are the parameters?** every weight is a square, and zoomed in each one becomes a knob with its exact value.
 
 ### Zoom into a neuron
 

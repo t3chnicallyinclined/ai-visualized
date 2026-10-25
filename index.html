@@ -75,13 +75,14 @@ button:hover { border-color: var(--ink); }
   display: grid; grid-template-columns: minmax(0, 1fr) 390px; gap: 12px; align-items: start; }
 @media (max-width: 1180px) { .stage { grid-template-columns: minmax(0, 1fr); } }
 .boardscroll { overflow-x: auto; min-width: 0; }
-svg#board { width: 100%; height: auto; display: block; min-width: 860px; }
+svg#board { width: 100%; height: auto; display: block; }
+@media (min-width: 1181px) { .cloudp { position: sticky; top: 8px; } }
 .swipe { display: none; } @media (max-width: 900px) { .swipe { display: block; } }
 .cloudp { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .chead { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 #cTitle { font: 700 15px/1.3 var(--display); margin: 0; color: var(--st-ink); text-wrap: pretty; height: 2.6em; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 #cInfo { min-height: 4.5em; }
-.badge { font: 600 11px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--st-bg); background: var(--score); border-radius: 4px; padding: 2px 6px; white-space: nowrap; }
+.ctools { display: none; padding: 3px 9px; font-size: 12px; } .badge { font: 600 11px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--st-bg); background: var(--score); border-radius: 4px; padding: 2px 6px; white-space: nowrap; }
 .cwrap { position: relative; }
 .cloudgl { position: absolute; left: 1px; top: 1px; width: calc(100% - 2px); height: calc(100% - 2px); border-radius: 10px; pointer-events: none; }
 .cloudcv.overgl { position: relative; background: transparent !important; }
@@ -120,7 +121,12 @@ svg#board { width: 100%; height: auto; display: block; min-width: 860px; }
 .nb-text { font-size: 13.5px; line-height: 1.4; color: var(--st-ink2); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 /* phones: the board follows the action, and the narrator bar sits right under it and stays on screen */
 @media (max-width: 700px) {
-  .stage { padding: 8px; } .boardscroll { order: 1; } .nbar { order: 2; } .cloudp { order: 3; }
+  .stage { padding: 8px; } .cloudp { order: 1; } .boardscroll { order: 2; } .nbar { order: 3; }
+  .cloudp { position: sticky; top: 0; z-index: 6; background: var(--st-bg); margin: 0 -8px; padding: 8px 8px 6px; box-shadow: 0 8px 18px rgb(0 0 0 / 0.55); gap: 4px; }
+  .cloudp:not(.open) #cBar, .cloudp:not(.open) #cInfo, .cloudp:not(.open) .cnote, .cloudp:not(.open) .dice { display: none; }
+  .cloudp.open { position: static; box-shadow: none; }
+  #cTitle { font-size: 13px; height: 2.6em; } .cguess { font-size: 12px; min-height: 2.6em; }
+  .ctools { display: inline-block !important; }
   .nbar { position: sticky; bottom: 8px; z-index: 5; height: auto; min-height: 96px; grid-template-columns: auto minmax(0, 1fr); row-gap: 8px; box-shadow: 0 6px 24px rgb(0 0 0 / 0.5); }
   .nb-btns { grid-column: 1 / -1; justify-content: flex-end; flex-wrap: wrap; } .nb-text { -webkit-line-clamp: 3; }
   .seg { flex-wrap: nowrap; overflow-x: auto; } .seg button { white-space: nowrap; }
@@ -285,13 +291,12 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
   <div class="stage">
     <ol class="pipe" id="pipe" aria-label="The steps, in order"></ol>
     <div class="boardscroll">
-      <svg id="board" viewBox="0 0 1000 560" role="img" aria-label="Board: your device on the left; on the machine, each row is a token and each column a layer, read left to right; the ball leaves on the right into the token cloud">
+      <svg id="board" viewBox="0 0 1000 560" role="img" aria-label="Board: your device at the top; each token is a lane falling down through every layer (bands of the layer's real weights) to the exit into the token cloud">
         <g id="static"></g><g id="dyn"></g><g id="sel"></g>
       </svg>
-      <p class="note swipe">Swipe the board sideways to follow the steps.</p>
     </div>
     <section class="cloudp" id="cloudCard" aria-label="Token cloud">
-      <div class="chead"><h2 id="cTitle">Token cloud</h2><span class="badge" id="cBadge" hidden></span></div>
+      <div class="chead"><h2 id="cTitle">Token cloud</h2><span class="badge" id="cBadge" hidden></span><button type="button" class="ctools" id="cTools" aria-expanded="false">Tools</button></div>
       <div id="cBar"></div>
       <canvas id="cloudCv" class="cloudcv" aria-label="Token cloud: every token of the model's vocabulary as a dot, placed so similar tokens sit together; the ball's readings light it up"></canvas>
       <div class="ribbon" id="gStrip" aria-hidden="true"></div>
@@ -620,15 +625,15 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
   const STAGES_REAL = () => {
     const R = RM(), chat = R.chat;
     return [
-      ['Type', chat ? 'You type a message (left). A chat app also has a system prompt you usually never see: instructions written by whoever built the app. At this point both are just strings of characters.' : 'You type the start of a story (left). This tiny model only ever saw children\'s stories, so it continues them. At this point it is just a string of characters.'],
+      ['Type', chat ? 'You type a message (top of the board). A chat app also has a system prompt you usually never see: instructions written by whoever built the app. At this point both are just strings of characters.' : 'You type the start of a story (top of the board). This tiny model only ever saw children\'s stories, so it continues them. At this point it is just a string of characters.'],
       ['Send', 'In a chat app this is where your message would travel over the internet to a server. Here nothing is sent: the model was downloaded once and runs right in this browser tab, on your computer\'s processor.' + (chat ? ' The app first wraps everything in the model\'s chat template: the system prompt, then your message, each between <|im_start|> and <|im_end|> markers, then "assistant", where the model starts writing.' : ' A start-of-text token (<s>) goes in front, as in training.')],
       ['Tokenize', `The model's own tokenizer cuts the text into pieces it learned from data (${nf(R.V)} of them) and looks each one up to get its ID. A dot (·) means the piece starts with a space.` + (chat ? ' The system prompt and the template markers are tokens like any other; long stretches share one band lane on the board (sys, tpl).' : '')],
-      ['Embed', `Each ID picks one row of the model's embedding table (top left): ${nf(R.V)} rows, one per token, each ${R.D} numbers learned in training. That row is the ball. The embedding says nothing about word order; that comes later.`],
-      ['Layers', `All the lanes move through all ${R.L} layers at the same time. Each layer is a bank of knobs (its weights), set once in training and never moved while it runs: the ball is multiplied through them. In each layer a token first talks (attention: the pink lines are the model's real attention; this is the only place it can read earlier tokens` + (chat ? ', including the system prompt' : '') + `) and then thinks alone (feed-forward: the amber burst is how much it really added). After every layer the cloud reads the ball with the model's final reader and lights up every token by the chance it would give it. The little bar under the last ball is its first 16 numbers, changing as each + is added. Click any layer to look inside it.`],
+      ['Embed', `Each ID picks one row of the model's embedding table (the small grid left of the lanes): ${nf(R.V)} rows, one per token, each ${R.D} numbers learned in training. That row is the ball. The embedding says nothing about word order; that comes later.`],
+      ['Layers', `All the lanes move through all ${R.L} layers at the same time. Each layer is a bank of knobs (its weights), set once in training and never moved while it runs: the ball is multiplied through them. In each layer a token first talks (attention: the pink lines are the model's real attention; this is the only place it can read earlier tokens` + (chat ? ', including the system prompt' : '') + `) and then thinks alone (feed-forward: the amber burst is how much it really added). After every layer the cloud reads the ball with the model's final reader and lights up every token by the chance it would give it. The little bar beside the last ball is its first 16 numbers, changing as each + is added. Click any layer to look inside it.`],
       ['Unembed', `After the last layer comes one more norm, then the ball leaves the board and is compared with every row of the output table, which here is the embedding table reused: one score for each of the ${nf(R.V)} tokens. A token scores high when the ball points the same way as its row.` + (chat ? ' The context decides which way the ball points, so the right context lights up the tokens that fit it.' : '')],
       ['Choose', 'Softmax turns the top five scores into chances, temperature sets how loaded the dice are, and a weighted dice roll picks one: watch the dice hop between the candidates in the cloud.'],
       ['Detokenize', 'The tokenizer runs backwards: the winning ID becomes its piece of text and is added to the output. It also becomes a new lane.'],
-      ['Stream back', 'Each new piece goes to the reply on the left the moment it is chosen. In a chat app it would travel back over the internet; here it never leaves your computer.'],
+      ['Stream back', 'Each new piece goes to the reply at the top the moment it is chosen. In a chat app it would travel back over the internet; here it never leaves your computer.'],
       ['Repeat', `Only the new lane moves now. Each layer reads the keys and values it kept for earlier lanes (teal ticks) instead of redoing them, but all ${R.mb} MB of weights (every knob) are read again for every new token. The loop runs until the model writes an end token or reaches a length limit.`],
     ];
   };
@@ -650,14 +655,15 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
     return b;
   });
 
-  // ---- board geometry: lanes (one per token) running left to right through every layer ----
-  // Each layer is a thin column with two stations: "talk" (attention: tokens share information) and
-  // "think" (feed-forward: each token works alone). Both add onto the ball (the residual stream).
-  const VBW = 980, TOP = 124, ROW0 = 152, RH = 27, SCW = 44, DEVW = 128, TOKX = DEVW + 26, TOKW = 92, EMBW = 56;
-  const TBL = { x: TOKX, y: 24, w: 90, h: 40 }; // the embedding table drawing, top left of the machine
+  // ---- the board: words drop in at the top, become balls, and fall down through every layer to the cloud ----
+  // Each token is a lane running down the board. Each layer is a band across it: that layer's knob bank (its real
+  // weights), with two stations, "talk" (attention: tokens share information) and "think" (feed-forward: each token works
+  // alone). Both add onto the ball (the residual stream). One board unit is one screen pixel: the layout is computed from
+  // the board's width, and redone when the width changes.
+  let VBW = 900;
+  const GUT = 50; // left gutter: row names and layer numbers
   const vocabSize = () => (isReal() ? RM().V : 248320);
-  const rowY = i => ROW0 + i * RH;
-  const isFull = l => isReal() || (l + 1) % 4 === 0; // Qwen3.6: every 4th layer full attention; SmolLM2: all
+  const isFull = l => isReal() || (l + 1) % 4 === 0; // Qwen3.6 (toy): every 4th layer full attention; SmolLM2 and TinyStories: all
   const SUB = {
     norm: 'rescale the ball to a steady size', qkv: 'make a query, a key and a value',
     rope: 'rotate the query and key by their position (RoPE): how word order gets in', conv: 'mix in the previous 3 tokens (a short convolution)', scores: 'compare the query with every earlier key',
@@ -672,69 +678,79 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
     const att = kind === 'linear' ? ['norm', 'qkv', 'conv', 'write', 'read', 'ogate', 'add'] : ['norm', 'qkv', 'rope', 'scores', 'softmax', 'mix', ...(qwen ? ['ogate'] : []), 'add'];
     return { att, ff };
   }
+  const wrapTo = (str, n) => { const out = []; let line = ''; str.split(/(\s+)/).forEach(w => { if ((line + w).length > n && line.trim()) { out.push(line); line = w.trimStart(); } else line += w; }); if (line) out.push(line); return out; };
+  // the vertical stack: header, your device, the wire, the prompt, tokens, embedding, the layers, the exit, the output
   function layout() {
-    const L = MODELS[S.mode].layers, x0 = TOKX + TOKW + EMBW + 10, x1 = VBW - SCW - 12, LW = (x1 - x0) / L;
-    return { L, x0, x1, LW, scx: VBW - SCW, lx: l => x0 + l * LW, talkX: l => x0 + (l + 0.3) * LW, thinkX: l => x0 + (l + 0.72) * LW };
+    VBW = Math.max(320, Math.round($('.boardscroll').clientWidth || 900));
+    const D = S.data, L = MODELS[S.mode].layers, N = D ? D.nP + 6 : 16, x0 = GUT, x1 = VBW - 8, LW = (x1 - x0) / N;
+    const G2 = { L, N, x0, x1, LW, laneX: i => x0 + (i + 0.5) * LW };
+    G2.vertical = LW < 44; // narrow lanes: token text runs vertically in a tall chip
+    G2.chipW = Math.min(LW - 3, 64); G2.chipH = G2.vertical ? 58 : 22;
+    // the device: system prompt (chat model), your message, the reply
+    const chars = w => Math.max(6, Math.floor((w - 16) / 6.6)), W = VBW - 8 - GUT;
+    G2.devCols = D && D.sys ? [['sys', 0.31], ['you', 0.33], ['rep', 0.36]] : [['you', 0.46], ['rep', 0.54]];
+    let xx = GUT; G2.dev = {};
+    G2.devCols.forEach(([k, f]) => { G2.dev[k] = { x: xx, w: W * f - 8, n: chars(W * f - 8) }; xx += W * f; });
+    const lines = k => (!D || !G2.dev[k] ? 1 : Math.min(k === 'sys' ? 3 : 4, wrapTo(k === 'sys' ? D.sys : k === 'you' ? D.prompt : D.gen.join(''), G2.dev[k].n).length));
+    G2.devLines = Math.max(...G2.devCols.map(([k]) => lines(k)));
+    return G2;
   }
-
   function drawStatic() {
     const g = $('#static'); g.innerHTML = '';
     G = layout();
-    const N = S.data ? S.data.nP + 6 : 15, real = isReal(); G.N = N; G.outY = rowY(N - 1) + 44; G.vbH = G.outY + 16;
-    const top = TOP, bot = rowY(N - 1) + 16;
-    $('#board').setAttribute('viewBox', `0 0 ${VBW} ${G.vbH}`);
-    // left: your device; right: the machine the model runs on; between them, the internet (or nothing, in real mode)
-    el('rect', { x: 2, y: 2, width: DEVW, height: G.vbH - 4, rx: 16, class: 'sec' }, g);
-    el('text', { x: 14, y: 20, class: 'lbl' }, g, real ? 'YOU' : 'YOUR DEVICE');
-    el('rect', { x: 12, y: 30, width: DEVW - 20, height: G.vbH - 46, rx: 14, class: 'phone' }, g);
-    el('rect', { x: DEVW + 12, y: 2, width: VBW - DEVW - 14, height: G.vbH - 4, rx: 16, class: 'board' }, g);
-    el('text', { x: G.x1, y: 16, 'text-anchor': 'end', class: 'lbl' }, g, real ? 'THE MODEL: IN THIS BROWSER TAB, ON YOUR CPU' : 'A SERVER WITH A GPU');
-    G.wireY = TOP - 26;
-    el('path', { d: `M${DEVW - 8} ${G.wireY} L${G.x0 + 40} ${G.wireY}`, class: real ? 'wire local' : 'wire' }, g);
-    el('text', { x: DEVW + 4, y: G.wireY + 13, class: 'tiny' }, g, real ? 'no internet' : 'internet · HTTPS');
-    el('text', { x: TOKX + 4, y: TOP + 4, class: 'lbl' }, g, 'TOKENS');
-    el('text', { x: TOKX + TOKW + 2, y: TOP + 4, class: 'lbl' }, g, 'EMBED');
-    el('text', { x: G.x0, y: TOP - 26, class: 'lbl' }, g, 'PROMPT');
-    el('text', { x: TBL.x, y: 16, class: 'lbl' }, g, 'EMBEDDING TABLE');
-    el('rect', { x: TBL.x, y: TBL.y, width: TBL.w, height: TBL.h, rx: 3, class: 'sec' }, g);
-    for (let k = 1; k < 12; k++) el('line', { x1: TBL.x + 2, x2: TBL.x + TBL.w - 2, y1: TBL.y + k * TBL.h / 12, y2: TBL.y + k * TBL.h / 12, stroke: 'var(--line)', 'stroke-width': 0.5 }, g);
-    el('text', { x: TBL.x, y: TBL.y + TBL.h + 12, class: 'tiny' }, g, real ? `${nf(RM().V)} rows × ${RM().D}` : `248,320 rows × ${MODELS[S.mode].dims.d.toLocaleString('en-US')}`);
-    el('text', { x: TBL.x, y: TBL.y + TBL.h + 24, class: 'tiny' }, g, 'one row per token');
-    // header: what the columns are, and a legend
-    el('text', { x: G.x0, y: 16, class: 'secname' }, g, `${G.L} layers, left to right. Each: talk, then think`);
-    const leg = real
-      ? [['knob', 'column = that layer\'s knobs (real weights), the same for every token; click one to look inside'], ['att', 'talk: attention'], ['kvt', 'KV cache'], ['ff', 'think: feed-forward (+ = added onto the ball)']]
-      : [['knob', 'knobs: the layer\'s weights; lit while read, never turned'], ['att', 'full attention (every 4th layer)'], ['lin', 'linear attention: one fixed memory'], ['kvt', 'KV cache'], ['ff', 'think: feed-forward']];
-    let lx = G.x0;
-    let ly = 28;
+    const real = isReal(), D = S.data;
+    // header: what the board shows, and a legend that wraps to the width
+    el('text', { x: 8, y: 16, class: 'secname' }, g, `${G.L} layers, top to bottom. Each: talk, then think`);
+    if (VBW > 620) el('text', { x: VBW - 8, y: 16, 'text-anchor': 'end', class: 'lbl' }, g, 'THE MODEL: IN THIS BROWSER TAB');
+    const leg = [['knob', 'band = that layer\'s knobs (real weights), the same for every token'], ['att', 'talk: attention'], ['kvt', 'KV cache'], ['ff', 'think: feed-forward'], ['plus', '+ = added onto the ball']];
+    let lx = 8, ly = 26;
     leg.forEach(([cls, txt]) => {
-      const sq = el('rect', { x: lx, y: ly, width: 8, height: 8, rx: cls === 'knob' ? 4 : 2, class: 'leg ' + cls }, g), t = el('text', { x: lx + 11, y: ly + 8, class: 'tiny' }, g, txt);
       const w = txt.length * 6.3; // 10.5px IBM Plex Mono: every character is 6.3 wide
-      if (lx + 11 + w > G.x1 && lx > G.x0) { lx = G.x0; ly += 15; sq.setAttribute('x', lx); sq.setAttribute('y', ly); t.setAttribute('x', lx + 11); t.setAttribute('y', ly + 8); }
+      if (lx + 11 + w > VBW - 8 && lx > 8) { lx = 8; ly += 15; }
+      if (cls === 'plus') el('text', { x: lx, y: ly + 9, class: 'plus' }, g, '+'); else el('rect', { x: lx, y: ly, width: 8, height: 8, rx: cls === 'knob' ? 1 : 2, class: 'leg ' + cls }, g);
+      el('text', { x: lx + 11, y: ly + 8, class: 'tiny' }, g, cls === 'plus' ? txt.slice(4) : txt);
       lx += 11 + w + 14;
     });
-    // one thin column per layer; the stripe on top says which kind of attention it uses
-    S.mem = []; G.cols = []; G.knobs = [];
+    // your device
+    G.devTop = ly + 22; G.devH = 30 + G.devLines * 14 + 10;
+    el('rect', { x: 4, y: G.devTop, width: VBW - 8, height: G.devH, rx: 12, class: 'sec' }, g);
+    el('text', { x: 12, y: G.devTop + 16, class: 'lbl' }, g, 'YOU');
+    // the wire into the machine (no internet here: the model runs in this tab)
+    const wx = GUT + 18; G.wireTop = G.devTop + G.devH; G.promptY = G.wireTop + 42;
+    el('path', { d: `M${wx} ${G.wireTop + 2} L${wx} ${G.promptY - 16}`, class: real ? 'wire local' : 'wire' }, g);
+    el('text', { x: wx + 8, y: G.wireTop + 22, class: 'tiny' }, g, real ? 'no internet: the model runs in this tab' : 'internet · HTTPS');
+    G.wireX = wx;
+    el('text', { x: GUT - 6, y: G.promptY + 4, 'text-anchor': 'end', class: 'tiny' }, g, 'prompt');
+    // tokens and their embedding rows
+    G.tokY = G.promptY + 22 + G.chipH / 2; G.embY = G.tokY + G.chipH / 2 + (G.vertical ? 12 : 22);
+    el('text', { x: GUT - 6, y: G.tokY + 4, 'text-anchor': 'end', class: 'tiny' }, g, 'tokens');
+    el('text', { x: GUT - 6, y: G.embY + 4, 'text-anchor': 'end', class: 'tiny' }, g, 'embed');
+    G.TBL = { x: 6, y: G.embY + 10, w: GUT - 14, h: 26 }; // the embedding table, drawn small in the gutter
+    el('rect', { x: G.TBL.x, y: G.TBL.y, width: G.TBL.w, height: G.TBL.h, rx: 2, class: 'sec' }, g);
+    for (let k = 1; k < 8; k++) el('line', { x1: G.TBL.x + 2, x2: G.TBL.x + G.TBL.w - 2, y1: G.TBL.y + k * G.TBL.h / 8, y2: G.TBL.y + k * G.TBL.h / 8, stroke: 'var(--line)', 'stroke-width': 0.5 }, g);
+    // the layers: a band per layer, with that layer's real weights drawn into it
+    G.Y0 = G.embY + 40; G.LH = Math.max(24, Math.min(72, Math.round(640 / G.L)));
+    G.talkY = l => G.Y0 + l * G.LH + G.LH * 0.34; G.thinkY = l => G.Y0 + l * G.LH + G.LH * 0.76;
+    G.cols = []; G.knobs = [];
     for (let l = 0; l < G.L; l++) {
-      const x = G.lx(l), full = isFull(l);
-      G.cols.push(el('rect', { x: x + 0.6, y: top, width: G.LW - 1.2, height: bot - top, rx: Math.min(3, G.LW / 3), class: 'lcol' + (full ? ' full' : ' lin') }, g));
-      el('rect', { x: x + 0.6, y: top, width: G.LW - 1.2, height: 4, class: 'lstripe' + (full ? ' full' : ' lin') }, g);
-      if (!full) S.mem[l] = el('rect', { x: G.talkX(l) - Math.max(1.5, G.LW * 0.25), y: top + 8, width: Math.max(3, G.LW * 0.5), height: 5, rx: 1, class: 'mem', 'fill-opacity': 0.25 }, g);
-      // the column is the layer's knob bank: its real weights, the talk grids (q, k, v, o) on the left half, the think grids
-      // (gate, up, down) on the right half. Every lane passes through the same knobs.
-      if (real && S.llm) G.knobs.push(el('image', { href: knobBank(l), x: x + 0.6, y: top + 5, width: G.LW - 1.2, height: bot - top - 5, preserveAspectRatio: 'none', class: 'kbank' }, g));
-      const every = real ? (G.L > 10 ? 5 : 1) : 4;
-      if (l === 0 || (l + 1) % every === 0) el('text', { x: x + G.LW / 2, y: top - 4, 'text-anchor': 'middle', class: 'tiny' }, g, String(l + 1));
+      const y = G.Y0 + l * G.LH;
+      G.cols.push(el('rect', { x: G.x0, y: y + 0.6, width: G.x1 - G.x0, height: G.LH - 1.2, rx: 3, class: 'lcol full' }, g));
+      if (real && S.llm) G.knobs.push(el('image', { href: knobBank(l), x: G.x0, y: y + 0.6, width: G.x1 - G.x0, height: G.LH - 1.2, preserveAspectRatio: 'none', class: 'kbank' }, g));
+      el('rect', { x: G.x0, y: y + 0.6, width: 3, height: G.LH - 1.2, class: 'lstripe full' }, g);
+      const every = G.L > 10 ? 5 : 1;
+      if (l === 0 || (l + 1) % every === 0) el('text', { x: GUT - 6, y: y + G.LH / 2 + 4, 'text-anchor': 'end', class: 'tiny' }, g, l === 0 ? 'layer 1' : String(l + 1));
     }
-    // the exit: after the last layer the ball leaves the board for the output table, drawn as the token cloud on the right
-    G.GX = G.scx + SCW / 2;
-    el('rect', { x: G.scx + 6, y: top, width: SCW - 12, height: bot - top, rx: 6, class: 'gate' }, g);
-    G.gateFlash = el('rect', { x: G.scx + 6, y: top, width: SCW - 12, height: bot - top, rx: 6, class: 'gateflash', style: 'opacity:0' }, g);
-    const gl = el('text', { x: 0, y: 0, class: 'lbl', transform: `translate(${G.GX + 4} ${top + 8}) rotate(90)` }, g, real ? 'UNEMBED · TO THE CLOUD →' : 'SCORES · TO THE CLOUD →');
-    gl.setAttribute('style', 'letter-spacing:0.12em');
-    el('text', { x: TOKX + 4, y: G.outY - 18, class: 'lbl' }, g, 'OUTPUT');
+    if (G.LH >= 40) { el('text', { x: G.x0 + 6, y: G.talkY(0) - 4, class: 'tiny', style: 'font-size:9.5px' }, g, 'talk'); el('text', { x: G.x0 + 6, y: G.thinkY(0) - 4, class: 'tiny', style: 'font-size:9.5px' }, g, 'think'); }
+    // the exit: after the last layer the ball leaves the board for the output table, drawn as the token cloud
+    G.gateY = G.Y0 + G.L * G.LH + 8;
+    el('rect', { x: G.x0, y: G.gateY, width: G.x1 - G.x0, height: 30, rx: 6, class: 'gate' }, g);
+    G.gateFlash = el('rect', { x: G.x0, y: G.gateY, width: G.x1 - G.x0, height: 30, rx: 6, class: 'gateflash', style: 'opacity:0' }, g);
+    el('text', { x: (G.x0 + G.x1) / 2, y: G.gateY + 19, 'text-anchor': 'middle', class: 'lbl', style: 'letter-spacing:0.12em' }, g, narrow.matches ? 'UNEMBED · INTO THE CLOUD ↑' : 'UNEMBED · INTO THE CLOUD →');
+    G.outY = G.gateY + 58; G.vbH = G.outY + 14;
+    el('text', { x: GUT - 6, y: G.outY, 'text-anchor': 'end', class: 'tiny' }, g, 'output');
+    $('#board').setAttribute('viewBox', `0 0 ${VBW} ${G.vbH}`);
     // one hit area over the layers; the pointer position picks the lane, layer and station
-    el('rect', { x: G.x0, y: top, width: G.x1 - G.x0, height: bot - top, fill: 'transparent', id: 'layerHit' }, g);
+    el('rect', { x: G.x0, y: G.Y0, width: G.x1 - G.x0, height: G.L * G.LH, fill: 'transparent', id: 'layerHit' }, g);
   }
 
   // colours as numbers so they can be mixed: hsl -> rgb
@@ -745,82 +761,73 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
   const rgbStr = c => `rgb(${c.map(v => Math.round(v)).join(',')})`;
 
   function build() {
-    const D = S.data, real = D.real, M = MODELS[S.mode], moe = S.mode === 'moe';
+    const D = S.data;
     if (tl) tl.kill();
     drawStatic();
     const dyn = $('#dyn'); dyn.innerHTML = ''; $('#sel').innerHTML = '';
-    const { nP, all, steps } = D, NG = 6, N = nP + NG, L = G.L;
-    const base = all.map((w, i) => idColour(real ? D.ids[i] : toyMapId(w)));
-    const color = i => rgbStr(base[i]);
-    const gLanes = el('g', {}, dyn), gRows = el('g', {}, dyn), gArcs = el('g', {}, dyn), gScore = el('g', {}, dyn), gBalls = el('g', {}, dyn);
+    const { nP, all, steps } = D, NG = 6, N = nP + NG, L = G.L, X = G.laneX;
+    const base = all.map((w, i) => idColour(D.ids[i])), color = i => rgbStr(base[i]);
+    const gRows = el('g', {}, dyn), gArcs = el('g', {}, dyn), gScore = el('g', {}, dyn), gBalls = el('g', {}, dyn);
     const rows = [], ball = [], burst = [], ticks = [];
-    const embX = TOKX + TOKW + EMBW / 2;
     for (let i = 0; i < N; i++) {
-      const y = rowY(i), rg = el('g', { style: 'opacity:0' }, gRows);
-      el('line', { x1: G.x0, x2: G.x1, y1: y, y2: y, class: 'lane' }, rg);
-      const rk = D.rows ? D.rows[i] : null, isBand = rk && rk.pos.length > 1;
-      el('rect', { x: TOKX, y: y - 11, width: 54, height: 22, rx: 5, class: (i >= nP ? 'chip gen' : 'chip') + (rk ? ' r-' + rk.kind : '') + (isBand ? ' band' : '') }, rg);
-      el('text', { x: TOKX + 27, y: y + 4, 'text-anchor': 'middle', class: 'chiptxt' }, rg, short(all[i]));
-      el('text', { x: TOKX + 57, y: y + 3, class: 'tiny', style: 'font-size:10px' }, rg, isBand ? rk.pos.length + ' tok' : String(D.ids[i]));
-      el('rect', { x: TOKX - 1, y: y - 12, width: TOKW - 2, height: 24, class: 'cell', 'fill-opacity': 0, 'data-row': i, 'data-sec': -3 }, rg);
-      // the embedding: the first 12 numbers of the token's row, as a strip (teal positive, pink negative)
-      const bs = [];
-      for (let b = 0; b < 12; b++) {
-        const v = D.bars[i][b];
-        bs.push([el('rect', { x: embX - 24 + b * 4, y: y - 7, width: 3.4, height: 14, rx: 0.6, fill: v >= 0 ? 'var(--pos)' : 'var(--neg)', style: 'opacity:0' }, rg), 0.15 + 0.85 * Math.abs(v)]);
-      }
-      const rowLineY = TBL.y + 2 + (D.ids[i] % vocabSize()) / vocabSize() * (TBL.h - 4);
-      const look = [el('rect', { x: TBL.x + 1, y: rowLineY - 1.2, width: TBL.w - 2, height: 2.4, fill: color(i), style: 'opacity:0' }, rg),
-        el('path', { d: `M${TBL.x + TBL.w} ${rowLineY} C${embX - 22} ${rowLineY} ${embX - 30} ${y} ${embX - 25} ${y}`, fill: 'none', stroke: color(i), 'stroke-width': 1.4, style: 'opacity:0' }, rg)];
-      el('rect', { x: embX - 27, y: y - 10, width: 54, height: 20, class: 'cell', 'fill-opacity': 0, 'data-row': i, 'data-sec': -2 }, rg);
-      // KV ticks: in every full-attention layer, each token's key and value stay behind
-      ticks.push(Array.from({ length: L }, (_, l) => isFull(l) ? el('rect', { x: G.talkX(l) - 1.2, y: y - 6, width: 2.4, height: 12, rx: 1, class: 'kvt', style: 'opacity:0' }, rg) : null));
+      const x = X(i), rg = el('g', { style: 'opacity:0' }, gRows), rk = D.rows ? D.rows[i] : null, isBand = rk && rk.pos.length > 1;
+      el('line', { x1: x, x2: x, y1: G.Y0, y2: G.gateY, class: 'lane' }, rg);
+      el('rect', { x: x - G.chipW / 2, y: G.tokY - G.chipH / 2, width: G.chipW, height: G.chipH, rx: 5, class: (i >= nP ? 'chip gen' : 'chip') + (rk ? ' r-' + rk.kind : '') + (isBand ? ' band' : '') }, rg);
+      if (G.vertical) el('text', { x: 0, y: 0, 'text-anchor': 'middle', class: 'chiptxt', transform: `translate(${x + 4} ${G.tokY}) rotate(-90)` }, rg, short(all[i]));
+      else el('text', { x, y: G.tokY + 4, 'text-anchor': 'middle', class: 'chiptxt' }, rg, short(all[i]));
+      if (!G.vertical) el('text', { x, y: G.tokY + G.chipH / 2 + 10, 'text-anchor': 'middle', class: 'tiny', style: 'font-size:9.5px' }, rg, isBand ? rk.pos.length + ' tok' : String(D.ids[i]));
+      el('rect', { x: x - G.LW / 2, y: G.tokY - G.chipH / 2 - 2, width: G.LW, height: G.chipH + 4, class: 'cell', 'fill-opacity': 0, 'data-row': i, 'data-sec': -3 }, rg);
+      // the embedding: the first 12 numbers of the token's row, as a strip
+      const bs = [], sw = Math.min(G.LW - 4, 48), cw = sw / 12;
+      for (let b = 0; b < 12; b++) { const v = D.bars[i][b]; bs.push([el('rect', { x: x - sw / 2 + b * cw, y: G.embY - 6, width: Math.max(0.8, cw - 0.6), height: 12, fill: v >= 0 ? 'var(--pos)' : 'var(--neg)', style: 'opacity:0' }, rg), 0.15 + 0.85 * Math.abs(v)]); }
+      const rowLineY = G.TBL.y + 2 + (D.ids[i] % vocabSize()) / vocabSize() * (G.TBL.h - 4);
+      const look = [el('rect', { x: G.TBL.x + 1, y: rowLineY - 1.2, width: G.TBL.w - 2, height: 2.4, fill: color(i), style: 'opacity:0' }, rg),
+        el('path', { d: `M${G.TBL.x + G.TBL.w} ${rowLineY} C${x} ${rowLineY} ${x} ${G.embY + 10} ${x} ${G.embY + 6}`, fill: 'none', stroke: color(i), 'stroke-width': 1.4, style: 'opacity:0' }, rg)];
+      el('rect', { x: x - G.LW / 2, y: G.embY - 9, width: G.LW, height: 18, class: 'cell', 'fill-opacity': 0, 'data-row': i, 'data-sec': -2 }, rg);
+      // KV ticks: in every layer each token's key and value stay behind
+      ticks.push(Array.from({ length: L }, (_, l) => el('rect', { x: x - 6, y: G.talkY(l) - 1.2, width: 12, height: 2.4, rx: 1, class: 'kvt', style: 'opacity:0' }, rg)));
       rows.push({ g: rg, bars: bs, look });
-      burst.push(el('circle', { cx: G.thinkX(0), cy: y, r: 2, class: 'burst', style: 'opacity:0' }, gBalls));
-      ball.push(el('circle', { cx: TOKX + TOKW + EMBW + 1, cy: y, r: 0, fill: color(i), class: 'ball' }, gBalls));
+      burst.push(el('circle', { cx: x, cy: G.thinkY(0), r: 2, class: 'burst', style: 'opacity:0' }, gBalls));
+      ball.push(el('circle', { cx: x, cy: G.embY + 16, r: 0, fill: color(i), class: 'ball' }, gBalls));
     }
-    const out = el('text', { x: TOKX + 4, y: G.outY, class: 'out' }, dyn);
-    el('tspan', { class: 'outp' }, out, D.prompt.length > 60 ? '…' + D.prompt.slice(-59) : D.prompt);
+    const out = el('text', { x: G.x0, y: G.outY, class: 'out' }, dyn), maxc = Math.floor((G.x1 - G.x0) / 7.8);
+    el('tspan', { class: 'outp' }, out, D.prompt.length > maxc - 24 ? '…' + D.prompt.slice(-(maxc - 25)) : D.prompt);
     const outW = D.gen.map(gx => el('tspan', { class: 'outg', 'fill-opacity': 0 }, out, gx));
-    S.guessEl = real ? el('text', { x: 0, y: 0, class: 'guess', style: 'opacity:0' }, dyn) : null;
-    S.strip = real ? el('g', { class: 'strip16', style: 'opacity:0' }, dyn) : null;
-    S.stripCells = real ? Array.from({ length: 16 }, (_, k) => el('rect', { x: k * 2.6, y: 0, width: 2.2, height: 7, rx: 0.4 }, S.strip)) : null;
+    S.guessEl = el('text', { x: 0, y: 0, class: 'guess', style: 'opacity:0' }, dyn);
+    S.strip = el('g', { class: 'strip16', style: 'opacity:0' }, dyn);
+    S.stripCells = Array.from({ length: 16 }, (_, k) => el('rect', { x: k * 2.6, y: 0, width: 2.2, height: 7, rx: 0.4 }, S.strip));
     S.balls = ball;
-    // the prompt as text, cut into the pieces that become lanes (12px IBM Plex Mono: every character is 7.2 wide)
-    // the device: your message as a chat bubble, and the reply that streams in piece by piece
-    const gDev = el('g', {}, dyn), DX = 20, DCH = 14, dw = 6.6; // 11px IBM Plex Mono: each character 6.6 wide
-    const wrapTo = (str, n) => { const out = []; let line = ''; str.split(/(\s+)/).forEach(w => { if ((line + w).length > n && line.trim()) { out.push(line); line = w.trimStart(); } else line += w; }); if (line) out.push(line); return out; };
-    // the system prompt: set by whoever built the app, usually hidden from you
-    const sysLines = D.sys ? wrapTo(D.sys, 12).slice(0, 4) : [], gSys = el('g', { style: 'opacity:0' }, gDev);
-    if (sysLines.length) {
-      if (wrapTo(D.sys, 12).length > 4) sysLines[3] = sysLines[3].slice(0, 11) + '…';
-      el('rect', { x: DX - 4, y: 38, width: DEVW - 32, height: sysLines.length * DCH + 22, rx: 8, class: 'bub sys' }, gSys);
-      el('text', { x: DX + 2, y: 50, class: 'tiny', style: 'font-size:9.5px' }, gSys, 'SYSTEM · HIDDEN');
-      sysLines.forEach((ln, i) => el('text', { x: DX + 2, y: 64 + i * DCH, class: 'dtext sys' }, gSys, ln));
-    }
-    const youLines = wrapTo(D.prompt, 12).slice(0, sysLines.length ? 5 : 7);
-    const bubY = sysLines.length ? 38 + sysLines.length * DCH + 22 + 22 : 52, youH = youLines.length * DCH + 10;
-    const youBub = el('rect', { x: DX + 6, y: bubY - 12, width: DEVW - 32, height: youH, rx: 8, class: 'bub you', style: 'opacity:0' }, gDev);
-    const youTxt = youLines.map((ln, i) => el('text', { x: DX + 12, y: bubY + 2 + i * DCH, class: 'dtext', style: 'opacity:0' }, gDev, ln));
-    // reply: place each new piece where it will sit, wrapping at piece boundaries
-    const repY = bubY + youH + 16, repPieces = []; let cx0 = 0, line = 0;
-    D.gen.forEach(pc => { const txt = pc.replace(/^ /, line || cx0 ? ' ' : ''); if (cx0 + txt.length > 12 && cx0) { line++; cx0 = 0; } const t2 = cx0 ? txt : txt.trimStart(); repPieces.push(el('text', { x: DX + 4 + cx0 * dw, y: repY + 2 + line * DCH, class: 'dtext rep', style: 'opacity:0' }, gDev, t2)); cx0 += t2.length; });
-    const repBub = el('rect', { x: DX - 2, y: repY - 12, width: DEVW - 36, height: (line + 1) * DCH + 10, rx: 8, class: 'bub them', style: 'opacity:0' }, gDev);
+    // the device: the system prompt (chat model; usually hidden), your message, and the reply that streams in
+    const gDev = el('g', {}, dyn), DCH = 14, dw = 6.6, by = G.devTop + 30; // 11px IBM Plex Mono: each character 6.6 wide
+    const bubble = (k, text, cls, label) => {
+      const c = G.dev[k], ls = wrapTo(text, c.n), max = k === 'sys' ? 3 : 4, show = ls.slice(0, max);
+      if (ls.length > max) show[max - 1] = show[max - 1].slice(0, c.n - 1) + '…';
+      const gb = el('g', { style: 'opacity:0' }, gDev);
+      el('rect', { x: c.x, y: by - 14, width: c.w, height: Math.max(1, show.length) * DCH + 10, rx: 8, class: 'bub ' + cls }, gb);
+      if (label) el('text', { x: c.x + 4, y: by - 18, class: 'tiny', style: 'font-size:9.5px' }, gb, label);
+      return { g: gb, lines: show.map((ln, i) => el('text', { x: c.x + 7, y: by + i * DCH, class: 'dtext' + (cls === 'sys' ? ' sys' : ''), style: cls === 'you' ? 'opacity:0' : '' }, gb, ln)) };
+    };
+    const gSys = D.sys ? bubble('sys', D.sys, 'sys', 'SYSTEM · HIDDEN').g : el('g', {}, gDev);
+    const you = bubble('you', D.prompt, 'you', D.sys ? 'YOUR MESSAGE' : null), youBub = you.g, youTxt = you.lines;
+    // the reply: place each new piece where it will sit, wrapping at piece boundaries
+    const rc = G.dev.rep, repPieces = []; let cx0 = 0, line = 0;
+    D.gen.forEach(pc => { const txt = pc.replace(/^ /, line || cx0 ? ' ' : ''); if (cx0 + txt.length > rc.n && cx0) { line++; cx0 = 0; } const t2 = cx0 ? txt : txt.trimStart(); repPieces.push(el('text', { x: rc.x + 7 + cx0 * dw, y: by + Math.min(line, 3) * DCH, class: 'dtext rep', style: 'opacity:0' }, gDev, t2)); cx0 += t2.length; });
+    const repBub = el('rect', { x: rc.x, y: by - 14, width: rc.w, height: (Math.min(line, 3) + 1) * DCH + 10, rx: 8, class: 'bub them', style: 'opacity:0' }, gDev);
     gDev.insertBefore(repBub, gDev.firstChild);
+    el('text', { x: rc.x + 4, y: by - 18, class: 'tiny', style: 'font-size:9.5px' }, gDev, 'REPLY');
     const packet = el('g', { style: 'opacity:0' }, dyn);
     el('rect', { x: -9, y: -6, width: 18, height: 12, rx: 3, class: 'pkt' }, packet); el('path', { d: 'M-9 -6 L0 1 L9 -6', class: 'pktl' }, packet);
-
-    const GAP = 4, tx0 = G.x0 + 64, ty = TOP - 22, gText = el('g', {}, dyn), segEls = [], cuts = [];
+    // the prompt as the model reads it, cut into the pieces that become lanes
+    const GAP = 4, tx0 = G.x0, ty = G.promptY + 4, gText = el('g', {}, dyn), segEls = [], cuts = [];
     const nch = D.segs.reduce((a, sg) => a + sg.length, 0), CW = Math.min(7.2, (G.x1 - tx0 - GAP * D.segs.length) / Math.max(1, nch)), fs = (CW / 0.6).toFixed(2); // IBM Plex Mono: a character is 0.6 em wide
     let chars = 0;
-    if (D.cut) { el('text', { x: tx0 - 14, y: ty, class: 'ptext', fill: 'var(--muted)' }, gText, '…'); }
     D.segs.forEach((sg, i) => {
       const x = tx0 + chars * CW + i * GAP, w = Math.max(CW, sg.length * CW), rk = D.rows && D.rows[i], cls = 'ptext' + (rk && rk.pos.length > 1 ? ' r-' + rk.kind : '');
       if (i) cuts.push(el('line', { x1: x - GAP / 2, x2: x - GAP / 2, y1: ty - 13, y2: ty + 4, class: 'cut', style: 'opacity:0' }, gText));
       const hl = el('rect', { x, y: ty - 12, width: w, height: 16, rx: 3, class: 'phl', style: 'opacity:0' }, gText);
       const ghost = el('text', { x, y: ty, class: cls, style: `opacity:0;font-size:${fs}px`, 'fill-opacity': 0.35 }, gText, sg);
       const t1 = el('text', { x, y: ty, class: cls, style: `opacity:0;font-size:${fs}px` }, gText, sg);
-      segEls.push({ el: t1, ghost, hl });
+      segEls.push({ el: t1, ghost, hl, w });
       chars += sg.length;
     });
 
@@ -828,93 +835,69 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
     CAPS = []; INFOS = []; LENS = []; PASSES = []; STEPLOG = []; CHOOSE = [];
     const mark = (st, t) => CAPS.push([t, st]);
     const info = (o, t) => INFOS.push([t, o]);
-    const recOf = i => (real ? D.rowRecs[i] : null);
-
-    // who lane i listens to in layer l: weights over lanes j <= i that add up to 1
+    const recOf = i => D.rowRecs[i];
+    // who lane i listens to in layer l: the model's attention, averaged over heads; a band lane sums its tokens
     function listen(i, l) {
-      if (real) { // a band lane gets the attention of all its tokens together
-        const ly = recOf(i).layers[l], T = recOf(i).pos + 1, avg = new Float32Array(i + 1);
-        for (let j = 0; j <= i; j++) for (const p of D.rows[j].pos) if (p < T) for (let h = 0; h < ly.heads; h++) avg[j] += ly.attn[h * T + p] / ly.heads;
-        const s = avg.reduce((a, b) => a + b, 0) || 1; return Array.from(avg, v => v / s);
-      }
-      let w;
-      if (isFull(l)) w = Array.from({ length: i + 1 }, (_, j) => Math.exp(-0.18 * (i - j) + (hash(all[i] + '>' + all[j] + '@' + l) % 100) / 100 * 1.6 + (j < i && all[j].toLowerCase() === all[i].toLowerCase() ? 1.5 : 0)));
-      else w = Array.from({ length: i + 1 }, (_, j) => Math.pow(0.6, i - j)); // linear attention: a fading memory, recent tokens count most
-      const s = w.reduce((a, b) => a + b, 0); return w.map(v => v / s);
+      const ly = recOf(i).layers[l], T = recOf(i).pos + 1, avg = new Float32Array(i + 1);
+      for (let j = 0; j <= i; j++) for (const p of D.rows[j].pos) if (p < T) for (let h = 0; h < ly.heads; h++) avg[j] += ly.attn[h * T + p] / ly.heads;
+      const s = avg.reduce((a, b) => a + b, 0) || 1; return Array.from(avg, v => v / s);
     }
-    // the ball's colour after each layer: the cloud-map colour of the token it points at most after that layer
-    // (real mode, for the lanes whose full readings are kept); every other ball keeps its own token's map colour
-    const colAt = all.map((_, i) => Array.from({ length: L }, (_, l) => {
-      const ly = real && recOf(i) && recOf(i).layers[l];
-      return ly && ly.lens ? idColour(ly.lens[0].id) : base[i];
-    }));
-    // how much a station adds, 0..1 (real: size of the addition relative to the ball; toy: made up)
-    const added = (i, l, which) => {
-      const ly = real && recOf(i) && recOf(i).layers[l];
-      if (ly && ly.downNorm != null) return Math.min(1, (which ? ly.downNorm : ly.outNorm) / Math.max(1e-6, ly.norm) * 2.5);
-      return 0.25 + (hash(all[i] + '+' + l + which) % 50) / 100;
-    };
-
-    const arcPath = (x, i, j) => { const yi = rowY(i), yj = rowY(j), bend = 6 + (i - j) * 3; return `M${x} ${yi} Q${x + bend} ${(yi + yj) / 2} ${x} ${yj}`; };
+    // the ball's colour after each layer: the cloud-map colour of the token it points at most after that layer (for the
+    // lanes whose full readings are kept); every other ball keeps its own token's map colour
+    const colAt = all.map((_, i) => Array.from({ length: L }, (_, l) => { const ly = recOf(i) && recOf(i).layers[l]; return ly && ly.lens ? idColour(ly.lens[0].id) : base[i]; }));
+    // how much a station adds, 0..1: the size of the addition relative to the ball
+    const added = (i, l, which) => { const ly = recOf(i) && recOf(i).layers[l]; return ly && ly.downNorm != null ? Math.min(1, (which ? ly.downNorm : ly.outNorm) / Math.max(1e-6, ly.norm) * 2.5) : 0.35; };
+    const arcPath = (y, i, j) => { const xi = X(i), xj = X(j), bend = Math.min(G.LH * 0.9, 6 + (i - j) * G.LW * 0.22); return `M${xi} ${y} Q${(xi + xj) / 2} ${y - bend} ${xj} ${y}`; };
     function embed(i, t) {
       const [rowHl, line] = rows[i].look;
       tl.to(rowHl, { opacity: 1, duration: 0.15 }, t); tl.to(line, { opacity: 0.85, duration: 0.15 }, t + 0.08);
-      rows[i].bars.forEach(([rc, op], b) => tl.to(rc, { opacity: op, duration: 0.2 }, t + 0.18 + b * 0.015));
+      rows[i].bars.forEach(([rc2, op], b) => tl.to(rc2, { opacity: op, duration: 0.2 }, t + 0.18 + b * 0.015));
       tl.to([rowHl, line], { opacity: 0, duration: 0.3 }, t + 0.75);
-      tl.to(ball[i], { attr: { r: 5 }, duration: 0.3, ease: 'back.out(2)' }, t + 0.3);
+      tl.to(ball[i], { attr: { r: Math.min(5, G.LW * 0.28) }, duration: 0.3, ease: 'back.out(2)' }, t + 0.3);
     }
-    const LD = real ? 0.42 : Math.min(0.42, 15 / L); // seconds per layer in the prompt pass
+    const LD = 0.42; // seconds per layer in the prompt pass
     function pass(p, cols, focus, t, s) {
       PASSES.push({ t0: t, focus });
       const d = LD * s;
       for (let l = 0; l < L; l++) {
-        const tx = G.talkX(l), hx = G.thinkX(l), full = isFull(l);
-        // talk: move to the station, listen to earlier lanes, take on their colours, leave a KV tick
+        const ty2 = G.talkY(l), hy = G.thinkY(l);
+        // talk: fall to the station, listen to earlier lanes, leave a KV tick
         cols.forEach(i => {
-          tl.to(ball[i], { attr: { cx: tx, fill: rgbStr(colAt[i][l]) }, duration: d * 0.42, ease: 'power1.inOut' }, t);
-          if (full) tl.to(ticks[i][l], { opacity: 1, duration: d * 0.3 }, t + d * 0.35);
+          tl.to(ball[i], { attr: { cy: ty2, fill: rgbStr(colAt[i][l]) }, duration: d * 0.42, ease: 'power1.inOut' }, t);
+          tl.to(ticks[i][l], { opacity: 1, duration: d * 0.3 }, t + d * 0.35);
         });
         STEPLOG.push([t + d * 0.2, l, 0, p]);
-        if (full) {
-          cols.forEach(i => {
-            const w = listen(i, l), mx = Math.max(1e-9, ...w.slice(0, i)), strong = i === focus ? 1 : 0.3;
-            for (let j = 0; j < i; j++) {
-              const r = w[j] / mx; if (r < 0.06) continue;
-              const pth = el('path', { d: arcPath(tx, i, j), class: 'arc', style: 'opacity:0' }, gArcs);
-              tl.to(pth, { opacity: strong * (0.1 + 0.9 * r), duration: d * 0.15 }, t + d * 0.2);
-              tl.to(pth, { opacity: 0, duration: d * 0.3 }, t + d * 0.6);
-            }
-          });
-          for (let j = 0; j < focus; j++) if (!cols.includes(j)) { tl.to(ticks[j][l], { attr: { width: 4.4, x: tx - 2.2 }, duration: d * 0.12 }, t + d * 0.2); tl.to(ticks[j][l], { attr: { width: 2.4, x: tx - 1.2 }, duration: d * 0.3 }, t + d * 0.45); }
-        } else {
-          const m = S.mem[l], my = TOP + 11;
-          cols.forEach(i => {
-            const pth = el('path', { d: `M${tx} ${rowY(i) - 6} L${tx} ${my}`, class: 'arc mw', style: 'opacity:0' }, gArcs);
-            tl.to(pth, { opacity: i === focus ? 0.8 : 0.3, duration: d * 0.15 }, t + d * 0.2); tl.to(pth, { opacity: 0, duration: d * 0.3 }, t + d * 0.55);
-          });
-          tl.to(m, { attr: { 'fill-opacity': 0.8 }, duration: d * 0.15 }, t + d * 0.2); tl.to(m, { attr: { 'fill-opacity': 0.25 }, duration: d * 0.3 }, t + d * 0.55);
-        }
-        // the + where each change is added onto the focus ball (after talk, after think)
-        [[tx, d * 0.42], [hx, d * 0.84]].forEach(([px, at]) => { const pl = el('text', { x: px + 4, y: rowY(focus) - 7, class: 'plus', style: 'opacity:0' }, gArcs, '+'); tl.to(pl, { opacity: 1, duration: d * 0.06 }, t + at); tl.to(pl, { opacity: 0, duration: d * 0.2 }, t + at + d * 0.12); });
-        // think: move on, and a burst shows how much the feed-forward block added
         cols.forEach(i => {
-          tl.to(ball[i], { attr: { cx: hx }, duration: d * 0.42, ease: 'power1.inOut' }, t + d * 0.5);
+          const w = listen(i, l), mx = Math.max(1e-9, ...w.slice(0, i)), strong = i === focus ? 1 : 0.3;
+          for (let j = 0; j < i; j++) {
+            const r = w[j] / mx; if (r < 0.06) continue;
+            const pth = el('path', { d: arcPath(ty2, i, j), class: 'arc', style: 'opacity:0' }, gArcs);
+            tl.to(pth, { opacity: strong * (0.1 + 0.9 * r), duration: d * 0.15 }, t + d * 0.2);
+            tl.to(pth, { opacity: 0, duration: d * 0.3 }, t + d * 0.6);
+          }
+        });
+        for (let j = 0; j < focus; j++) if (!cols.includes(j)) { tl.to(ticks[j][l], { attr: { height: 4.4, y: ty2 - 2.2 }, duration: d * 0.12 }, t + d * 0.2); tl.to(ticks[j][l], { attr: { height: 2.4, y: ty2 - 1.2 }, duration: d * 0.3 }, t + d * 0.45); }
+        // the + where each change is added onto the focus ball (after talk, after think)
+        [[ty2, d * 0.42], [hy, d * 0.84]].forEach(([py, at]) => { const pl = el('text', { x: X(focus) + 7, y: py + 4, class: 'plus', style: 'opacity:0' }, gArcs, '+'); tl.to(pl, { opacity: 1, duration: d * 0.06 }, t + at); tl.to(pl, { opacity: 0, duration: d * 0.2 }, t + at + d * 0.12); });
+        // think: fall on, and a burst shows how much the feed-forward block added
+        cols.forEach(i => {
+          tl.to(ball[i], { attr: { cy: hy }, duration: d * 0.42, ease: 'power1.inOut' }, t + d * 0.5);
           const a = added(i, l, 1);
-          tl.to(burst[i], { attr: { cx: hx, r: 2 }, opacity: 0.75, duration: d * 0.05 }, t + d * 0.78);
+          tl.to(burst[i], { attr: { cy: hy, r: 2 }, opacity: 0.75, duration: d * 0.05 }, t + d * 0.78);
           tl.to(burst[i], { attr: { r: 4 + a * 9 }, opacity: 0, duration: d * 0.45, ease: 'power1.out' }, t + d * 0.83);
         });
         STEPLOG.push([t + d * 0.7, l, 1, p]);
         t += d;
-        if (real) LENS.push([t, p, l]);
+        LENS.push([t, p, l]);
       }
       return t;
     }
     function score(k, src, t) {
-      // unembed: one more norm, then the ball leaves through the gate and is compared with every row of the output table
+      // unembed: one more norm, then the ball drops through the exit and is compared with every row of the output table
       mark(5, t); STEPLOG.push([t, -4, 0, k]);
       PASSES[PASSES.length - 1].t1 = t + 0.45;
-      const st = steps[k], g = el('g', {}, gScore), gx = G.GX;
-      tl.to(ball[src], { attr: { cx: gx }, duration: 0.45, ease: 'power1.in' }, t);
+      const st = steps[k], g = el('g', {}, gScore), gy = G.gateY + 15;
+      tl.to(ball[src], { attr: { cy: gy }, duration: 0.45, ease: 'power1.in' }, t);
       tl.to(G.gateFlash, { opacity: 0.35, duration: 0.12 }, t + 0.42); tl.to(G.gateFlash, { opacity: 0, duration: 0.45 }, t + 0.6);
       tl.to(ball[src], { opacity: 0, attr: { r: 2 }, duration: 0.2 }, t + 0.45);
       t += 1.0;
@@ -923,50 +906,50 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
       const rr = rng(hash(all.join(' ') + k)), hops = [Math.floor(rr() * 5), Math.floor(rr() * 5), Math.floor(rr() * 5), st.pick];
       CHOOSE.push({ tc: t, t0: t + 0.85, k, hops, t1: t + 0.85 + 0.15 + hops.length * 0.26 });
       t += 0.85 + 0.15 + hops.length * 0.26 + 0.45;
-      // detokenize: the winning ID turns back into its text and becomes a new lane
+      // detokenize: the winning ID turns back into its text and rises to become a new lane
       mark(7, t); STEPLOG.push([t, -6, 0, k]);
-      const row = nP + k, wy = rowY(src);
-      const idTxt = el('text', { x: gx - 8, y: wy - 12, 'text-anchor': 'end', class: 'tiny', style: 'opacity:0' }, g, `ID ${D.ids[row]} → “${st.c[st.pick].w}”`);
+      const row = nP + k, fx0 = Math.min(G.x1 - 60, X(src));
+      const idTxt = el('text', { x: fx0, y: G.gateY - 6, 'text-anchor': 'middle', class: 'tiny', style: 'opacity:0' }, g, `ID ${D.ids[row]} → “${st.c[st.pick].w}”`);
       tl.to(idTxt, { opacity: 1, duration: 0.15 }, t);
-      const fly = el('text', { x: gx - 8, y: wy + 4, 'text-anchor': 'end', class: 'fly', style: 'opacity:0' }, g, short(st.c[st.pick].w));
+      const fly = el('text', { x: X(src), y: G.gateY + 20, 'text-anchor': 'middle', class: 'fly', style: 'opacity:0' }, g, short(st.c[st.pick].w));
       tl.to(fly, { opacity: 1, duration: 0.1 }, t + 0.1);
-      tl.to(fly, { attr: { x: TOKX + 50, y: rowY(row) + 4 }, duration: 0.9, ease: 'power2.inOut' }, t + 0.35);
-      tl.to([fly, idTxt], { opacity: 0, duration: 0.15 }, t + 1.25);
-      tl.to(rows[row].g, { opacity: 1, duration: 0.25 }, t + 1.15);
-      tl.to(outW[k], { attr: { 'fill-opacity': 1 }, duration: 0.2 }, t + 1.2);
-      t += 1.4;
+      tl.to(fly, { attr: { x: X(row), y: G.tokY + 4 }, duration: 1.0, ease: 'power2.inOut' }, t + 0.35);
+      tl.to([fly, idTxt], { opacity: 0, duration: 0.15 }, t + 1.35);
+      tl.to(rows[row].g, { opacity: 1, duration: 0.25 }, t + 1.25);
+      tl.to(outW[k], { attr: { 'fill-opacity': 1 }, duration: 0.2 }, t + 1.3);
+      t += 1.5;
       // stream back: the new piece goes to the reply on your device straight away
       mark(8, t); STEPLOG.push([t, -9, 0, k]);
       const rp = repPieces[k], rx = +rp.getAttribute('x'), ry = +rp.getAttribute('y') - 4;
       const pk = el('g', { style: 'opacity:0' }, g);
       el('rect', { x: -9, y: -6, width: 18, height: 12, rx: 3, class: 'pkt' }, pk); el('path', { d: 'M-9 -6 L0 1 L9 -6', class: 'pktl' }, pk);
       tl.to(pk, { opacity: 1, duration: 0.1 }, t);
-      tl.fromTo(pk, { attr: { transform: `translate(${TOKX + 30} ${rowY(row)})` } }, { attr: { transform: `translate(${rx + 8} ${ry})` }, duration: real ? 0.5 : 0.9, ease: 'power1.inOut', immediateRender: false }, t);
-      tl.to(pk, { opacity: 0, duration: 0.12 }, t + (real ? 0.5 : 0.9));
-      if (k === 0) tl.to(repBub, { opacity: 1, duration: 0.2 }, t + (real ? 0.4 : 0.8));
-      tl.to(rp, { opacity: 1, duration: 0.15 }, t + (real ? 0.5 : 0.9));
-      t += real ? 0.65 : 1.05;
+      tl.fromTo(pk, { attr: { transform: `translate(${X(row)} ${G.tokY})` } }, { attr: { transform: `translate(${rx + 8} ${ry})` }, duration: 0.5, ease: 'power1.inOut', immediateRender: false }, t);
+      tl.to(pk, { opacity: 0, duration: 0.12 }, t + 0.5);
+      if (k === 0) tl.to(repBub, { opacity: 1, duration: 0.2 }, t + 0.4);
+      tl.to(rp, { opacity: 1, duration: 0.15 }, t + 0.5);
+      t += 0.65;
       info({ gen: k + 1 }, t - 0.2);
       tl.to(g, { opacity: 0, duration: 0.3 }, t);
       return t + 0.35;
     }
 
     let t = 0;
-    // type: the message appears on the device, line by line
+    // type: the message appears on the device, line by line (the system prompt was set by the app beforehand)
     mark(0, t); info({ kv: 0, read: 0, gen: 0 }, t);
     tl.to(gSys, { opacity: 1, duration: 0.2 }, t);
     tl.to(youBub, { opacity: 1, duration: 0.2 }, t);
     youTxt.forEach((el2, i) => tl.to(el2, { opacity: 1, duration: 0.2 }, t + 0.15 + i * 0.18));
     t += 0.4 + youTxt.length * 0.18;
-    // send: the message travels to the machine (real mode: it stays on this computer)
+    // send: here it stays on this computer, and drops straight into the model
     mark(1, t); STEPLOG.push([t, -8, 0, 0]);
     tl.to(packet, { opacity: 1, duration: 0.1 }, t);
-    tl.fromTo(packet, { attr: { transform: `translate(${DEVW - 14} ${G.wireY})` } }, { attr: { transform: `translate(${tx0 - 6} ${G.wireY})` }, duration: real ? 0.6 : 1.1, ease: 'power1.inOut', immediateRender: false }, t);
-    tl.to(packet, { opacity: 0, duration: 0.15 }, t + (real ? 0.6 : 1.1));
-    t += real ? 0.7 : 1.2;
-    tl.to(segEls.map(s => s.el), { opacity: 1, duration: 0.3 }, t);
+    tl.fromTo(packet, { attr: { transform: `translate(${G.wireX} ${G.wireTop + 4})` } }, { attr: { transform: `translate(${G.wireX} ${G.promptY - 14})` }, duration: 0.6, ease: 'power1.inOut', immediateRender: false }, t);
+    tl.to(packet, { opacity: 0, duration: 0.15 }, t + 0.6);
+    t += 0.7;
+    tl.to(segEls.map(s2 => s2.el), { opacity: 1, duration: 0.3 }, t);
     t += 0.6;
-    // tokenize: cut the text, then each piece is looked up (its ID appears) and becomes a lane
+    // tokenize: cut the text, then each piece drops into its lane and its ID is looked up
     mark(2, t);
     cuts.forEach((c, k) => tl.to(c, { opacity: 1, duration: 0.15 }, t + k * 0.07));
     t += cuts.length * 0.07 + 0.3;
@@ -974,7 +957,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
       const tt = t + i * 0.16;
       tl.to(sg.hl, { opacity: 1, duration: 0.12 }, tt);
       tl.to(sg.ghost, { opacity: 1, duration: 0.1 }, tt + 0.1);
-      tl.to(sg.el, { attr: { x: TOKX + 6, y: rowY(i) + 4 }, duration: 0.55, ease: 'power2.inOut' }, tt + 0.12);
+      tl.to(sg.el, { attr: { x: X(i) - sg.w / 2, y: G.tokY + 4 }, duration: 0.55, ease: 'power2.inOut' }, tt + 0.12);
       tl.to(sg.el, { opacity: 0, duration: 0.15 }, tt + 0.62);
       tl.to(sg.hl, { opacity: 0, duration: 0.2 }, tt + 0.3);
       tl.to(rows[i].g, { opacity: 1, duration: 0.2 }, tt + 0.6);
@@ -983,16 +966,13 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
     mark(3, t);
     for (let i = 0; i < nP; i++) embed(i, t + i * 0.05);
     t += nP * 0.05 + 0.9;
-    // The prompt pass reads each weight once for all prompt tokens together. In the MoE model only the experts
-    // those tokens were routed to are read: roughly 1 - (1 - 8/256)^tokens of the expert weights (rough).
-    const prefill = real ? 0 : moe ? M.active + (M.weights - M.active) * (1 - Math.pow(1 - 8 / 256, nP)) : M.weights;
-    mark(4, t); info({ kv: real ? D.nTok : nP, read: prefill }, t);
+    mark(4, t); info({ kv: D.nTok, read: 0 }, t);
     t = pass(0, [...Array(nP).keys()], nP - 1, t, 1);
     for (let i = 0; i < nP - 1; i++) tl.to(ball[i], { opacity: 0, duration: 0.3 }, t);
     t = score(0, nP - 1, t);
     for (let k = 1; k < NG; k++) {
       const c = nP + k - 1;
-      mark(9, t); info({ kv: real ? D.nTok + k : c + 1, read: real ? 0 : prefill + k * M.active }, t);
+      mark(9, t); info({ kv: D.nTok + k, read: 0 }, t);
       embed(c, t); t += 0.55;
       t = pass(k, [c], c, t, 0.5);
       t = score(k, c, t);
@@ -1006,6 +986,13 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
     window.__timelines.plinko = tl;
     renderModel();
   }
+  // a new width redraws the board at the same moment
+  let lastW = 0;
+  new ResizeObserver(() => {
+    const w = Math.round($('.boardscroll').clientWidth); if (!S.data || !tl || Math.abs(w - lastW) < 24) return; lastW = w;
+    const at = tl.time(), playing = tl.isActive(); build(); tl.time(at); if (playing) tl.play(); sync();
+  }).observe($('.boardscroll'));
+
 
   // ---- panels ----
   function setStage(st) {
@@ -1153,10 +1140,11 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
     showInspect(inspect(0, l, PASSES[p] ? PASSES[p].focus : null, which), true);
   }
   function drawHl(h) {
-    if (h.si === -2 || h.si === -3) { const x = h.si === -3 ? TOKX - 2 : TOKX + TOKW + EMBW / 2 - 27; el('rect', { x, y: rowY(h.row) - 12, width: h.si === -3 ? TOKW - 1 : 54, height: 24, rx: 5, class: 'hl' }, $('#sel')); return; }
+    const x = G.laneX(h.row) - G.LW / 2;
+    if (h.si === -3) { el('rect', { x, y: G.tokY - G.chipH / 2 - 2, width: G.LW, height: G.chipH + 4, rx: 5, class: 'hl' }, $('#sel')); return; }
+    if (h.si === -2) { el('rect', { x, y: G.embY - 9, width: G.LW, height: 18, rx: 4, class: 'hl' }, $('#sel')); return; }
     if (h.si < 0) return;
-    const x = h.which ? G.lx(h.l) + G.LW / 2 : G.lx(h.l);
-    el('rect', { x, y: rowY(h.row) - 10, width: G.LW / 2, height: 20, rx: 2, class: 'hl' }, $('#sel'));
+    el('rect', { x, y: G.Y0 + h.l * G.LH + (h.which ? G.LH * 0.53 : 1), width: G.LW, height: G.LH * 0.47, rx: 2, class: 'hl' }, $('#sel'));
   }
 
   // the label on the ball, the cloud's layer ribbon and its line of top guesses (real mode)
@@ -1169,12 +1157,13 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
     if (S.guessEl) {
       if (live) {
         const b = S.balls[pass.focus], x = +b.getAttribute('cx'), y = +b.getAttribute('cy'), top = D.recs[cur[1]].layers[cur[2]].lens[0];
-        S.guessEl.setAttribute('x', x); S.guessEl.setAttribute('y', y - 11); S.guessEl.setAttribute('text-anchor', 'middle');
+        const left = x > VBW - 120; // near the right edge, put the label and strip on the left of the ball
+        S.guessEl.setAttribute('x', left ? x - 9 : x + 9); S.guessEl.setAttribute('y', y - 2); S.guessEl.setAttribute('text-anchor', left ? 'end' : 'start');
         S.guessEl.textContent = S.llm.tok.piece(top.id) + ' ' + fmtPct(top.p);
         S.guessEl.style.opacity = 1;
         // the ball's first 16 numbers after this layer (real), under the ball
         const rec = D.recs[cur[1]], f = rec.layers[cur[2]].first, sc = rec.sc16 || (rec.sc16 = Math.max(1e-6, ...rec.layers.flatMap(q => q.first.map(Math.abs)))), bg = hexRgb(css('--st-bg'));
-        S.strip.setAttribute('transform', `translate(${x - 20.8} ${y + 8})`); S.strip.style.opacity = 1;
+        S.strip.setAttribute('transform', `translate(${left ? x - 50 : x + 9} ${y + 3})`); S.strip.style.opacity = 1;
         S.stripCells.forEach((c, k) => c.setAttribute('fill', rgbStr(cellCol(f[k], sc, bg))));
       } else { S.guessEl.style.opacity = 0; S.strip.style.opacity = 0; }
     }
@@ -1234,24 +1223,24 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
     if ($('#bTitle').textContent !== $('#capTitle').textContent) $('#bTitle').textContent = $('#capTitle').textContent;
     if ($('#bText').textContent !== $('#capText').textContent) $('#bText').textContent = $('#capText').textContent;
   }
-  // a layer's knob bank as a picture: its real weights, the talk grids stacked on the left half and the think grids on the
-  // right half; each pixel is one real weight (warm positive, blue negative), sampled evenly. Cached per model and layer.
+  // a layer's knob bank as a picture: its real weights, the talk grids (q, k, v, o) on the top half and the think grids
+  // (gate, up, down) on the bottom half; each pixel is one real weight (warm positive, blue negative), sampled evenly.
   function knobBank(l) {
     const key = S.llm.meta.key + ':' + l; S.banks = S.banks || {}; if (S.banks[key]) return S.banks[key];
-    const P = S.llm.mats.layers[l], W = 24, H = 360, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+    const P = S.llm.mats.layers[l], W = 480, H = 24, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
     const c = cv.getContext('2d'), img = c.createImageData(W, H), bg = hexRgb(css('--st-bg'));
-    const half = (mats, x0) => {
+    const half = (mats, y0) => { // each knob row of the grids becomes a column of pixels, left to right
       const rows = mats.map(([m, r]) => r), tot = rows.reduce((a, b) => a + b, 0);
       mats.forEach(([m]) => { m.sc = m.sc || p98v(m.subarray(0, 65536)); });
-      for (let y = 0; y < H; y++) {
-        let r = Math.floor(y / H * tot), k = 0; while (r >= rows[k]) r -= rows[k++];
+      for (let x = 0; x < W; x++) {
+        let r = Math.floor(x / W * tot), k = 0; while (r >= rows[k]) r -= rows[k++];
         const [m, , cols] = mats[k];
-        for (let x = 0; x < W / 2; x++) { const col = cellCol(m[r * cols + Math.floor(x / (W / 2) * cols)], m.sc, bg), o = (y * W + x0 + x) * 4; img.data[o] = col[0]; img.data[o + 1] = col[1]; img.data[o + 2] = col[2]; img.data[o + 3] = 255; }
+        for (let y = 0; y < H / 2; y++) { const col = cellCol(m[r * cols + Math.floor(y / (H / 2) * cols)], m.sc, bg), o = ((y0 + y) * W + x) * 4; img.data[o] = col[0]; img.data[o + 1] = col[1]; img.data[o + 2] = col[2]; img.data[o + 3] = 255; }
       }
     };
     const D = S.llm.D, KV = S.llm.KVH * S.llm.HD, F = S.llm.F;
     half([[P.q, D, D], [P.k, KV, D], [P.v, KV, D], [P.o, D, D]], 0);
-    half([[P.gate, F, D], [P.up, F, D], [P.down, D, F]], W / 2);
+    half([[P.gate, F, D], [P.up, F, D], [P.down, D, F]], H / 2);
     c.putImageData(img, 0, 0);
     return (S.banks[key] = cv.toDataURL());
   }
@@ -1625,7 +1614,7 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
     }
     pts() { if (!isReal() && CKEY !== 'smollm2-instruct') setCloud('smollm2-instruct'); return realCloud() ? ALL_PTS : TOY_PTS; }
     dims() {
-      const W = this.cv.clientWidth || 300, H = Math.round(W * this.ratio), dpr = Math.min(2, devicePixelRatio || 1);
+      const W = this.cv.clientWidth || 300, H = Math.round(Math.min(W * this.ratio, this.maxH ? this.maxH() : Infinity)), dpr = Math.min(2, devicePixelRatio || 1);
       if (this.cv.width !== Math.round(W * dpr) || this.cv.height !== Math.round(H * dpr)) { this.cv.width = Math.round(W * dpr); this.cv.height = Math.round(H * dpr); this.cv.style.height = H + 'px'; }
       return { W, H, dpr };
     }
@@ -1826,8 +1815,10 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
     cb.title = 'Map: each region has its own colour (the balls on the board use the same colours). Kind: whole words, word pieces, numbers, punctuation, code, other scripts.';
     return q;
   }
-  // the cloud on the stage, the board's destination
+  // the cloud on the stage, the board's destination (on phones it sits on top, sticky, so it stays in view while the layers run)
   const cardView = new CloudView($('#cloudCv'), $('#cInfo'), 1);
+  cardView.maxH = () => (matchMedia('(max-width: 700px)').matches && !$('#cloudCard').classList.contains('open') ? Math.round(innerHeight * 0.3) : Infinity);
+  $('#cTools').addEventListener('click', () => { const open = $('#cloudCard').classList.toggle('open'); $('#cTools').setAttribute('aria-expanded', open); $('#cTools').textContent = open ? 'Close tools' : 'Tools'; cardView.render(); });
   if (matchMedia('(min-width: 700px)').matches && !reduced) cardView.tilt = 0.92;
   cloudControls($('#cBar'), cardView);
   cardView.describe();
@@ -2246,19 +2237,19 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
       setPlayLabel();
     }
   }
-  // ---- phones: the board scrolls itself to keep the action in view (until you scroll it yourself) ----
-  const narrow = matchMedia('(max-width: 900px)');
-  S.followOff = 0;
-  ['pointerdown', 'wheel', 'touchstart'].forEach(ev => $('.boardscroll').addEventListener(ev, () => { S.followOff = Date.now() + 6000; }, { passive: true }));
+  // ---- the page follows the falling ball while it plays (until you scroll it yourself) ----
+  const narrow = matchMedia('(max-width: 700px)');
+  S.followOff = 0; S.followCool = 0;
+  ['wheel', 'touchstart', 'keydown'].forEach(ev => addEventListener(ev, () => { S.followOff = Date.now() + 6000; }, { passive: true }));
   function follow(time, st) {
-    if (!narrow.matches || Date.now() < S.followOff || !G) return;
-    let x = DEVW / 2;
-    if (st >= 2 && st <= 3) x = TOKX + TOKW;
-    else if (st === 4 || st === 9) { let cur = null; for (const e of STEPLOG) if (e[0] <= time) cur = e; x = cur && cur[1] >= 0 ? G.lx(cur[1]) : G.x0; }
-    else if (st >= 5 && st <= 7) x = G.scx;
-    else if (st === 8 || st === 10) x = DEVW;
-    const sc = $('.boardscroll'), k = $('#board').clientWidth / VBW;
-    sc.scrollLeft = Math.max(0, x * k - sc.clientWidth / 2);
+    if (!G || G.Y0 == null || (!tl.isActive() && !S.tour) || Date.now() < S.followOff || Date.now() < S.followCool) return;
+    let y = G.devTop + 20;
+    if (st >= 2 && st <= 3) y = G.tokY;
+    else if (st === 4 || st === 9) { let cur = null; for (const e of STEPLOG) if (e[0] <= time) cur = e; y = cur && cur[1] >= 0 ? G.Y0 + (cur[1] + 0.5) * G.LH : G.Y0; }
+    else if (st >= 5 && st <= 7) y = G.gateY;
+    const r = $('#board').getBoundingClientRect(), sy = r.top + y * (r.height / G.vbH);
+    const topLim = narrow.matches ? $('#cloudCard').getBoundingClientRect().bottom + 24 : 70, botLim = innerHeight - (narrow.matches ? $('#nbar').offsetHeight + 30 : 110);
+    if (sy < topLim || sy > botLim) { S.followCool = Date.now() + 600; scrollBy({ top: sy - (topLim + (botLim - topLim) * 0.4), behavior: reduced ? 'auto' : 'smooth' }); }
   }
 
   // ---- training, for real but tiny: a model with one grid of knobs learns which letter follows which ----
@@ -2480,9 +2471,9 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
     if (e.target.id !== 'layerHit') return null;
     const svg = $('#board'), pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY;
     const p = pt.matrixTransform(svg.getScreenCTM().inverse());
-    const l = Math.max(0, Math.min(G.L - 1, Math.floor((p.x - G.x0) / G.LW))), row = Math.round((p.y - ROW0) / RH);
+    const l = Math.max(0, Math.min(G.L - 1, Math.floor((p.y - G.Y0) / G.LH))), row = Math.floor((p.x - G.x0) / G.LW);
     if (row < 0 || row >= S.data.nP + 5) return null; // the last new token is never fed back through the layers
-    return { si: 0, l, row, which: p.x - G.lx(l) > G.LW / 2 ? 1 : 0 };
+    return { si: 0, l, row, which: p.y - G.Y0 - l * G.LH > G.LH * 0.53 ? 1 : 0 };
   }
   const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
   $('#board').addEventListener('pointermove', e => { if (S.pinned) return; const h = pick(e); if (!same(h, S.hover)) { S.hover = h; sync(); } });
