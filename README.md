@@ -4,7 +4,7 @@
 
 Type a prompt and press Enter. Your text gets cut into tokens, each token becomes a ball, the balls fall through the model's layers, and the last one lands as a score for every possible next word. A dice roll picks one, it joins the text, and the whole thing runs again. That loop is all an LLM does, whether it is a small model on a laptop or the largest one in a datacenter.
 
-**Try it: [the board](https://t3chnicallyinclined.github.io/llm-plinko/) · [the 3D tower](https://t3chnicallyinclined.github.io/llm-plinko/3d.html)** · **Watch: [68-second video](media/llm-plinko.mp4)**
+**Try it: [the board](https://t3chnicallyinclined.github.io/llm-plinko/) · [the 3D tower](https://t3chnicallyinclined.github.io/llm-plinko/3d.html)**
 
 No install, no build step, no account. Plain HTML and JavaScript you can read.
 
@@ -15,16 +15,14 @@ No install, no build step, no account. Plain HTML and JavaScript you can read.
 
 ## What you are looking at
 
-Read the board left to right. Each **row is a token** and each **column is a step** the model does, in order. Squares light up as they are processed; point at any square (or tap it) and the inspector says what that step does. The page walks through six stages; scrub the timeline or slow it to 0.5× to watch any of them.
+Read the board left to right. Each token gets a **lane**, and the lanes run through **every layer** of the model (64 for Qwen3.6-27B, 40 for the MoE, 30 for SmolLM2). In each layer a token does two things:
 
-1. **Tokenize.** Text is cut into word pieces called tokens, one per row. Each gets an ID number from a vocabulary.
-2. **Embed.** Each token becomes a list of a few thousand numbers, a kind of meaning fingerprint (the ball). Eight of them are drawn as bars.
-3. **Read the prompt.** All rows move through the layers at the same time. Two layers are drawn step by step:
-   - **norm → Q K V → attention → + add**: the token makes a query, a key and a value. In a full-attention layer it compares its query with every earlier token's key (pink lines), turns the scores into weights (softmax) and blends their values (teal lines). This is the only step where tokens share information. Each token's key and value stay in the **KV cache** (teal outline). The result is added onto the ball (the residual stream).
-   - **norm → feed-forward → + add**: thousands of neurons each take a dot product with the ball; a few fire strongly. Click any feed-forward square to see one neuron worked out.
-4. **Score.** The last row comes out as a score for every possible next token.
-5. **Roll.** A weighted dice roll picks one. **Temperature** sets how loaded the dice are: at 0 the top score always wins. The winner becomes a new row.
-6. **Repeat.** Only the new row moves. It reads the keys and values earlier rows left in the cache instead of redoing them. One full pass per new token.
+- **Talk (attention):** it compares itself with the earlier tokens and blends in information from the ones that match. This is the only place tokens share information. Pink lines show who it listens to, and its ball takes on their colours. Its key and value stay behind in that layer's **KV cache** (a teal tick). In linear-attention layers it reads and updates one fixed memory instead.
+- **Think (feed-forward):** it works alone. Thousands of neurons check the ball for patterns and a few fire strongly; the burst shows how much was added.
+
+Both add onto the ball rather than replacing it. Point at any lane in any layer and the inspector lists the exact steps inside that station (norm, query/key/value, scores, softmax, mix, add; or norm, gate and up, SiLU, down, add), with the real numbers in real model mode.
+
+The page walks through six stages: **tokenize**, **embed** (each token's ID picks a row of a big learned table), **read the prompt** (all lanes move through the layers together), **score**, **roll** (a weighted dice roll, loaded by the temperature, picks the next token, which becomes a new lane) and **repeat** (only the new lane moves, reading what earlier lanes left in the cache).
 
 ### Two kinds of attention
 
@@ -76,16 +74,6 @@ Almost every LLM is a **transformer**, and it uses the same few operations over 
 - **Real:** the structure. Tokens, embeddings, a stack of layers with attention and feed-forward, the KV cache, scores, temperature, sampling, one pass per token, and the memory arithmetic.
 - **Not real (Qwen3.6 views):** the next-word scores. They come from a tiny word table built into the page, not a neural network, so the page runs anywhere with no download. The token splits and ID numbers are made up too. Memory and speed figures are rough.
 - **All real (Real model mode):** a smaller model, but every number is its actual output.
-
-## Render it as a video
-
-The page follows the [HyperFrames](https://github.com/heygen-com/hyperframes) composition format: the root element carries `data-composition-id`, and the animation is a paused GSAP timeline registered on `window.__timelines.plinko`. With Node 22+ and FFmpeg installed:
-
-```
-npx hyperframes render . -o llm-plinko.mp4 --quality delivery
-```
-
-That renders the default prompt at 1920×1080, which is how [media/llm-plinko.mp4](media/llm-plinko.mp4) was made. The renderer reads the length from `data-duration` on `#stage`; if you change the default prompt or the timing, update it to the new timeline length (run `window.__timelines.plinko.duration()` in the browser console to get it).
 
 ## Roadmap
 

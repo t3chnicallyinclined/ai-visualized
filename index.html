@@ -118,6 +118,13 @@ dt { color: var(--muted); } dd { margin: 0; text-align: right; font-family: var(
 .out { font: 500 13px var(--mono); } .outp { fill: var(--muted); } .outg { fill: var(--accent); }
 .guess { font: 600 11px var(--mono); fill: var(--accent); paint-order: stroke; stroke: var(--band); stroke-width: 4px; stroke-linejoin: round; }
 .hl { fill: none; stroke: var(--ink); stroke-width: 1.5; pointer-events: none; }
+.lcol { fill: var(--band); } .lcol.full { fill: var(--accent); fill-opacity: 0.07; } .lcol.lin { fill: var(--lin); fill-opacity: 0.05; }
+.lstripe.full { fill: var(--accent); } .lstripe.lin { fill: var(--lin); fill-opacity: 0.6; }
+.lane { stroke: var(--line); stroke-width: 1; stroke-dasharray: 2 3; }
+.kvt { fill: var(--kv); } .burst { fill: none; stroke: var(--wt); stroke-width: 2; }
+.leg.att { fill: var(--accent); } .leg.lin { fill: var(--lin); } .leg.kvt { fill: var(--kv); } .leg.ff { fill: none; stroke: var(--wt); stroke-width: 1.6; }
+.burst, .lane, .lcol, .lstripe { pointer-events: none; }
+#dyn * { pointer-events: none; } #dyn .cell { pointer-events: auto; }
 .ball, .arc, .guess, .kvm, .bar, .win, .die, .fly { pointer-events: none; }
 /* Zoom dialog */
 dialog#zoom { width: min(600px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); box-sizing: border-box; overflow: auto;
@@ -154,7 +161,7 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
 <div id="stage" data-composition-id="plinko" data-start="0" data-duration="67.9" data-width="1920" data-height="1080">
   <header>
     <h1>LLM Plinko</h1>
-    <p>Type a prompt and press Enter. Read the board left to right: each row is a token, each column a step the model does in order. Point at any square to see what it does. <a href="3d.html">See it as a 3D tower</a>.</p>
+    <p>Type a prompt and press Enter. Read the board left to right: each token gets a lane through every layer, and in each layer it first talks to earlier tokens, then thinks alone. Point at any lane in any layer to see what happens there. <a href="3d.html">See it as a 3D tower</a>.</p>
   </header>
 
   <form id="promptForm" autocomplete="off">
@@ -386,89 +393,60 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
       dims: { d: 2048, ff: '512 neurons per expert', heads: '16 query heads share 2 key/value heads', hd: 256, linHeads: '16 key heads and 32 value heads' } },
     real: { label: 'SmolLM2-135M', layers: 30, dims: { d: 576, ff: '1,536 neurons', heads: '9 query heads share 3 key/value heads', hd: 64 } },
   };
-  const STEPS = {
-    norm: { lab: 'norm', cls: '', what: d => `Rescales the ball's ${d.d.toLocaleString('en-US')} numbers to a steady size (RMS norm) and multiplies each by a learned weight, so the next weights see a predictable input.` },
-    qkv: { lab: 'Q K V', cls: 'att', what: (d, kind) => kind === 'linear'
-      ? `Weight matrices turn the ball into a query, a key and a value (${d.linHeads}), plus gates that set how much old memory fades and how strongly this token writes.`
-      : `Three weight matrices turn the ball into a query (what this token is looking for), a key (what it offers) and a value (what it passes on); ${d.heads}. The key and value are kept in this layer's KV cache (teal outline) so later tokens can read them.` },
-    scores: { lab: 'scores', cls: 'att', what: d => `The query is compared with the key of every earlier token and itself: a dot product, divided by √${d.hd}. The pink lines show which earlier tokens each token looks at; brighter means a stronger match.` },
-    softmax: { lab: 'softmax', cls: 'att', what: () => 'Each token\'s scores become weights that add up to 100% (softmax). Tokens never look at anything later than themselves.' },
-    mix: { lab: 'mix', cls: 'att', what: () => 'The values of the earlier tokens are blended using those weights (teal lines). This is the only step where information moves between tokens.' },
-    ogate: { lab: 'out gate', cls: 'att', what: () => 'Qwen3.6 multiplies the attention result by a learned gate between 0 and 1 before adding it back.' },
-    add: { lab: '+ add', cls: '', what: () => 'The attention result is added onto the ball instead of replacing it (the residual stream), so what the ball already knew is kept.' },
-    write: { lab: 'write mem', cls: 'lin', what: () => 'Each token updates one fixed-size memory: old contents fade a little and the token writes its key and value in. The memory never grows, however long the text gets.' },
-    read: { lab: 'read mem', cls: 'lin', what: () => 'The token\'s query reads from that memory. Much cheaper than full attention, but the memory is a summary, so it recalls less exactly.' },
-    norm2: { lab: 'norm', cls: '', what: () => 'Rescaled again, this time before the feed-forward block.' },
-    gateup: { lab: 'gate · up', cls: 'ff', what: d => `The feed-forward block: ${d.ff} each take a dot product with the ball, twice, giving a "gate" and an "up" value. Click to see one neuron worked out.` },
-    silu: { lab: 'SiLU ×', cls: 'ff', what: () => 'Each neuron\'s gate goes through SiLU (negatives squeezed toward 0) and is multiplied by its up value. Most neurons stay near 0; a few fire strongly.' },
-    down: { lab: 'down', cls: 'ff', what: d => `One more weight matrix turns the neuron outputs back into ${d.d.toLocaleString('en-US')} numbers.` },
-    router: { lab: 'router', cls: 'ff', what: () => 'A small router scores all 256 experts for this token and picks the top 8.' },
-    experts: { lab: 'experts', cls: 'ff', what: () => 'The 8 picked experts and 1 shared expert each run a small feed-forward block (512 neurons); their outputs are blended using the router\'s weights.' },
-    add2: { lab: '+ add', cls: '', what: d => `Added onto the ball again. The ball leaves the layer with ${d.d.toLocaleString('en-US')} updated numbers.` },
-  };
-  function layerSteps(kind, moe, qwen) {
-    const ff = moe ? ['norm2', 'router', 'experts', 'add2'] : ['norm2', 'gateup', 'silu', 'down', 'add2'];
-    if (kind === 'linear') return ['norm', 'qkv', 'write', 'read', 'ogate', 'add', ...ff];
-    return ['norm', 'qkv', 'scores', 'softmax', 'mix', ...(qwen ? ['ogate'] : []), 'add', ...ff];
-  }
   const STAGES = [
-    ['Tokenize', 'Your text is cut into word pieces called tokens, one per row. Each gets an ID number from a vocabulary of about 250,000.'],
+    ['Tokenize', 'Your text is cut into word pieces called tokens, one lane each. Each gets an ID number from a vocabulary of about 250,000.'],
     ['Embed', 'Each token ID picks one row of a huge learned table (the embedding table, top left). That row is a list of a few thousand numbers: the ball. The numbers mean nothing one by one, but tokens used in similar ways get similar rows. The strip shows the first 12 (teal positive, pink negative); in toy mode they are made up.'],
-    ['Read the prompt', 'All rows move through the layers at the same time, step by step, left to right. Layer 1 uses linear attention (one fixed memory); every 4th layer, like layer 4, uses full attention (lines to every earlier token, keys and values kept in the KV cache). Point at any square to see what it does.'],
+    ['Read the prompt', 'All the lanes move through every layer at the same time. In each layer a token first talks (attention: pink lines to earlier tokens in the full-attention layers, every 4th; the other layers use one fixed memory) and its ball takes on the colours of the tokens it listens to. Then it thinks alone (feed-forward: the burst). Point at any lane in any layer to see the exact steps inside.'],
     ['Score', 'The last row\'s ball comes out as a score for every token in the vocabulary. The dice only choose among the top five, as many apps do.'],
-    ['Roll', 'A weighted dice roll picks one. Temperature sets how loaded the dice are. The winner becomes a new row.'],
-    ['Repeat', 'Only the new row moves now. In full-attention layers it reads the keys and values earlier rows left in the cache (teal) instead of redoing them; linear layers read their memory. But every active weight is read from memory again: one full pass per token.'],
+    ['Roll', 'A weighted dice roll picks one. Temperature sets how loaded the dice are. The winner becomes a new lane.'],
+    ['Repeat', 'Only the new lane moves now. In full-attention layers it reads the keys and values earlier lanes left behind (teal ticks) instead of redoing them; linear layers read their memory. But every active weight is read from memory again: one full pass per token.'],
   ];
   const STAGES_REAL = [
-    ['Tokenize', 'The model\'s own tokenizer cuts your text into pieces it learned from data (49,152 of them), one per row. A dot (·) means the piece starts with a space; the number is its real ID.'],
+    ['Tokenize', 'The model\'s own tokenizer cuts your text into pieces it learned from data (49,152 of them), one lane each. A dot (·) means the piece starts with a space; the number is its real ID.'],
     ['Embed', 'Each token ID picks one row of the model\'s embedding table (top left): 49,152 rows, one per token, each 576 numbers learned in training. That row is the ball. The numbers mean nothing one by one, but tokens used in similar ways get similar rows: point at a strip to see which tokens are closest.'],
-    ['Read the prompt', 'All rows move through the 30 layers at the same time, step by step, left to right. Layer 1 is drawn step by step; every layer here uses full attention. The lines are the model\'s real attention. The word above the last ball is what the model would say if it stopped there. Point at any square for its real numbers.'],
+    ['Read the prompt', 'All the lanes move through all 30 layers at the same time. In each layer a token first talks (attention: the pink lines and the colours it takes on come from the model\'s real attention) and then thinks alone (feed-forward: the burst is how much it really added). The word above the last ball is what the model would say if it stopped there. Point at any lane in any layer for its real numbers.'],
     ['Score', 'The last row becomes a real score for each of the 49,152 tokens. The top five are shown, and the dice only choose among them.'],
-    ['Roll', 'A weighted dice roll picks one. Temperature sets how loaded the dice are. The winner becomes a new row.'],
-    ['Repeat', 'Only the new row moves now. Each layer reads the keys and values it cached for earlier rows (teal) instead of redoing them, but all 269 MB of weights are read again for every new token.'],
+    ['Roll', 'A weighted dice roll picks one. Temperature sets how loaded the dice are. The winner becomes a new lane.'],
+    ['Repeat', 'Only the new lane moves now. Each layer reads the keys and values it kept for earlier lanes (teal ticks) instead of redoing them, but all 269 MB of weights are read again for every new token.'],
   ];
   const DONE = ['Done', 'Six new tokens, six passes. A real model keeps going until it writes an end-of-text token or hits a length limit. Press Replay, or type a new prompt.'];
   const S = { mode: 'dense', speed: 1, data: null, llm: null, loading: null, wantReal: false, hover: null, pinned: false, mem: [], nb: {} };
-  let tl = null, CAPS = [], INFOS = [], LENS = [], PASSES = [], STEPLOG = [], SECS = [], G = null;
+  let tl = null, CAPS = [], INFOS = [], LENS = [], PASSES = [], STEPLOG = [], G = null;
   const isReal = () => S.mode === 'real';
 
   STAGES.forEach(([t], i) => { const li = document.createElement('li'); li.textContent = (i + 1) + ' ' + t; $('#stages').appendChild(li); });
 
-  // ---- board geometry: columns left to right ----
-  const VBW = 1000, ROW0 = 118, RH = 27, SCW = 210, TOKX = 14, TOKW = 92, EMBW = 56;
+  // ---- board geometry: lanes (one per token) running left to right through every layer ----
+  // Each layer is a thin column with two stations: "talk" (attention: tokens share information) and
+  // "think" (feed-forward: each token works alone). Both add onto the ball (the residual stream).
+  const VBW = 1000, ROW0 = 118, RH = 27, SCW = 200, TOKX = 14, TOKW = 92, EMBW = 56;
   const TBL = { x: 14, y: 24, w: 90, h: 40 }; // the embedding table drawing, top left
   const vocabSize = () => (isReal() ? 49152 : 248320);
   const rowY = i => ROW0 + i * RH;
-  function layoutSections() {
-    const real = isReal(), moe = S.mode === 'moe', M = MODELS[S.mode], L = M.layers;
-    const list = real
-      ? [{ type: 'layer', layer: 0, kind: 'full', name: 'Layer 1 · full attention' },
-         { type: 'gap', layers: Array.from({ length: 28 }, (_, i) => i + 1), name: 'Layers 2–29' },
-         { type: 'last', layer: 29, kind: 'full', name: 'Layer 30' }]
-      : [{ type: 'layer', layer: 0, kind: 'linear', name: 'Layer 1 · linear attention' },
-         { type: 'gap', layers: [1, 2], name: 'Layers 2–3' },
-         { type: 'layer', layer: 3, kind: 'full', name: 'Layer 4 · full attention' },
-         { type: 'gap', layers: Array.from({ length: L - 5 }, (_, i) => i + 4), name: `Layers 5–${L - 1}` },
-         { type: 'last', layer: L - 1, kind: 'full', name: 'Layer ' + L }];
-    list.forEach(s => { if (s.type === 'layer') s.steps = layerSteps(s.kind, moe, !real); });
-    const nSteps = list.reduce((a, s) => a + (s.steps ? s.steps.length : 0), 0), GAPW = 46, LASTW = 40, PADS = list.length * 8;
-    const budget = VBW - TOKX - TOKW - EMBW - SCW - 14 - PADS - list.filter(s => s.type === 'gap').length * GAPW - LASTW;
-    const stepW = Math.min(46, budget / nSteps);
-    let x = TOKX + TOKW + EMBW + 8;
-    list.forEach(s => {
-      s.x = x;
-      if (s.type === 'layer') { s.w = s.steps.length * stepW; s.cols = s.steps.map((k, i) => ({ key: k, x: x + (i + 0.5) * stepW })); }
-      else if (s.type === 'gap') { s.w = GAPW; s.cx = x + GAPW / 2; }
-      else { s.w = LASTW; s.cx = x + LASTW / 2; }
-      x += s.w + 8;
-    });
-    return { list, stepW, scx: VBW - SCW };
+  const isFull = l => isReal() || (l + 1) % 4 === 0; // Qwen3.6: every 4th layer full attention; SmolLM2: all
+  const SUB = {
+    norm: 'rescale the ball to a steady size', qkv: 'make a query, a key and a value', scores: 'compare the query with every earlier key',
+    softmax: 'turn the scores into weights (sum 100%)', mix: 'blend the earlier values by those weights', ogate: 'gate the result (Qwen3.6)',
+    add: 'add the result onto the ball', write: 'fade the memory a little, write this token in', read: 'read the memory with the query',
+    norm2: 'rescale again', gateup: 'every neuron: a "gate" and an "up" dot product', silu: 'SiLU(gate) × up: a few neurons fire',
+    down: 'turn the neuron outputs back into the ball size', router: 'score 256 experts, keep the top 8', experts: '8 picked experts + 1 shared run',
+    add2: 'add the result onto the ball',
+  };
+  function layerSteps(kind, moe, qwen) {
+    const ff = moe ? ['norm2', 'router', 'experts', 'add2'] : ['norm2', 'gateup', 'silu', 'down', 'add2'];
+    const att = kind === 'linear' ? ['norm', 'qkv', 'write', 'read', 'ogate', 'add'] : ['norm', 'qkv', 'scores', 'softmax', 'mix', ...(qwen ? ['ogate'] : []), 'add'];
+    return { att, ff };
+  }
+  function layout() {
+    const L = MODELS[S.mode].layers, x0 = TOKX + TOKW + EMBW + 10, x1 = VBW - SCW - 12, LW = (x1 - x0) / L;
+    return { L, x0, x1, LW, scx: VBW - SCW, lx: l => x0 + l * LW, talkX: l => x0 + (l + 0.3) * LW, thinkX: l => x0 + (l + 0.72) * LW };
   }
 
   function drawStatic() {
     const g = $('#static'); g.innerHTML = '';
-    const lay = layoutSections(); SECS = lay.list; G = lay;
-    const N = S.data ? S.data.nP + 6 : 15; G.N = N; G.outY = rowY(N - 1) + 44; G.vbH = G.outY + 16;
+    G = layout();
+    const N = S.data ? S.data.nP + 6 : 15, real = isReal(); G.N = N; G.outY = rowY(N - 1) + 44; G.vbH = G.outY + 16;
+    const top = 100, bot = rowY(N - 1) + 16;
     $('#board').setAttribute('viewBox', `0 0 ${VBW} ${G.vbH}`);
     el('rect', { x: 2, y: 2, width: VBW - 4, height: G.vbH - 4, rx: 16, class: 'board' }, g);
     el('text', { x: TOKX + 4, y: 104, class: 'lbl' }, g, 'TOKENS');
@@ -476,46 +454,63 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
     el('text', { x: TBL.x, y: 16, class: 'lbl' }, g, 'EMBEDDING TABLE');
     el('rect', { x: TBL.x, y: TBL.y, width: TBL.w, height: TBL.h, rx: 3, class: 'sec' }, g);
     for (let k = 1; k < 12; k++) el('line', { x1: TBL.x + 2, x2: TBL.x + TBL.w - 2, y1: TBL.y + k * TBL.h / 12, y2: TBL.y + k * TBL.h / 12, stroke: 'var(--line)', 'stroke-width': 0.5 }, g);
-    el('text', { x: TBL.x, y: TBL.y + TBL.h + 11, class: 'tiny' }, g, isReal() ? '49,152 rows × 576' : `248,320 rows × ${MODELS[S.mode].dims.d.toLocaleString('en-US')}`);
+    el('text', { x: TBL.x, y: TBL.y + TBL.h + 11, class: 'tiny' }, g, real ? '49,152 rows × 576' : `248,320 rows × ${MODELS[S.mode].dims.d.toLocaleString('en-US')}`);
     el('text', { x: TBL.x, y: TBL.y + TBL.h + 21, class: 'tiny' }, g, 'one row per token');
-    S.mem = [];
-    SECS.forEach((s, si) => {
-      el('rect', { x: s.x - 3, y: 100, width: s.w + 6, height: rowY(N - 1) + 18 - 100, rx: 8, class: 'sec' + (s.kind === 'linear' ? ' lin' : s.kind === 'full' && s.type !== 'gap' ? ' full' : '') }, g);
-      if (s.type === 'layer') {
-        el('text', { x: s.x + 2, y: 18, class: 'secname' }, g, s.name);
-        s.cols.forEach(c => { const t = el('text', { x: c.x + 3, y: 106, class: 'slab', transform: `rotate(-60 ${c.x + 3} 106)` }, g, STEPS[c.key].lab); });
-        if (s.kind === 'linear') {
-          const w = s.cols.find(c => c.key === 'write'), r = s.cols.find(c => c.key === 'read');
-          S.mem[si] = el('rect', { x: w.x - G.stepW / 2 + 2, y: 24, width: r.x - w.x + G.stepW - 4, height: 16, rx: 4, class: 'mem', 'fill-opacity': 0.18 }, g);
-          el('text', { x: (w.x + r.x) / 2, y: 35.5, 'text-anchor': 'middle', class: 'tiny' }, g, 'memory');
-        }
-        if (s.kind === 'full') { const q = s.cols.find(c => c.key === 'qkv'); el('text', { x: q.x, y: 36, 'text-anchor': 'middle', class: 'tiny', fill: 'var(--kv)' }, g, 'KV'); }
-      } else {
-        if (s.type === 'last') el('text', { x: s.cx, y: 18, 'text-anchor': 'middle', class: 'secname' }, g, s.name);
-        el('text', { x: s.cx + 3, y: 106, class: 'slab', transform: `rotate(-60 ${s.cx + 3} 106)` }, g, s.type === 'gap' ? s.name.toLowerCase() + ' ⋯' : 'all steps');
-      }
+    // header: what the columns are, and a legend
+    el('text', { x: G.x0, y: 16, class: 'secname' }, g, `${G.L} layers, left to right. Each: talk, then think`);
+    const leg = real
+      ? [['att', 'talk: full attention (lines to earlier tokens)'], ['kvt', 'KV cache: each layer keeps every token\'s key and value'], ['ff', 'think: feed-forward (burst = how much it added)']]
+      : [['att', 'full attention (every 4th layer)'], ['lin', 'linear attention: one fixed memory'], ['kvt', 'KV cache'], ['ff', 'think: feed-forward']];
+    let lx = G.x0;
+    let ly = 26;
+    leg.forEach(([cls, txt]) => {
+      const sq = el('rect', { x: lx, y: ly, width: 8, height: 8, rx: 2, class: 'leg ' + cls }, g), t = el('text', { x: lx + 11, y: ly + 7.5, class: 'tiny' }, g, txt);
+      const w = t.getComputedTextLength ? t.getComputedTextLength() : txt.length * 5;
+      if (lx + 11 + w > G.x1 && lx > G.x0) { lx = G.x0; ly += 13; sq.setAttribute('x', lx); sq.setAttribute('y', ly); t.setAttribute('x', lx + 11); t.setAttribute('y', ly + 7.5); }
+      lx += 11 + (t.getComputedTextLength ? t.getComputedTextLength() : w) + 14;
     });
+    // one thin column per layer; the stripe on top says which kind of attention it uses
+    S.mem = [];
+    for (let l = 0; l < G.L; l++) {
+      const x = G.lx(l), full = isFull(l);
+      el('rect', { x: x + 0.6, y: top, width: G.LW - 1.2, height: bot - top, rx: Math.min(3, G.LW / 3), class: 'lcol' + (full ? ' full' : ' lin') }, g);
+      el('rect', { x: x + 0.6, y: top, width: G.LW - 1.2, height: 4, class: 'lstripe' + (full ? ' full' : ' lin') }, g);
+      if (!full) S.mem[l] = el('rect', { x: G.talkX(l) - Math.max(1.5, G.LW * 0.25), y: top + 6, width: Math.max(3, G.LW * 0.5), height: 5, rx: 1, class: 'mem', 'fill-opacity': 0.25 }, g);
+      const every = real ? 5 : 4;
+      if (l === 0 || (l + 1) % every === 0) el('text', { x: x + G.LW / 2, y: top - 4, 'text-anchor': 'middle', class: 'tiny' }, g, String(l + 1));
+    }
+    el('text', { x: G.x0 - 2, y: top - 4, 'text-anchor': 'end', class: 'tiny' }, g, 'layer');
     el('text', { x: G.scx + 6, y: 104, class: 'lbl' }, g, 'NEXT-TOKEN SCORES');
     el('text', { x: TOKX + 4, y: G.outY - 18, class: 'lbl' }, g, 'OUTPUT');
+    // one hit area over the layers; the pointer position picks the lane, layer and station
+    el('rect', { x: G.x0, y: top, width: G.x1 - G.x0, height: bot - top, fill: 'transparent', id: 'layerHit' }, g);
   }
+
+  // colours as numbers so they can be mixed: hsl -> rgb
+  function hslRgb(h, s, l) {
+    const a = s * Math.min(l, 1 - l), f = n => { const k = (n + h / 30) % 12; return l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)); };
+    return [f(0) * 255, f(8) * 255, f(4) * 255];
+  }
+  const rgbStr = c => `rgb(${c.map(v => Math.round(v)).join(',')})`;
 
   function build() {
     const D = S.data, real = D.real, M = MODELS[S.mode], moe = S.mode === 'moe';
     if (tl) tl.kill();
     drawStatic();
-    S.mem.forEach(m => m && m.setAttribute('fill-opacity', 0.18));
     const dyn = $('#dyn'); dyn.innerHTML = ''; $('#sel').innerHTML = '';
-    const { nP, all, steps } = D, NG = 6, N = nP + NG;
-    const color = i => `hsl(${hash(all[i] + i) % 360} 68% 56%)`;
-    const gRows = el('g', {}, dyn), gArcs = el('g', {}, dyn), gScore = el('g', {}, dyn), gBalls = el('g', {}, dyn);
-    const rows = [], ball = [], cells = [], kvm = [];
+    const { nP, all, steps } = D, NG = 6, N = nP + NG, L = G.L;
+    const base = all.map((w, i) => hslRgb(hash(w + i) % 360, 0.68, 0.56));
+    const color = i => rgbStr(base[i]);
+    const gLanes = el('g', {}, dyn), gRows = el('g', {}, dyn), gArcs = el('g', {}, dyn), gScore = el('g', {}, dyn), gBalls = el('g', {}, dyn);
+    const rows = [], ball = [], burst = [], ticks = [];
     const embX = TOKX + TOKW + EMBW / 2;
     for (let i = 0; i < N; i++) {
       const y = rowY(i), rg = el('g', { style: 'opacity:0' }, gRows);
+      el('line', { x1: G.x0, x2: G.x1, y1: y, y2: y, class: 'lane' }, rg);
       el('rect', { x: TOKX, y: y - 11, width: 58, height: 22, rx: 5, class: i >= nP ? 'chip gen' : 'chip' }, rg);
       el('text', { x: TOKX + 29, y: y + 4, 'text-anchor': 'middle', class: 'chiptxt' }, rg, short(all[i]));
       el('text', { x: TOKX + 62, y: y + 3, class: 'tiny' }, rg, String(D.ids[i]));
-      el('rect', { x: TOKX - 1, y: y - 12, width: TOKW - 2, height: 24, class: 'cell', 'fill-opacity': 0, 'data-row': i, 'data-sec': -3, 'data-col': 0 }, rg);
+      el('rect', { x: TOKX - 1, y: y - 12, width: TOKW - 2, height: 24, class: 'cell', 'fill-opacity': 0, 'data-row': i, 'data-sec': -3 }, rg);
       // the embedding: the first 12 numbers of the token's row, as a strip (teal positive, pink negative)
       const bs = [];
       for (let b = 0; b < 12; b++) {
@@ -525,22 +520,11 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
       const rowLineY = TBL.y + 2 + (D.ids[i] % vocabSize()) / vocabSize() * (TBL.h - 4);
       const look = [el('rect', { x: TBL.x + 1, y: rowLineY - 1.2, width: TBL.w - 2, height: 2.4, fill: color(i), style: 'opacity:0' }, rg),
         el('path', { d: `M${TBL.x + TBL.w} ${rowLineY} C${embX - 22} ${rowLineY} ${embX - 30} ${y} ${embX - 25} ${y}`, fill: 'none', stroke: color(i), 'stroke-width': 1.4, style: 'opacity:0' }, rg)];
-      el('rect', { x: embX - 27, y: y - 10, width: 54, height: 20, class: 'cell', 'fill-opacity': 0, 'data-row': i, 'data-sec': -2, 'data-col': 0 }, rg);
-      // squares: one per step per row (and one for each gap / last layer)
-      const rc = [], rk = [];
-      SECS.forEach((s, si) => {
-        if (s.type === 'layer') rc[si] = s.cols.map((c, ci) => {
-          const cls = STEPS[c.key].cls;
-          const r = el('rect', { x: c.x - G.stepW / 2 + 2, y: y - 9, width: G.stepW - 4, height: 18, rx: 3, class: 'cell ' + (cls === 'att' && s.kind === 'linear' ? 'lin' : cls), 'fill-opacity': 0.1, 'data-row': i, 'data-sec': si, 'data-col': ci }, rg);
-          if (c.key === 'qkv' && s.kind === 'full') rk[si] = el('rect', { x: c.x - G.stepW / 2 + 2, y: y - 9, width: G.stepW - 4, height: 18, rx: 3, class: 'kvm', style: 'opacity:0' }, rg);
-          return r;
-        });
-        else {
-          rc[si] = [el('rect', { x: s.x + 2, y: y - 9, width: s.w - 4, height: 18, rx: 3, class: 'cell', 'fill-opacity': 0.1, 'data-row': i, 'data-sec': si, 'data-col': 0 }, rg)];
-          if (s.type === 'last') rk[si] = el('rect', { x: s.x + 2, y: y - 9, width: s.w - 4, height: 18, rx: 3, class: 'kvm', style: 'opacity:0' }, rg);
-        }
-      });
-      rows.push({ g: rg, bars: bs, look }); cells.push(rc); kvm.push(rk);
+      el('rect', { x: embX - 27, y: y - 10, width: 54, height: 20, class: 'cell', 'fill-opacity': 0, 'data-row': i, 'data-sec': -2 }, rg);
+      // KV ticks: in every full-attention layer, each token's key and value stay behind
+      ticks.push(Array.from({ length: L }, (_, l) => isFull(l) ? el('rect', { x: G.talkX(l) - 1.2, y: y - 6, width: 2.4, height: 12, rx: 1, class: 'kvt', style: 'opacity:0' }, rg) : null));
+      rows.push({ g: rg, bars: bs, look });
+      burst.push(el('circle', { cx: G.thinkX(0), cy: y, r: 2, class: 'burst', style: 'opacity:0' }, gBalls));
       ball.push(el('circle', { cx: TOKX + TOKW + EMBW + 1, cy: y, r: 0, fill: color(i), class: 'ball' }, gBalls));
     }
     const out = el('text', { x: TOKX + 4, y: G.outY, class: 'out' }, dyn);
@@ -555,80 +539,84 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
     const info = (o, t) => INFOS.push([t, o]);
     const recOf = i => (real ? D.rowRecs[i] : null);
 
-    // attention from row i to each earlier row j < i, as 0..1 relative to the strongest position i looks at
-    function attnRow(i, layer) {
-      if (!real) {
-        const s = [];
-        for (let j = 0; j <= i; j++) s.push(-0.18 * (i - j) + (hash(all[i] + '>' + all[j] + '@' + layer) % 100) / 100 * 1.6 + (j < i && all[j].toLowerCase() === all[i].toLowerCase() ? 1.5 : 0));
-        const e = s.map(Math.exp), mx = Math.max(1e-9, ...e);
-        return e.slice(0, i).map(x => x / mx);
+    // who lane i listens to in layer l: weights over lanes j <= i that add up to 1
+    function listen(i, l) {
+      if (real) {
+        const ly = recOf(i).layers[l], T = recOf(i).pos + 1, avg = new Float32Array(i + 1);
+        for (let h = 0; h < ly.heads; h++) for (let j = 0; j <= i; j++) avg[j] += ly.attn[h * T + D.offset + j] / ly.heads;
+        const s = avg.reduce((a, b) => a + b, 0) || 1; return Array.from(avg, v => v / s);
       }
-      const ly = recOf(i).layers[layer], T = recOf(i).pos + 1, avg = new Float32Array(T);
-      for (let h = 0; h < ly.heads; h++) for (let j = 0; j < T; j++) avg[j] += ly.attn[h * T + j] / ly.heads;
-      const mx = Math.max(1e-9, ...avg);
-      return Array.from({ length: i }, (_, j) => avg[D.offset + j] / mx);
+      let w;
+      if (isFull(l)) w = Array.from({ length: i + 1 }, (_, j) => Math.exp(-0.18 * (i - j) + (hash(all[i] + '>' + all[j] + '@' + l) % 100) / 100 * 1.6 + (j < i && all[j].toLowerCase() === all[i].toLowerCase() ? 1.5 : 0)));
+      else w = Array.from({ length: i + 1 }, (_, j) => Math.pow(0.6, i - j)); // linear attention: a fading memory, recent tokens count most
+      const s = w.reduce((a, b) => a + b, 0); return w.map(v => v / s);
     }
-    const arcPath = (x, i, j, side) => { const yi = rowY(i), yj = rowY(j), bend = 7 + (i - j) * 3.2; return `M${x} ${yi} Q${x + side * bend} ${(yi + yj) / 2} ${x} ${yj}`; };
-    function arcs(x, cols, focus, layer, cls, t, s, side) {
-      cols.forEach(i => {
-        const w = attnRow(i, layer), strong = i === focus ? 1 : 0.35;
-        for (let j = 0; j < i; j++) {
-          if (w[j] < 0.03) continue;
-          const p = el('path', { d: arcPath(x, i, j, side), class: 'arc' + (cls ? ' ' + cls : ''), style: 'opacity:0' }, gArcs);
-          tl.to(p, { opacity: strong * (0.12 + 0.88 * w[j]), duration: 0.12 * s }, t);
-          tl.to(p, { opacity: 0, duration: 0.25 * s }, t + 0.55 * s);
-        }
-      });
-    }
-    function light(rect, t, s) { tl.to(rect, { attr: { 'fill-opacity': 0.8 }, duration: 0.1 * s }, t); tl.to(rect, { attr: { 'fill-opacity': 0.3 }, duration: 0.3 * s }, t + 0.38 * s); }
+    // the ball's colour after each layer: it mixes in the colours of the lanes it listens to
+    const colAt = all.map(() => []);
+    const mixLane = (i, l) => {
+      const prev = l ? colAt[i][l - 1] : base[i], w = listen(i, l), m = [0, 0, 0];
+      for (let j = 0; j <= i; j++) { const c = j === i ? prev : l ? colAt[j][l - 1] : base[j]; for (let k = 0; k < 3; k++) m[k] += w[j] * c[k]; }
+      colAt[i][l] = prev.map((v, k) => v * 0.6 + m[k] * 0.4);
+    };
+    for (let l = 0; l < L; l++) for (let i = 0; i < nP; i++) mixLane(i, l);
+    for (let i = nP; i < N - 1; i++) for (let l = 0; l < L; l++) mixLane(i, l);
+    // how much a station adds, 0..1 (real: size of the addition relative to the ball; toy: made up)
+    const added = (i, l, which) => {
+      const ly = real && recOf(i) && recOf(i).layers[l];
+      if (ly && ly.downNorm != null) return Math.min(1, (which ? ly.downNorm : ly.outNorm) / Math.max(1e-6, ly.norm) * 2.5);
+      return 0.25 + (hash(all[i] + '+' + l + which) % 50) / 100;
+    };
+
+    const arcPath = (x, i, j) => { const yi = rowY(i), yj = rowY(j), bend = 6 + (i - j) * 3; return `M${x} ${yi} Q${x + bend} ${(yi + yj) / 2} ${x} ${yj}`; };
     function embed(i, t) {
       const [rowHl, line] = rows[i].look;
       tl.to(rowHl, { opacity: 1, duration: 0.15 }, t); tl.to(line, { opacity: 0.85, duration: 0.15 }, t + 0.08);
       rows[i].bars.forEach(([rc, op], b) => tl.to(rc, { opacity: op, duration: 0.2 }, t + 0.18 + b * 0.015));
       tl.to([rowHl, line], { opacity: 0, duration: 0.3 }, t + 0.75);
-      tl.to(ball[i], { attr: { r: 6 }, duration: 0.3, ease: 'back.out(2)' }, t + 0.3);
+      tl.to(ball[i], { attr: { r: 5 }, duration: 0.3, ease: 'back.out(2)' }, t + 0.3);
     }
+    const LD = real ? 0.42 : Math.min(0.42, 15 / L); // seconds per layer in the prompt pass
     function pass(p, cols, focus, t, s) {
       PASSES.push({ t0: t, focus });
-      SECS.forEach((sec, si) => {
-        if (sec.type === 'layer') {
-          sec.cols.forEach((c, ci) => {
-            cols.forEach(i => tl.to(ball[i], { attr: { cx: c.x }, duration: 0.2 * s, ease: 'power1.inOut' }, t));
-            STEPLOG.push([t + 0.1 * s, si, ci, p]);
-            cols.forEach(i => light(cells[i][si][ci], t + 0.12 * s, s));
-            const k = c.key, ax = c.x + G.stepW / 2 - 3;
-            if (k === 'qkv' && sec.kind === 'full') cols.forEach(i => tl.to(kvm[i][si], { opacity: 1, duration: 0.2 * s }, t + 0.25 * s));
-            if (k === 'scores') {
-              arcs(ax, cols, focus, sec.layer, '', t + 0.15 * s, s, 1);
-              for (let j = 0; j < focus; j++) if (!cols.includes(j)) { tl.to(kvm[j][si], { strokeWidth: 4.5, duration: 0.1 * s }, t + 0.15 * s); tl.to(kvm[j][si], { strokeWidth: 2.2, duration: 0.3 * s }, t + 0.5 * s); }
+      const d = LD * s;
+      for (let l = 0; l < L; l++) {
+        const tx = G.talkX(l), hx = G.thinkX(l), full = isFull(l);
+        // talk: move to the station, listen to earlier lanes, take on their colours, leave a KV tick
+        cols.forEach(i => {
+          tl.to(ball[i], { attr: { cx: tx, fill: rgbStr(colAt[i][l]) }, duration: d * 0.42, ease: 'power1.inOut' }, t);
+          if (full) tl.to(ticks[i][l], { opacity: 1, duration: d * 0.3 }, t + d * 0.35);
+        });
+        STEPLOG.push([t + d * 0.2, l, 0, p]);
+        if (full) {
+          cols.forEach(i => {
+            const w = listen(i, l), mx = Math.max(1e-9, ...w.slice(0, i)), strong = i === focus ? 1 : 0.3;
+            for (let j = 0; j < i; j++) {
+              const r = w[j] / mx; if (r < 0.06) continue;
+              const pth = el('path', { d: arcPath(tx, i, j), class: 'arc', style: 'opacity:0' }, gArcs);
+              tl.to(pth, { opacity: strong * (0.1 + 0.9 * r), duration: d * 0.15 }, t + d * 0.2);
+              tl.to(pth, { opacity: 0, duration: d * 0.3 }, t + d * 0.6);
             }
-            if (k === 'mix') arcs(ax, cols, focus, sec.layer, 'v', t + 0.15 * s, s, 1);
-            if (k === 'write' || k === 'read') {
-              const m = S.mem[si], my = 40;
-              cols.forEach(i => {
-                const pth = el('path', { d: `M${c.x} ${rowY(i) - 9} L${c.x} ${my}`, class: 'arc mw', style: 'opacity:0' }, gArcs);
-                tl.to(pth, { opacity: k === 'read' && i !== focus ? 0.25 : 0.7, duration: 0.12 * s }, t + 0.12 * s);
-                tl.to(pth, { opacity: 0, duration: 0.25 * s }, t + 0.5 * s);
-              });
-              tl.to(m, { attr: { 'fill-opacity': 0.65 }, duration: 0.12 * s }, t + 0.12 * s); tl.to(m, { attr: { 'fill-opacity': 0.18 }, duration: 0.3 * s }, t + 0.5 * s);
-            }
-            t += 0.36 * s;
           });
-          if (real) LENS.push([t, p, sec.layer]);
-        } else if (sec.type === 'gap') {
-          const dur = (real ? sec.layers.length * 0.1 : 0.6) * s;
-          cols.forEach(i => { tl.to(ball[i], { attr: { cx: sec.cx }, duration: dur, ease: 'none' }, t); light(cells[i][si][0], t + dur * 0.3, s * 2); });
-          STEPLOG.push([t, si, 0, p]);
-          if (real) sec.layers.forEach((l, k) => LENS.push([t + (k + 1) / sec.layers.length * dur, p, l]));
-          t += dur;
+          for (let j = 0; j < focus; j++) if (!cols.includes(j)) { tl.to(ticks[j][l], { attr: { width: 4.4, x: tx - 2.2 }, duration: d * 0.12 }, t + d * 0.2); tl.to(ticks[j][l], { attr: { width: 2.4, x: tx - 1.2 }, duration: d * 0.3 }, t + d * 0.45); }
         } else {
-          cols.forEach(i => { tl.to(ball[i], { attr: { cx: sec.cx }, duration: 0.25 * s }, t); light(cells[i][si][0], t + 0.15 * s, s); tl.to(kvm[i][si], { opacity: 1, duration: 0.2 * s }, t + 0.3 * s); });
-          STEPLOG.push([t + 0.1 * s, si, 0, p]);
-          arcs(sec.x + sec.w - 3, cols, focus, sec.layer, '', t + 0.25 * s, s, 1);
-          t += 0.7 * s;
-          if (real) LENS.push([t, p, sec.layer]);
+          const m = S.mem[l], my = 111;
+          cols.forEach(i => {
+            const pth = el('path', { d: `M${tx} ${rowY(i) - 6} L${tx} ${my}`, class: 'arc mw', style: 'opacity:0' }, gArcs);
+            tl.to(pth, { opacity: i === focus ? 0.8 : 0.3, duration: d * 0.15 }, t + d * 0.2); tl.to(pth, { opacity: 0, duration: d * 0.3 }, t + d * 0.55);
+          });
+          tl.to(m, { attr: { 'fill-opacity': 0.8 }, duration: d * 0.15 }, t + d * 0.2); tl.to(m, { attr: { 'fill-opacity': 0.25 }, duration: d * 0.3 }, t + d * 0.55);
         }
-      });
+        // think: move on, and a burst shows how much the feed-forward block added
+        cols.forEach(i => {
+          tl.to(ball[i], { attr: { cx: hx }, duration: d * 0.42, ease: 'power1.inOut' }, t + d * 0.5);
+          const a = added(i, l, 1);
+          tl.to(burst[i], { attr: { cx: hx, r: 2 }, opacity: 0.75, duration: d * 0.05 }, t + d * 0.78);
+          tl.to(burst[i], { attr: { r: 4 + a * 9 }, opacity: 0, duration: d * 0.45, ease: 'power1.out' }, t + d * 0.83);
+        });
+        STEPLOG.push([t + d * 0.7, l, 1, p]);
+        t += d;
+        if (real) LENS.push([t, p, l]);
+      }
       return t;
     }
     const SY = i => 150 + i * 46, BX = G.scx + 70, BW = VBW - 14 - BX - 50;
@@ -712,8 +700,8 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
     $('#capText').textContent = text;
     document.querySelectorAll('#stages li').forEach((li, i) => li.classList.toggle('on', i === st));
   }
-  const NOTE_TOY = 'Toy model. The board shows how a real LLM is wired, but the next-token scores come from a tiny word table built into this page, not a real model. The token splits, ID numbers and attention lines are made up too. Memory and speed figures are rough.';
-  const NOTE_REAL = 'Real model: SmolLM2-135M (Apache 2.0, by Hugging Face), running in your browser from its published weights with 32-bit maths. Every number on the board is its actual output. The dice only choose among the top five.';
+  const NOTE_TOY = 'Toy model. The board shows how a real LLM is wired, but the next-token scores come from a tiny word table built into this page, not a real model. The token splits, ID numbers, attention and colours are made up too. Memory and speed figures are rough.';
+  const NOTE_REAL = 'Real model: SmolLM2-135M (Apache 2.0, by Hugging Face), running in your browser from its published weights with 32-bit maths. Attention lines, colours, bursts, guesses and scores come from its actual numbers. The dice only choose among the top five.';
   function renderModel() {
     const real = isReal();
     $('#gpuCard').hidden = real; $('#realCard').hidden = !real; $('#guessCard').hidden = !real;
@@ -734,11 +722,48 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
     $('#kv32').textContent = `Only the ${M.full} full-attention layers keep a KV cache, and it grows with every token: about ${(32000 * M.kvMB / 1024).toFixed(1)} GB at 32,000 tokens. The other ${M.layers - M.full} layers keep one fixed memory of about ${M.memMB} MB, however long the text gets. Each layer has its own cache or memory; they all live in the same GPU memory.`;
   }
 
-  // ---- the inspector: what the current (or pointed-at) square does, with real numbers in real mode ----
+  // ---- the inspector: what the current (or pointed-at) station does, broken into its exact sub-steps ----
   const v6 = a => '[' + a.map(v => (v >= 0 ? ' ' : '−') + Math.abs(v).toFixed(3)).join(' ') + ' …]';
-  function inspect(si, ci, row) {
-    const D = S.data, real = D.real, M = MODELS[S.mode], dims = M.dims;
-    let where, title, text, nums = null;
+  function inspectLayer(l, which, row) {
+    const D = S.data, real = D.real, moe = S.mode === 'moe', full = isFull(l), dims = MODELS[S.mode].dims;
+    const who = row != null ? `“${D.all[row]}”` : '', kind = full ? 'full attention' : 'linear attention';
+    const { att, ff } = layerSteps(full ? 'full' : 'linear', moe, !real);
+    const where = `Layer ${l + 1} · ${which ? 'think' : 'talk'}${who ? ' · ' + who : ''}`;
+    let title, text;
+    if (!which) {
+      title = `Layer ${l + 1} · talk (${kind})`;
+      text = full
+        ? `${who || 'The token'} compares itself with every earlier token and blends in information from the ones that match. This is the only place tokens share information; the ball takes on the colours of the tokens it listens to. Its own key and value stay in this layer's KV cache (teal tick) for later tokens. ${dims.heads}.`
+        : `${who || 'The token'} reads and updates this layer's one fixed-size memory instead of looking at every earlier token. Cheaper, and it never grows, but it remembers less exactly.`;
+    } else {
+      title = `Layer ${l + 1} · think (feed-forward)`;
+      text = moe
+        ? `${who || 'The token'} works alone: a router picks 8 of 256 experts plus 1 shared expert, each a small block of 512 neurons, and their results are added onto the ball. The burst shows how much was added.`
+        : `${who || 'The token'} works alone: ${dims.ff} each check the ball for a pattern, a few fire strongly, and their results are added onto the ball. The burst shows how much was added. Click to see one neuron worked out.`;
+    }
+    const keys = which ? ff : att;
+    const rec = real && row != null ? D.rowRecs[row] : null, ly = rec && rec.layers[l], fullRec = ly && ly.xin != null;
+    let detail = null;
+    if (real && ly) {
+      const T = rec.pos + 1, avg = Array.from({ length: T }, (_, j) => { let s = 0; for (let h = 0; h < ly.heads; h++) s += ly.attn[h * T + j]; return s / ly.heads; });
+      const name = j => (j - D.offset >= 0 ? D.all[j - D.offset] : '(earlier)');
+      const top3 = (vals, f) => vals.map((v, j) => [j, v]).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([j, v]) => `${name(j)} ${f(v)}`).join(', ');
+      detail = {
+        norm: fullRec && `size ${ly.xinNorm.toFixed(1)} → ${v6(ly.h1)}`, qkv: fullRec && `q ${v6(ly.q)}\n              k ${v6(ly.k)}`,
+        scores: fullRec && 'head 1: ' + top3(Array.from(ly.sc), v => v.toFixed(2)), softmax: top3(avg, fmtPct), mix: fullRec && v6(ly.mix),
+        add: fullRec && `added ${ly.outNorm.toFixed(1)} → ball size ${ly.x1Norm.toFixed(1)}`, norm2: fullRec && v6(Array.from(ly.ffnIn.subarray(0, 6))),
+        gateup: fullRec && 'busiest: ' + ly.neurons.slice(0, 3).map(n => '#' + n.i).join(', '), silu: fullRec && ly.neurons.slice(0, 3).map(n => '#' + n.i + ' ' + n.v.toFixed(2)).join(', '),
+        down: fullRec && v6(ly.down), add2: fullRec && `added ${ly.downNorm.toFixed(1)} → ball size ${ly.norm.toFixed(1)}` + (ly.lens ? `\n              guess now: ${ly.lens.map(g => S.llm.tok.piece(g.id) + ' ' + fmtPct(g.p)).join(', ')}` : ''),
+      };
+    }
+    const lines = keys.map((k, n) => `${n + 1} ${SUB[k]}` + (detail && detail[k] ? '\n              ' + detail[k] : ''));
+    let nums = 'Inside this station:\n' + lines.join('\n');
+    if (real && ly && !fullRec) nums += '\n\n(Full numbers are kept for the last token of each pass; point at the last prompt row or a new row.)';
+    if (!real) nums += '\n\nToy mode: no real numbers. Pick "Real: SmolLM2-135M" to see them.';
+    return { where, title, text, nums };
+  }
+  function inspect(si, l, row, which) {
+    const D = S.data, real = D.real;
     const who = row != null ? `“${D.all[row]}”` : '';
     if (si === -3) {
       const id = D.ids[row];
@@ -756,48 +781,14 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
           '\n\nmost similar rows (1 = same direction):\n' + nb.map(n => `  ${S.llm.tok.piece(n.id).padEnd(14)} ${n.sim.toFixed(2)}`).join('\n') };
     }
     if (si === -1) {
-      where = 'Next-token scores'; title = 'Scores, softmax and the dice';
-      text = real ? 'After the last layer, a final norm and the output matrix (the embedding table, reused) turn the ball into one score for each of the 49,152 tokens. The top five are kept, softmax turns them into chances, and a weighted dice roll picks one. Click the board\'s Zoom button to see the softmax worked out.'
+      let nums = null;
+      const text = real ? 'After the last layer, a final norm and the output matrix (the embedding table, reused) turn the ball into one score for each of the 49,152 tokens. The top five are kept, softmax turns them into chances, and a weighted dice roll picks one. The Zoom button shows the softmax worked out.'
         : 'After the last layer, the ball is turned into one score for every token in the vocabulary. The top five are kept, softmax turns them into chances, and a weighted dice roll picks one.';
-      if (real && row != null && D.steps[row - D.nP + 1]) { const st = D.steps[Math.max(0, row - D.nP + 1)]; nums = st.c.map((c, i) => `${(i === st.pick ? '✓ ' : '  ') + c.w.padEnd(12)} score ${c.s.toFixed(2).padStart(6)}  chance ${fmtPct(c.p).padStart(4)}`).join('\n'); }
-      return { where, title, text, nums };
+      const st = row != null && D.steps[row - D.nP + 1];
+      if (real && st) nums = st.c.map((c, i) => `${(i === st.pick ? '✓ ' : '  ') + c.w.padEnd(12)} score ${c.s.toFixed(2).padStart(6)}  chance ${fmtPct(c.p).padStart(4)}`).join('\n');
+      return { where: 'Next-token scores', title: 'Scores, softmax and the dice', text, nums };
     }
-    const sec = SECS[si];
-    if (sec.type === 'gap') {
-      return { where: sec.name, title: `${sec.name}: the same steps, ${sec.layers.length} more times`, text: `Every one of these layers repeats the steps drawn in full on the left${real ? '' : ' (3 linear layers, then 1 full-attention layer)'}, each with its own weights.${real ? ' Watch the guess above the ball change as it goes.' : ''}` };
-    }
-    if (sec.type === 'last') {
-      const ly = real && row != null && D.rowRecs[row] && D.rowRecs[row].layers[sec.layer];
-      if (ly && ly.lens) nums = 'guess after the last layer:\n' + ly.lens.map(g => `  ${S.llm.tok.piece(g.id).padEnd(12)} ${fmtPct(g.p)}`).join('\n');
-      return { where: sec.name + (who ? ' · ' + who : ''), title: `${sec.name}: the last layer`, text: 'The same steps one last time (full attention). After it, a final norm and the output matrix turn the ball into next-token scores.', nums };
-    }
-    const key = sec.cols[ci].key, step = STEPS[key];
-    where = `${sec.name}${who ? ' · ' + who : ''}`;
-    title = `${sec.name.split(' · ')[0]} · ${step.lab}`;
-    text = step.what(dims, sec.kind);
-    if (real && row != null) {
-      const rec = D.rowRecs[row], ly = rec && rec.layers[sec.layer];
-      if (ly) {
-        const T = rec.pos + 1, avg = Array.from({ length: T }, (_, j) => { let s = 0; for (let h = 0; h < ly.heads; h++) s += ly.attn[h * T + j]; return s / ly.heads; });
-        const name = j => (j - D.offset >= 0 ? D.all[j - D.offset] : '(earlier)');
-        const top = (vals, f) => vals.map((v, j) => [j, v]).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([j, v]) => `  ${name(j).padEnd(12)} ${f(v)}`).join('\n');
-        const fullRec = ly.xin != null;
-        if (key === 'scores' && fullRec) nums = 'head 1, query · key ÷ 8, strongest:\n' + top(Array.from(ly.sc), v => v.toFixed(2));
-        else if (key === 'scores' || key === 'softmax') nums = 'attention, average of 9 heads:\n' + top(avg, v => fmtPct(v));
-        else if (key === 'mix') nums = (fullRec ? 'blended values (first 6 of 576):\n' + v6(ly.mix) + '\n' : '') + 'taken mostly from:\n' + top(avg, v => fmtPct(v));
-        else if (!fullRec) nums = 'Full numbers are kept for the last token of each pass. Point at the last prompt row or a new row.';
-        else if (key === 'norm') nums = `in  ${v6(ly.xin)} size ${ly.xinNorm.toFixed(1)}\nout ${v6(ly.h1)}`;
-        else if (key === 'qkv') nums = `q ${v6(ly.q)}\nk ${v6(ly.k)}\nv ${v6(ly.v)}\n(head 1, first 6 of 64 each)`;
-        else if (key === 'add') nums = `attention output ${v6(ly.out)}\nball after       ${v6(ly.x1)}  size ${ly.x1Norm.toFixed(1)}`;
-        else if (key === 'norm2') nums = `out ${v6(Array.from(ly.ffnIn.subarray(0, 6)))}`;
-        else if (key === 'gateup' || key === 'silu') nums = 'busiest neurons (output after SiLU × up):\n' + ly.neurons.map(n => `  #${String(n.i).padEnd(5)} ${(n.v >= 0 ? ' ' : '−') + Math.abs(n.v).toFixed(2)}`).join('\n');
-        else if (key === 'down') nums = `back to 576 numbers ${v6(ly.down)}`;
-        else if (key === 'add2') nums = `ball after ${v6(ly.first.slice(0, 6))} size ${ly.norm.toFixed(1)}` + (ly.lens ? '\nguess now: ' + ly.lens.map(g => S.llm.tok.piece(g.id) + ' ' + fmtPct(g.p)).join(', ') : '');
-      }
-    } else if (!real && ['norm', 'qkv', 'scores', 'softmax', 'mix', 'add', 'gateup', 'silu', 'down', 'add2'].includes(key)) {
-      nums = 'Toy mode has no real numbers here. Pick "Real: SmolLM2-135M" to see the actual values for every square.';
-    }
-    return { where, title, text, nums };
+    return inspectLayer(l, which, row);
   }
   function showInspect(o, live) {
     $('#iWhere').textContent = (live ? 'Now processing · ' : 'Pointing at · ') + o.where;
@@ -805,24 +796,21 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
     $('#iNums').hidden = !o.nums; if (o.nums) $('#iNums').textContent = o.nums;
   }
   function syncInspector(time, st) {
-    const hl = $('#sel'); hl.innerHTML = '';
-    if (S.hover) { const h = S.hover; showInspect(inspect(h.si, h.ci, h.row), false); drawHl(h); return; }
+    $('#sel').innerHTML = '';
+    if (S.hover) { const h = S.hover; showInspect(inspect(h.si, h.l, h.row, h.which), false); drawHl(h); return; }
     let cur = null; for (const e of STEPLOG) if (e[0] <= time) cur = e;
     const D = S.data;
-    if (st <= 1 || !cur) {
-      showInspect(inspect(st === 0 ? -3 : -2, 0, D.nP - 1), true);
-      return;
-    }
-    if (st === 6) { showInspect({ where: 'Finished', title: 'Done', text: 'Point at any square to see what it does' + (D.real ? ' and its real numbers.' : '.') }, true); return; }
-    const [, si, ci, p] = cur;
-    const row = si === -1 ? D.nP - 1 + p : PASSES[p] ? PASSES[p].focus : null;
-    showInspect(inspect(si, ci, row), true);
+    if (st <= 1 || !cur) { showInspect(inspect(st === 0 ? -3 : -2, 0, D.nP - 1), true); return; }
+    if (st === 6) { showInspect({ where: 'Finished', title: 'Done', text: 'Point at any lane in any layer to see what that station did' + (D.real ? ', with its real numbers.' : '.') }, true); return; }
+    const [, l, which, p] = cur;
+    if (l === -1) { showInspect(inspect(-1, 0, D.nP - 1 + p), true); return; }
+    showInspect(inspect(0, l, PASSES[p] ? PASSES[p].focus : null, which), true);
   }
   function drawHl(h) {
     if (h.si === -2 || h.si === -3) { const x = h.si === -3 ? TOKX - 2 : TOKX + TOKW + EMBW / 2 - 27; el('rect', { x, y: rowY(h.row) - 12, width: h.si === -3 ? TOKW - 1 : 54, height: 24, rx: 5, class: 'hl' }, $('#sel')); return; }
     if (h.si < 0) return;
-    const s = SECS[h.si], x = s.type === 'layer' ? s.cols[h.ci].x - G.stepW / 2 + 1 : s.x + 1, w = s.type === 'layer' ? G.stepW - 2 : s.w - 2;
-    el('rect', { x, y: rowY(h.row) - 10, width: w, height: 20, rx: 4, class: 'hl' }, $('#sel'));
+    const x = h.which ? G.lx(h.l) + G.LW / 2 : G.lx(h.l);
+    el('rect', { x, y: rowY(h.row) - 10, width: G.LW / 2, height: 20, rx: 2, class: 'hl' }, $('#sel'));
   }
 
   // the guess card and the label on the ball (real mode)
@@ -950,18 +938,18 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
         Z.c.map((c, i) => [shortW(c.w) + (i === Z.pick ? ' ✓' : ''), minus(c.s.toFixed(2)), minus(xs[i].toFixed(2)), es[i].toFixed(3), fmtPct(es[i] / tot), ...(real ? [fmtPct(c.full)] : [])]), Z.pick);
     }
   }
-  function openZoom(si) {
+  function openZoom(l) {
     if (tl.isActive()) { tl.pause(); setPlayLabel(); }
-    const Z = S.zoom, real = isReal(), sec = SECS[si];
+    const Z = S.zoom, real = isReal(), lname = 'Layer ' + (l + 1);
     if (real) {
       // the busiest of this layer's 1,536 neurons for the last prompt token, worked out from the real weights
-      const m = S.llm, l = sec.layer, h = S.data.recs[0].layers[l].ffnIn;
+      const m = S.llm, h = S.data.recs[0].layers[l].ffnIn;
       const silu = a => a / (1 + Math.exp(-a)), dot = w => { let s = 0; for (let i = 0; i < m.D; i++) s += h[i] * w[i]; return s; };
       const acts = new Float32Array(m.F);
       for (let k = 0; k < m.F; k++) { const w = m.neuron(l, k); acts[k] = silu(dot(w.gate)) * dot(w.up); }
       const order = Array.from(acts.keys()).sort((a, b) => Math.abs(acts[b]) - Math.abs(acts[a])), n = order[0];
       const { gate, up } = m.neuron(l, n), g = dot(gate), u = dot(up), a = silu(g) * u;
-      $('#zWhere').textContent = `${sec.name.split(' · ')[0]} · neuron #${n} of 1,536`;
+      $('#zWhere').textContent = `${lname} · neuron #${n} of 1,536`;
       $('#zTitle').textContent = 'One neuron: multiply, then add';
       $('#zLead').textContent = `This is the busiest of the layer's 1,536 feed-forward neurons for “${Z.word}”. A neuron does a dot product: the token's 576 numbers (as they arrive here, normalised) times the neuron's own 576 weights, added up. The first 4 of the 576 pairs, from the real model:`;
       fillTable($('#zDot'), ['', 'ball', '× weight', '= product'], [0, 1, 2, 3].map(i => ['#' + (i + 1), fx(h[i], 4), fx(gate[i], 4), fx(h[i] * gate[i], 5)]));
@@ -972,9 +960,9 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
       $('#zNote').textContent = 'Real numbers from SmolLM2-135M, computed in your browser from its published weights. The scores are the model\'s real output for the first new token, so the chances match the scores on the board.';
     } else {
       const moe = S.mode === 'moe';
-      $('#zWhere').textContent = sec.name.split(' · ')[0] + (moe ? ' · one expert\'s neuron' : ' · one feed-forward neuron');
+      $('#zWhere').textContent = lname + (moe ? ' · one expert\'s neuron' : ' · one feed-forward neuron');
       $('#zTitle').textContent = 'One neuron: multiply, then add';
-      const r = rng(hash('neuron|' + S.mode + '|' + si));
+      const r = rng(hash('neuron|' + S.mode + '|' + l));
       const ball = Z.vals.slice(0, 4).map(v => Math.round(v * 10));
       const wts = ball.map(() => Math.round(r() * 20) - 10);
       const prods = ball.map((b, i) => b * wts[i]);
@@ -992,21 +980,29 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
     $('#zoom').showModal();
   }
 
-  // ---- pointing and clicking on squares ----
-  $('#dyn').addEventListener('pointerover', e => {
-    const c = e.target.closest && e.target.closest('.cell'); if (!c || S.pinned) return;
-    S.hover = { row: +c.dataset.row, si: +c.dataset.sec, ci: +c.dataset.col }; sync();
-  });
+  // ---- pointing and clicking: token chips and strips are cells; in the layers the pointer picks lane, layer, station ----
+  function pick(e) {
+    const c = e.target.closest && e.target.closest('.cell');
+    if (c) return { si: +c.dataset.sec, row: +c.dataset.row };
+    if (e.target.id !== 'layerHit') return null;
+    const svg = $('#board'), pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY;
+    const p = pt.matrixTransform(svg.getScreenCTM().inverse());
+    const l = Math.max(0, Math.min(G.L - 1, Math.floor((p.x - G.x0) / G.LW))), row = Math.round((p.y - ROW0) / RH);
+    if (row < 0 || row >= S.data.nP + 5) return null; // the last new token is never fed back through the layers
+    return { si: 0, l, row, which: p.x - G.lx(l) > G.LW / 2 ? 1 : 0 };
+  }
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  $('#board').addEventListener('pointermove', e => { if (S.pinned) return; const h = pick(e); if (!same(h, S.hover)) { S.hover = h; sync(); } });
   $('#board').addEventListener('pointerleave', () => { if (!S.pinned && S.hover) { S.hover = null; sync(); } });
-  $('#dyn').addEventListener('click', e => {
-    const c = e.target.closest && e.target.closest('.cell'); if (!c) { S.pinned = false; S.hover = null; sync(); return; }
-    const si = +c.dataset.sec, sec = SECS[si], key = sec.type === 'layer' ? sec.cols[+c.dataset.col].key : null;
-    S.hover = { row: +c.dataset.row, si, ci: +c.dataset.col }; S.pinned = true;
+  $('#board').addEventListener('click', e => {
+    const h = pick(e);
+    if (!h) { S.pinned = false; S.hover = null; sync(); return; }
+    S.hover = h; S.pinned = true;
     if (tl.isActive()) { tl.pause(); setPlayLabel(); }
     sync();
-    if (['gateup', 'silu', 'down', 'router', 'experts'].includes(key)) openZoom(si);
+    if (h.si === 0 && h.which === 1) openZoom(h.l);
   });
-  $('#zoomBtn').addEventListener('click', () => openZoom(SECS.findIndex(s => s.type === 'layer')));
+  $('#zoomBtn').addEventListener('click', () => openZoom(0));
   $('#zClose').addEventListener('click', () => $('#zoom').close());
   $('#zoom').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.close(); });
 

@@ -179,7 +179,7 @@
         }
         matvec(P.o, D, D, buf.att, buf.o);
         for (let i = 0; i < D; i++) x[i] += buf.o[i];
-        if (full) { ly.mix = f6(buf.att); ly.out = f6(buf.o); ly.x1 = f6(x); ly.x1Norm = nrm(x); }
+        if (full) { ly.mix = f6(buf.att); ly.out = f6(buf.o); ly.outNorm = nrm(buf.o); ly.x1 = f6(x); ly.x1Norm = nrm(x); }
         rmsnorm(x, P.ln2, eps, buf.h);
         matvec(P.gate, F, D, buf.h, buf.g); matvec(P.up, F, D, buf.h, buf.u);
         for (let i = 0; i < F; i++) { const a = buf.g[i]; buf.g[i] = (a / (1 + Math.exp(-a))) * buf.u[i]; } // SwiGLU: silu(gate) * up
@@ -189,7 +189,7 @@
           ly.attn = weights; ly.heads = H;
           if (full) {
             const tl = performance.now();
-            Object.assign(ly, { ffnIn: buf.h.slice(), neurons: topk(buf.g.map(Math.abs), 5).map(i => ({ i, v: buf.g[i] })), down: f6(buf.d),
+            Object.assign(ly, { ffnIn: buf.h.slice(), neurons: topk(buf.g.map(Math.abs), 5).map(i => ({ i, v: buf.g[i] })), down: f6(buf.d), downNorm: nrm(buf.d),
               first: Array.from(x.subarray(0, 16)), norm: nrm(x), lens: l < L - 1 ? lens(x, lensTop) : null });
             lensMs += performance.now() - tl;
           }
