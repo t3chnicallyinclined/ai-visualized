@@ -39,7 +39,7 @@ header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 18px; }
 h1 { font: 800 clamp(28px, 4vw, 40px)/1 var(--display); margin: 0; letter-spacing: -0.02em; }
 header p { margin: 0; color: var(--muted); max-width: 62ch; text-wrap: pretty; }
 form { display: flex; gap: 10px; flex-wrap: wrap; }
-#prompt { flex: 1 1 280px; min-width: 0; font: 500 17px var(--mono); padding: 13px 16px; border-radius: 10px;
+#prompt { flex: 1 1 200px; min-width: 0; font: 500 17px var(--mono); padding: 13px 16px; border-radius: 10px;
   border: 1.5px solid var(--line); background: var(--panel); color: var(--ink); }
 #prompt:focus-visible, button:focus-visible, input[type=range]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 button { font: 600 14px var(--body); border-radius: 9px; border: 1.5px solid var(--line); background: var(--panel); color: var(--ink);
@@ -93,6 +93,11 @@ dt { color: var(--muted); } dd { margin: 0; text-align: right; font-family: var(
 .word { font: 500 13px var(--mono); fill: var(--ink); }
 .fly { font: 600 13px var(--mono); fill: var(--accent); }
 .out { font: 500 13px var(--mono); } .outp { fill: var(--muted); } .outg { fill: var(--accent); }
+/* On phones the board scales to about half size, so the labels that fit get bigger. Chips and token IDs stay small: there is no room. */
+@media (max-width: 560px) {
+  .lbl { font-size: 16px; letter-spacing: 0.06em; } .bandname { font-size: 20px; }
+  .pct { font-size: 20px; } .word { font-size: 19px; } .out { font-size: 15px; }
+}
 </style>
 </head>
 <body>
@@ -110,7 +115,7 @@ dt { color: var(--muted); } dd { margin: 0; text-align: right; font-family: var(
 
   <div class="layout">
     <div class="boardwrap">
-      <svg id="board" viewBox="0 0 900 1030" role="img" aria-label="Plinko board showing tokens falling through model layers">
+      <svg id="board" viewBox="50 0 760 1030" role="img" aria-label="Plinko board showing tokens falling through model layers">
         <g id="static"></g><g id="dyn"></g>
       </svg>
       <div class="transport">
@@ -269,8 +274,8 @@ dt { color: var(--muted); } dd { margin: 0; text-align: right; font-family: var(
         const ex = [];
         for (let e = 0; e < 8; e++) {
           const x = 66 + e * 91;
-          ex.push(el('rect', { x, y: b.y + 88, width: 85, height: 74, rx: 6, class: 'expert', 'fill-opacity': 0.07 }, g));
-          el('text', { x: x + 42, y: b.y + 158, 'text-anchor': 'middle', class: 'tiny' }, g, 'expert ' + (e + 1));
+          ex.push(el('rect', { x, y: b.y + 88, width: 85, height: 66, rx: 6, class: 'expert', 'fill-opacity': 0.07 }, g));
+          el('text', { x: x + 42, y: b.y + 165, 'text-anchor': 'middle', class: 'tiny' }, g, 'expert ' + (e + 1));
         }
         S.experts.push(ex); S.flash.push(null);
       } else {
@@ -322,7 +327,7 @@ dt { color: var(--muted); } dd { margin: 0; text-align: right; font-family: var(
       const bs = [];
       for (let b = 0; b < 8; b++) bs.push([el('rect', { x: X(i) - 15 + b * 4, y: 134, width: 3, height: 0, fill: color(i) }, gBars), 4 + hash(all[i] + '#' + b) % 24]);
       bars.push(bs);
-      kv.push(BANDS.map(bd => (bd.gap ? null : el('rect', { x: X(i) - 6, y: bd.y + 70, width: 12, height: 5, rx: 1.5, class: 'kv', style: 'opacity:0' }, gKv))));
+      kv.push(BANDS.map(bd => (bd.gap ? null : el('rect', { x: X(i) - 6, y: bd.y + 28, width: 12, height: 5, rx: 1.5, class: 'kv', style: 'opacity:0' }, gKv))));
       ball.push(el('circle', { cx: X(i), cy: 150, r: 0, fill: color(i), class: 'ball' }, gBalls));
     }
     const out = el('text', { x: 66, y: 1008, class: 'out' }, dyn);
