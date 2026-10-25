@@ -47,7 +47,10 @@ button { font: 600 14px var(--body); border-radius: 9px; border: 1.5px solid var
 button:hover { border-color: var(--accent); }
 #drop { background: var(--accent); border-color: var(--accent); color: #fff; padding: 12px 22px; font-size: 15px; }
 .layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 20px; align-items: start; }
-@media (max-width: 920px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 920px) {
+  .layout { grid-template-columns: minmax(0, 1fr); }
+  .layout > aside { display: contents; } .cap { order: -1; } .boardwrap { order: 0; } aside > :not(.cap) { order: 1; }
+}
 .boardwrap { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 svg#board { width: 100%; height: auto; display: block; }
 .transport { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
@@ -81,7 +84,8 @@ dt { color: var(--muted); } dd { margin: 0; text-align: right; font-family: var(
 .board { fill: var(--board); } .band { fill: var(--band); stroke: var(--line); }
 .divider { stroke: var(--line); stroke-dasharray: 3 4; } .peg { fill: var(--peg); }
 .expert { fill: var(--wt); stroke: var(--line); } .flash { fill: var(--wt); } .kv { fill: var(--kv); }
-.arc { fill: none; stroke: var(--accent); stroke-width: 1.7; } .ball { stroke: var(--band); stroke-width: 2; }
+.arc { fill: none; stroke: var(--accent); stroke-width: 1.7; } .arc.memw { stroke: var(--kv); }
+.mem { fill: var(--kv); stroke: var(--kv); } .ball { stroke: var(--band); stroke-width: 2; }
 .chip { fill: var(--panel); stroke: var(--line); } .chip.gen { stroke: var(--accent); stroke-width: 1.6; }
 .bin { fill: none; stroke: var(--line); } .bar { fill: var(--wt); }
 .win { fill: none; stroke: var(--accent); stroke-width: 2.5; } .die { fill: var(--accent); }
@@ -109,16 +113,29 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
 .zt th:first-child, .zt td:first-child { text-align: left; }
 .zt tr.hi td { color: var(--accent); font-weight: 600; }
 .zsum { font-size: 14px; background: var(--band); border-radius: 8px; padding: 8px 10px; overflow-wrap: anywhere; }
+/* Full-screen 1080p (and the 1920x1080 video render): fit the whole board on one screen, captions large. */
+@media (min-width: 1800px) and (min-height: 1040px) {
+  #stage { max-width: 1840px; padding-block: 22px 16px; gap: 14px 24px; display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; align-content: start; }
+  header p { display: none; }
+  .layout { grid-column: 1 / -1; grid-template-columns: auto minmax(0, 1fr); gap: 28px; }
+  svg#board { height: calc(100vh - 186px); width: auto; }
+  .lbl { font-size: 12px; } .bandname { font-size: 17px; } .tiny { font-size: 10px; }
+  .pct { font-size: 15px; } .word { font-size: 15px; } .out { font-size: 15px; }
+  aside { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+  .cap, aside > .note { grid-column: 1 / -1; }
+  .cap { padding: 26px 30px; gap: 14px; }
+  #capTitle { font-size: 46px; } #capText { font-size: 23px; line-height: 1.45; } ol.stages li { font-size: 14px; }
+}
 /* On phones the board scales to about half size, so the labels that fit get bigger. Chips and token IDs stay small: there is no room. */
 @media (max-width: 560px) {
-  .lbl { font-size: 16px; letter-spacing: 0.06em; } .bandname { font-size: 20px; }
+  .lbl { font-size: 15px; letter-spacing: 0.06em; } .bandname { font-size: 20px; }
   .pct { font-size: 20px; } .word { font-size: 19px; } .out { font-size: 15px; }
 }
 </style>
 </head>
 <body>
 
-<div id="stage" data-composition-id="plinko" data-start="0" data-duration="36" data-width="1920" data-height="1080">
+<div id="stage" data-composition-id="plinko" data-start="0" data-duration="50.9" data-width="1920" data-height="1080">
   <header>
     <h1>LLM Plinko</h1>
     <p>Type a prompt and press Enter. Watch it get cut into tokens, fall through the layers, and come out as the next word, one token at a time.</p>
@@ -147,7 +164,7 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
     </div>
 
     <aside>
-      <div class="card" aria-live="polite">
+      <div class="card cap" aria-live="polite">
         <p class="eyebrow" id="capStep">Step 1 of 6</p>
         <h2 id="capTitle">Tokenize</h2>
         <p id="capText"></p>
@@ -171,9 +188,10 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
         <div class="legend"><span><i style="background:var(--wt)"></i>Weights</span><span><i style="background:var(--kv)"></i>KV cache</span><span><i style="background:var(--band);border:1px solid var(--line)"></i>Free</span></div>
         <dl>
           <dt>Model</dt><dd id="mName"></dd>
-          <dt>Weights in VRAM</dt><dd id="mW"></dd>
+          <dt>Weights in VRAM (4-bit)</dt><dd id="mW"></dd>
           <dt>Tokens in KV cache</dt><dd id="kvTok">0</dd>
           <dt>KV cache size</dt><dd id="kvSize">0 MB</dd>
+          <dt>Linear-attention memory</dt><dd id="mMem"></dd>
           <dt>Weights read so far</dt><dd id="read">0 GB</dd>
           <dt>Tokens written</dt><dd id="gen">0 of 6</dd>
         </dl>
@@ -181,7 +199,7 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
         <p class="note" id="kv32"></p>
       </div>
 
-      <p class="note">Toy model. The board shows how a real LLM is wired, but the next-token scores come from a tiny word table built into this page, not a real model. Memory figures are rough.</p>
+      <p class="note">Toy model. The board shows how a real LLM is wired, but the next-token scores come from a tiny word table built into this page, not a real model. The token splits and ID numbers are made up too. Memory and speed figures are rough.</p>
     </aside>
   </div>
 </div>
@@ -262,58 +280,73 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
   const fmtPct = p => (p >= 0.995 ? '100%' : p < 0.005 ? '<1%' : Math.round(p * 100) + '%');
 
   // ---- board ----
-  const BANDS = [
-    { n: 'Layer 1', y: 170, h: 170 },
-    { n: 'Layer 2', y: 350, h: 170 },
-    { n: '57 more layers, same pattern', y: 530, h: 56, gap: true },
-    { n: 'Layer 60', y: 596, h: 170 },
-  ];
+  // Both models are hybrids: 3 of every 4 layers use linear attention (one fixed-size memory),
+  // every 4th uses full attention (looks at every earlier token, keeps a KV cache).
+  // Figures from the models' published config.json; weights = the 4-bit Q4_K_M GGUF file size.
   const MODELS = {
-    dense: { label: 'Qwen3.6-27B · dense', weights: 16.8, active: 16.8, kvMB: 0.25, rep: '~31' },
-    moe: { label: 'Qwen3.6-35B-A3B · MoE', weights: 19.0, active: 1.9, kvMB: 0.1, rep: '~107' },
+    dense: { label: 'Qwen3.6-27B · dense', layers: 64, full: 16, hidden: 5120, weights: 16.8, active: 16.8, kvMB: 0.0625, memMB: 151, rep: 'about 35–40' },
+    moe: { label: 'Qwen3.6-35B-A3B · MoE', layers: 40, full: 10, hidden: 2048, weights: 22.1, active: 1.9, kvMB: 0.0195, memMB: 63, rep: 'about 110–135' },
   };
+  let BANDS = [];
+  function makeBands(L) {
+    return [
+      { n: 'Layer 1', kind: 'linear', y: 170, h: 156 },
+      { n: 'Layers 2–3 · linear, like layer 1', gap: true, y: 334, h: 40 },
+      { n: 'Layer 4', kind: 'full', y: 382, h: 156 },
+      { n: `Layers 5–${L - 1} · same 3 linear + 1 full pattern`, gap: true, y: 546, h: 40 },
+      { n: 'Layer ' + L, kind: 'full', y: 594, h: 156 },
+    ];
+  }
+  const pegRows = b => [b.y + 96, b.y + 116, b.y + 136];
+  const MEM = { x: 750, w: 42 };
   const STAGES = [
-    ['Tokenize', 'Your text is cut into word pieces called tokens. Each one gets an ID number from a vocabulary of about 150,000.'],
+    ['Tokenize', 'Your text is cut into word pieces called tokens. Each one gets an ID number from a vocabulary of about 250,000.'],
     ['Embed', 'Each token turns into a ball: a list of a few thousand numbers that works like a meaning fingerprint. Eight of them are drawn as bars.'],
-    ['Read the prompt', 'All your tokens drop at once. In every layer, attention lets a token look back at earlier ones (the arcs, shown for the last token), then the feed-forward pegs push it. Each token leaves its work behind in the KV cache (the teal marks).'],
-    ['Score', 'The last ball comes out as a score for every possible next token. The top five are shown.'],
+    ['Read the prompt', 'All your tokens drop at once. Every 4th layer uses full attention: the last token looks back at every earlier one (the arcs), and each token leaves its keys and values in the KV cache (the teal marks). The other layers use linear attention: tokens squeeze what they know into one fixed-size memory (the box) and read from it. Then the feed-forward pegs push each token.'],
+    ['Score', 'The last ball comes out as a score for every token in the vocabulary. The dice only choose among the top five, as many apps do.'],
     ['Roll', 'A weighted dice roll picks one. Temperature sets how loaded the dice are.'],
-    ['Repeat', 'The new token drops alone. It reads the cached work of every earlier token instead of redoing it, but every active weight is read from VRAM again. One full pass per token.'],
+    ['Repeat', 'The new token drops alone. Full-attention layers read the cached keys and values of every earlier token, linear layers read their memory, so nothing is redone. But every active weight is read from VRAM again: one full pass per token.'],
   ];
-  const S = { mode: 'dense', speed: 1, flash: [], experts: [], pegs: [], zoom: null };
+  const DONE = ['Done', 'Six new tokens, six passes. A real model keeps going until it writes an end-of-text token or hits a length limit. Press Replay, or type a new prompt.'];
+  const S = { mode: 'dense', speed: 1, flash: [], experts: [], mem: [], pegs: [], zoom: null };
   let tl = null, CAPS = [], INFOS = [];
 
   STAGES.forEach(([t], i) => { const li = document.createElement('li'); li.textContent = (i + 1) + ' ' + t; $('#stages').appendChild(li); });
 
   function drawStatic() {
     const g = $('#static'); g.innerHTML = '';
-    S.flash = []; S.experts = []; S.pegs = [];
+    S.flash = []; S.experts = []; S.mem = []; S.pegs = [];
+    BANDS = makeBands(MODELS[S.mode].layers);
     el('rect', { x: 50, y: 4, width: 760, height: 1022, rx: 18, class: 'board' }, g);
     el('text', { x: 66, y: 21, class: 'lbl' }, g, 'TOKENS');
     el('text', { x: 66, y: 98, class: 'lbl' }, g, 'EMBEDDINGS');
     BANDS.forEach((b, bi) => {
       el('rect', { x: 60, y: b.y, width: 740, height: b.h, rx: 10, class: 'band' }, g);
+      S.flash.push(null); S.experts.push(null); S.mem.push(null);
       if (b.gap) {
-        el('text', { x: 430, y: b.y + b.h / 2 + 4, 'text-anchor': 'middle', class: 'lbl' }, g, '⋮   ' + b.n.toUpperCase() + '   ⋮');
-        S.flash.push(null); S.experts.push(null); return;
+        el('text', { x: 430, y: b.y + b.h / 2 + 5, 'text-anchor': 'middle', class: 'lbl' }, g, '⋮  ' + b.n.toUpperCase() + '  ⋮');
+        return;
       }
       el('text', { x: 72, y: b.y + 19, class: 'bandname' }, g, b.n);
-      el('text', { x: 788, y: b.y + 18, 'text-anchor': 'end', class: 'lbl' }, g, 'ATTENTION');
-      el('text', { x: 788, y: b.y + 76, 'text-anchor': 'end', class: 'lbl' }, g, S.mode === 'moe' ? 'EXPERTS · ROUTER PICKS 2 ↓' : 'FEED-FORWARD ↓');
+      el('text', { x: 788, y: b.y + 18, 'text-anchor': 'end', class: 'lbl' }, g, b.kind === 'full' ? 'FULL ATTENTION' : 'LINEAR ATTENTION');
+      if (b.kind === 'linear') {
+        S.mem[bi] = el('rect', { x: MEM.x, y: b.y + 26, width: MEM.w, height: 20, rx: 4, class: 'mem', 'fill-opacity': 0.18 }, g);
+        el('text', { x: MEM.x + MEM.w / 2, y: b.y + 39.5, 'text-anchor': 'middle', class: 'tiny' }, g, 'memory');
+      }
+      el('text', { x: 788, y: b.y + 76, 'text-anchor': 'end', class: 'lbl' }, g, S.mode === 'moe' ? 'EXPERTS · 2 PICKED + SHARED ↓' : 'FEED-FORWARD ↓');
       el('line', { x1: 72, x2: 788, y1: b.y + 82, y2: b.y + 82, class: 'divider' }, g);
       if (S.mode === 'moe') {
         const ex = [];
         for (let e = 0; e < 8; e++) {
           const x = 66 + e * 91;
-          ex.push(el('rect', { x, y: b.y + 88, width: 85, height: 66, rx: 6, class: 'expert', 'fill-opacity': 0.07 }, g));
-          el('text', { x: x + 42, y: b.y + 165, 'text-anchor': 'middle', class: 'tiny' }, g, 'expert ' + (e + 1));
+          ex.push(el('rect', { x, y: b.y + 86, width: 85, height: 54, rx: 6, class: 'expert', 'fill-opacity': 0.07 }, g));
+          el('text', { x: x + 42, y: b.y + 150, 'text-anchor': 'middle', class: 'tiny' }, g, e ? 'expert ' + e : 'shared');
         }
-        S.experts.push(ex); S.flash.push(null);
+        S.experts[bi] = ex;
       } else {
-        S.flash.push(el('rect', { x: 66, y: b.y + 88, width: 728, height: 74, rx: 6, class: 'flash', style: 'opacity:0' }, g));
-        S.experts.push(null);
+        S.flash[bi] = el('rect', { x: 66, y: b.y + 86, width: 728, height: 60, rx: 6, class: 'flash', style: 'opacity:0' }, g);
       }
-      [b.y + 100, b.y + 124, b.y + 148].forEach((y, r) => {
+      pegRows(b).forEach((y, r) => {
         for (let m = -9; m <= 9; m++) {
           const x = 430 + m * 44 + (r === 1 ? 0 : 22);
           if (x < 72 || x > 788) continue;
@@ -321,7 +354,7 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
           S.pegs.push({ x, y, band: bi, n: S.pegs.filter(p => p.band === bi).length + 1 });
         }
       });
-      el('rect', { x: 66, y: b.y + 88, width: 728, height: 74, class: 'ffhit', 'data-band': bi }, g);
+      el('rect', { x: 66, y: b.y + 86, width: 728, height: 60, class: 'ffhit', 'data-band': bi }, g);
     });
     el('text', { x: 66, y: 784, class: 'lbl' }, g, 'NEXT-TOKEN SCORES');
     for (let k = 0; k < 5; k++) el('rect', { x: 70 + k * 146, y: 792, width: 136, height: 140, rx: 8, class: 'bin' }, g);
@@ -335,7 +368,9 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
     if (tl) tl.kill();
     S.flash.forEach(f => f && gsap.set(f, { opacity: 0 }));
     S.experts.forEach(ex => ex && ex.forEach(r => r.setAttribute('fill-opacity', 0.07)));
+    S.mem.forEach(m => m && m.setAttribute('fill-opacity', 0.18));
     const dyn = $('#dyn'); dyn.innerHTML = '';
+    $('#sel').innerHTML = '';
 
     let toks = tokenize(prompt); if (!toks.length) toks = ['?'];
     if (toks.length > 9) toks = toks.slice(-9);
@@ -355,12 +390,12 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
       const cg = el('g', { style: 'opacity:0' }, gChips);
       el('rect', { x: X(i) - 20, y: 28, width: 40, height: 26, rx: 5, class: i >= nP ? 'chip gen' : 'chip' }, cg);
       el('text', { x: X(i), y: 45, 'text-anchor': 'middle', class: 'chiptxt' }, cg, short(all[i]));
-      el('text', { x: X(i), y: 68, 'text-anchor': 'middle', class: 'tiny' }, cg, String(hash(all[i].toLowerCase()) % 151936));
+      el('text', { x: X(i), y: 68, 'text-anchor': 'middle', class: 'tiny' }, cg, String(hash(all[i].toLowerCase()) % 248320));
       chip.push(cg);
       const bs = [];
       for (let b = 0; b < 8; b++) bs.push([el('rect', { x: X(i) - 15 + b * 4, y: 134, width: 3, height: 0, fill: color(i) }, gBars), 4 + hash(all[i] + '#' + b) % 24]);
       bars.push(bs);
-      kv.push(BANDS.map(bd => (bd.gap ? null : el('rect', { x: X(i) - 6, y: bd.y + 28, width: 12, height: 5, rx: 1.5, class: 'kv', style: 'opacity:0' }, gKv))));
+      kv.push(BANDS.map(bd => (bd.kind !== 'full' ? null : el('rect', { x: X(i) - 6, y: bd.y + 28, width: 12, height: 5, rx: 1.5, class: 'kv', style: 'opacity:0' }, gKv))));
       ball.push(el('circle', { cx: X(i), cy: 150, r: 0, fill: color(i), class: 'ball' }, gBalls));
     }
     const out = el('text', { x: 66, y: 1008, class: 'out' }, dyn);
@@ -393,21 +428,34 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
         const ya = b.y + 58;
         cols.forEach(c => tl.to(ball[c], { attr: { cy: ya, cx: X(c) }, duration: 0.3 * s, ease: 'power1.in' }, t));
         t += 0.3 * s;
-        for (let j = 0; j < focus; j++) {
-          const p = el('path', { d: arc(X(focus), X(j), ya, b.y), class: 'arc', style: 'opacity:0' }, gArcs);
-          tl.to(p, { opacity: 0.15 + 0.85 * w[j], duration: 0.2 * s }, t);
-          tl.to(p, { opacity: 0, duration: 0.3 * s }, t + 0.6 * s);
-          if (!cols.includes(j)) { tl.to(kv[j][bi], { opacity: 1, duration: 0.12 * s }, t); tl.to(kv[j][bi], { opacity: 0.5, duration: 0.3 * s }, t + 0.5 * s); }
+        if (b.kind === 'full') {
+          // full attention: the focus token looks back at every earlier token; everyone's keys and values stay in the KV cache
+          for (let j = 0; j < focus; j++) {
+            const p = el('path', { d: arc(X(focus), X(j), ya, b.y), class: 'arc', style: 'opacity:0' }, gArcs);
+            tl.to(p, { opacity: 0.15 + 0.85 * w[j], duration: 0.2 * s }, t);
+            tl.to(p, { opacity: 0, duration: 0.3 * s }, t + 0.6 * s);
+            if (!cols.includes(j)) { tl.to(kv[j][bi], { opacity: 1, duration: 0.12 * s }, t); tl.to(kv[j][bi], { opacity: 0.5, duration: 0.3 * s }, t + 0.5 * s); }
+          }
+          cols.forEach(c => tl.to(kv[c][bi], { opacity: 0.5, duration: 0.2 * s }, t + 0.3 * s));
+        } else {
+          // linear attention: every token writes into one fixed-size memory, the focus token reads it back; nothing grows
+          cols.forEach(c => {
+            const p = el('path', { d: `M${X(c)} ${ya} Q${(X(c) + MEM.x) / 2} ${b.y + 12 + (X(c) - 100) * 0.03} ${MEM.x} ${b.y + 36}`, class: c === focus ? 'arc' : 'arc memw', style: 'opacity:0' }, gArcs);
+            tl.to(p, { opacity: c === focus ? 1 : 0.45, duration: 0.2 * s }, t + (c === focus ? 0.2 * s : 0));
+            tl.to(p, { opacity: 0, duration: 0.3 * s }, t + 0.6 * s);
+          });
+          tl.to(S.mem[bi], { attr: { 'fill-opacity': 0.6 }, duration: 0.15 * s }, t);
+          tl.to(S.mem[bi], { attr: { 'fill-opacity': 0.18 }, duration: 0.35 * s }, t + 0.55 * s);
         }
-        cols.forEach(c => tl.to(kv[c][bi], { opacity: 0.5, duration: 0.2 * s }, t + 0.3 * s));
         t += 0.7 * s;
         if (S.mode === 'moe') {
-          const h = hash(all[focus] + '@' + bi), e1 = h % 8, e2 = (e1 + 1 + ((h >>> 4) % 7)) % 8;
-          [e1, e2].forEach(e => { const rc = S.experts[bi][e]; tl.to(rc, { attr: { 'fill-opacity': 0.55 }, duration: 0.12 * s }, t); tl.to(rc, { attr: { 'fill-opacity': 0.07 }, duration: 0.35 * s }, t + 0.55 * s); });
+          // box 0 is the shared expert every token uses; the router picks 2 of the other 7
+          const h = hash(all[focus] + '@' + bi), e1 = 1 + h % 7, e2 = 1 + (e1 + (h >>> 4) % 6) % 7;
+          [0, e1, e2].forEach(e => { const rc = S.experts[bi][e]; tl.to(rc, { attr: { 'fill-opacity': 0.55 }, duration: 0.12 * s }, t); tl.to(rc, { attr: { 'fill-opacity': 0.07 }, duration: 0.35 * s }, t + 0.55 * s); });
         } else {
           tl.to(S.flash[bi], { opacity: 0.35, duration: 0.12 * s }, t); tl.to(S.flash[bi], { opacity: 0, duration: 0.35 * s }, t + 0.5 * s);
         }
-        const ry = [b.y + 100, b.y + 124, b.y + 148];
+        const ry = pegRows(b);
         cols.forEach(c => {
           ry.forEach((y, rI) => {
             const h = hash(all[c] + '/' + bi + '/' + rI);
@@ -472,17 +520,22 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
     mark(1, t);
     for (let i = 0; i < nP; i++) embed(i, t + i * 0.05);
     t += nP * 0.05 + 0.9;
-    mark(2, t); info({ kv: nP, read: M.weights }, t);
+    // The prompt pass reads each weight once for all prompt tokens together. In the MoE model only the experts
+    // those tokens were routed to are read: roughly 1 - (1 - 8/256)^tokens of the expert weights (rough).
+    const prefill = S.mode === 'moe' ? M.active + (M.weights - M.active) * (1 - Math.pow(1 - 8 / 256, nP)) : M.weights;
+    mark(2, t); info({ kv: nP, read: prefill }, t);
     t = pass([...Array(nP).keys()], nP - 1, t, 1);
     for (let i = 0; i < nP - 1; i++) tl.to(ball[i], { opacity: 0, duration: 0.3 }, t);
     t = score(0, nP - 1, t);
     for (let k = 1; k < NG; k++) {
       const c = nP + k - 1;
-      mark(5, t); info({ kv: c + 1, read: M.weights + k * M.active }, t);
+      mark(5, t); info({ kv: c + 1, read: prefill + k * M.active }, t);
       embed(c, t); t += 0.55;
       t = pass([c], c, t, 0.42);
       t = score(k, c, t);
     }
+    mark(6, t);
+    tl.to({}, { duration: 2.5 }, t); // hold the finished board (an empty tween: it only lengthens the timeline)
     S.zoom = { word: all[nP - 1], vals: bars[nP - 1].map(([, h]) => h), prev: lastWord(prompt), T, c: steps[0].c, pick: steps[0].pick };
     tl.timeScale(S.speed);
     window.__timelines = window.__timelines || {};
@@ -493,10 +546,11 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
 
   // ---- panel ----
   function setStage(st) {
-    $('#capStep').textContent = 'Step ' + (st + 1) + ' of 6';
-    $('#capTitle').textContent = STAGES[st][0];
-    let txt = STAGES[st][1];
-    if (st === 2 && S.mode === 'moe') txt += ' In this model a router sends each token to only 2 of the experts (real models: about 8 of 128).';
+    const [title, text] = STAGES[st] || DONE;
+    $('#capStep').textContent = st < STAGES.length ? 'Step ' + (st + 1) + ' of 6' : 'Finished';
+    $('#capTitle').textContent = title;
+    let txt = text;
+    if (st === 2 && S.mode === 'moe') txt += ' In the feed-forward part, a router sends each token to 2 of the 7 experts drawn plus a shared expert every token uses (the real model: 8 of 256, plus 1 shared).';
     $('#capText').textContent = txt;
     document.querySelectorAll('#stages li').forEach((li, i) => li.classList.toggle('on', i === st));
   }
@@ -505,8 +559,10 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
     $('#mName').textContent = M.label;
     $('#mW').textContent = M.weights.toFixed(1) + ' GB';
     $('#segW').style.width = (M.weights / 24 * 100) + '%';
-    $('#ceil').textContent = `Writing speed: each new token reads ${M.active} GB of active weights. 936 GB/s ÷ ${M.active} GB ≈ ${Math.round(936 / M.active)} tokens/s at most. Guides report ${M.rep} on a 3090.`;
-    $('#kv32').textContent = `The KV cache grows with every token. At 32,000 tokens it would be about ${(32000 * M.kvMB / 1024).toFixed(1)} GB.`;
+    $('#mMem').textContent = M.memMB + ' MB, fixed';
+    $('#ceil').textContent = `Writing speed: each new token reads about ${M.active} GB of active weights. 936 GB/s ÷ ${M.active} GB ≈ ${Math.round(936 / M.active)} tokens/s at most. Guides report ${M.rep} on a 3090` +
+      (S.mode === 'moe' ? ', well under the ceiling: jumping between many small experts costs time too.' : '. Speculative decoding can beat the ceiling by checking several guessed tokens in one read.');
+    $('#kv32').textContent = `Only the ${M.full} full-attention layers keep a KV cache, and it grows with every token: about ${(32000 * M.kvMB / 1024).toFixed(1)} GB at 32,000 tokens. The other ${M.layers - M.full} layers keep one fixed memory of about ${M.memMB} MB, however long the text gets.`;
   }
   function sync() {
     const time = tl.time() + 1e-6;
@@ -515,7 +571,7 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
     const o = { kv: 0, read: 0, gen: 0 }; for (const [tt, v] of INFOS) if (tt <= time) Object.assign(o, v);
     const M = MODELS[S.mode], mb = o.kv * M.kvMB;
     $('#kvTok').textContent = o.kv;
-    $('#kvSize').textContent = mb.toFixed(1) + ' MB';
+    $('#kvSize').textContent = mb.toFixed(2) + ' MB';
     $('#read').textContent = o.read.toFixed(1) + ' GB';
     $('#gen').textContent = o.gen + ' of 6';
     $('#segKV').style.width = (mb / 1024 / 24 * 100) + '%';
@@ -543,22 +599,25 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
     sel.innerHTML = '';
     el('circle', { cx: peg.x, cy: peg.y, r: 9, class: 'win' }, sel);
     const moe = S.mode === 'moe';
-    $('#zWhere').textContent = BANDS[peg.band].n + (moe ? ' · expert ' + (Math.floor((peg.x - 66) / 91) + 1) + ' · peg ' : ' · feed-forward peg ') + peg.n;
+    const box = Math.floor((peg.x - 66) / 91);
+    $('#zWhere').textContent = BANDS[peg.band].n + (moe ? (box ? ' · expert ' + box : ' · shared expert') + ' · peg ' : ' · feed-forward peg ') + peg.n;
 
     const r = rng(hash('peg|' + S.mode + '|' + peg.band + '|' + peg.n));
     const ball = Z.vals.slice(0, 4).map(h => h - 15);
     const wts = ball.map(() => Math.round(r() * 20) - 10);
     const prods = ball.map((b, i) => b * wts[i]);
     const sum = prods.reduce((a, b) => a + b, 0);
-    $('#zLead').textContent = `The ball for “${Z.word}” is a list of numbers. A real model uses a few thousand; here are the first 4 (the first 4 bars drawn for it). The peg holds 4 numbers of its own, called weights, which were fixed when the model was trained. Multiply each pair:`;
+    const M = MODELS[S.mode];
+    $('#zLead').textContent = `The ball for “${Z.word}” is a list of ${M.hidden.toLocaleString('en-US')} numbers in this model. Here are 4 of them, taken from the bars drawn for it` +
+      (peg.band ? ' (by this layer the real numbers would have changed)' : '') + `. The peg holds 4 numbers of its own, called weights, which were fixed when the model was trained. Multiply each pair:`;
     fillTable($('#zDot'), ['', 'ball', '× weight', '= product'], ball.map((b, i) => ['#' + (i + 1), f1(b), f1(wts[i]), f2(prods[i])]));
     $('#zSum').textContent = 'add them: ' + prods.map((p, i) => (i ? (p < 0 ? ' − ' : ' + ') + f2(Math.abs(p)) : f2(p))).join('') + ' = ' + f2(sum);
-    $('#zAfter').textContent = `That one number, ${f2(sum)}, is this peg's output. It is called a dot product: it is large when the ball's numbers line up with the peg's weights. Real models then bend it (negative results get squeezed toward 0) and the ball carries it into the next layer. A real layer has tens of millions of pegs like this, and the GPU works them all at once` + (moe
-      ? '. In this MoE model the router sends each token to only 2 experts, so only their pegs do this work and only their weights are read from memory.'
-      : ', which is why every weight is read from memory for every token.');
+    $('#zAfter').textContent = `That one number, ${f2(sum)}, is this peg's output. It is called a dot product: it is large when the ball's numbers line up with the peg's weights. Real models then bend it (negative results get squeezed toward 0) and the ball carries it into the next layer. ` + (moe
+      ? 'Each expert in this model has about 3,000 pegs. The router sends each token to 8 of the 256 experts plus 1 shared one, so about 28,000 pegs per layer do this work, and only their weights are read from memory.'
+      : 'A layer of this model has about 40,000 pegs like this, each holding thousands of weights (about 270 million per layer). The GPU works them all at once, and every weight is read from memory for every token.');
 
     const T = Z.T;
-    $('#zSoftLead').textContent = `At the bottom of the board the last ball becomes a score for every word in the vocabulary. After “${Z.prev}”, the toy model's top five scores are below. Softmax turns them into chances that add up to 100%:`;
+    $('#zSoftLead').textContent = `At the bottom of the board the last ball becomes a score for every token in the vocabulary (about 250,000). After “${Z.prev}”, the toy model's top five are below; like many apps, this page lets the dice choose only among the top few. Softmax turns their scores into chances that add up to 100%:`;
     const steps = $('#zSteps'); steps.innerHTML = '';
     const li = t => { const e = document.createElement('li'); e.textContent = t; steps.appendChild(e); };
     if (T < 0.05) {
@@ -584,15 +643,18 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
   }
   $('#static').addEventListener('click', e => { if (e.target.classList.contains('ffhit')) openZoom(pegAt(e)); });
   $('#zoomBtn').addEventListener('click', () => {
-    const mid = S.pegs.filter(p => p.band === 0 && p.y === BANDS[0].y + 124);
+    const mid = S.pegs.filter(p => p.band === 0 && p.y === pegRows(BANDS[0])[1]);
     openZoom(mid.reduce((a, b) => (Math.abs(b.x - 430) < Math.abs(a.x - 430) ? b : a)));
   });
   $('#zClose').addEventListener('click', () => $('#zoom').close());
   $('#zoom').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.close(); });
-  $('#zoom').addEventListener('close', () => { $('#sel').innerHTML = ''; });
 
-  $('#promptForm').addEventListener('submit', e => { e.preventDefault(); build(); tl.play(0); setPlayLabel(); });
+  $('#promptForm').addEventListener('submit', e => {
+    e.preventDefault(); build(); tl.play(0); setPlayLabel();
+    if (matchMedia('(max-width: 920px)').matches) $('.cap').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
   $('#play').addEventListener('click', () => {
+    $('#sel').innerHTML = '';
     if (tl.progress() >= 1) tl.play(0); else if (tl.isActive()) tl.pause(); else tl.play();
     setPlayLabel();
   });

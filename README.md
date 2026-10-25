@@ -4,6 +4,8 @@
 
 Type a prompt and press Enter. Your text gets cut into tokens, each token becomes a ball, the balls fall through the model's layers, and the last one lands as a score for every possible next word. A dice roll picks one, it joins the text, and the whole thing runs again. That loop is all an LLM does, whether it is a small model on a laptop or the largest one in a datacenter.
 
+**Try it: https://t3chnicallyinclined.github.io/llm-plinko/** · **Watch: [51-second video](media/llm-plinko.mp4)**
+
 No install, no build step, no account. It is one HTML file.
 
 ## Run it
@@ -15,19 +17,25 @@ No install, no build step, no account. It is one HTML file.
 
 The page walks through six steps. Scrub the timeline or slow it to 0.5× to watch any one of them.
 
-1. **Tokenize.** Text is cut into word pieces called tokens. Each gets an ID number from a vocabulary (real models use about 150,000).
+1. **Tokenize.** Text is cut into word pieces called tokens. Each gets an ID number from a vocabulary (the models shown here use about 250,000).
 2. **Embed.** Each token becomes a list of a few thousand numbers, a kind of meaning fingerprint. The page draws eight of them as bars.
-3. **Read the prompt.** All prompt tokens fall through the layers at once. In every layer:
-   - **Attention** (the arcs): each token looks back at earlier tokens and decides which ones matter.
+3. **Read the prompt.** All prompt tokens fall through the layers at once. Every layer has two parts:
+   - **Attention**: tokens share information with earlier tokens. The models shown use two kinds (see below).
    - **Feed-forward** (the pegs): a big block of learned weights pushes the token's numbers around. Most of a model's weights live here.
-   - Each token leaves its attention work in the **KV cache** (the teal marks) so it never has to be redone.
 4. **Score.** The last token's ball comes out as a score for every possible next token.
 5. **Roll.** A weighted dice roll picks one. **Temperature** sets how loaded the dice are: at 0 the top score always wins.
 6. **Repeat.** The new token falls alone, reading the cached work of every earlier token. One full pass per new token.
 
+### Two kinds of attention
+
+Both models on the page are hybrids, like many recent models:
+
+- **Full attention** (every 4th layer, drawn with arcs): a token looks back at every earlier token and decides which ones matter. Each token leaves its keys and values in the **KV cache** (the teal marks), which grows with every token.
+- **Linear attention** (the other 3 of every 4 layers, drawn with a memory box): tokens squeeze what they know into one fixed-size memory and read from it. It is cheaper and does not grow, but it can remember less exactly.
+
 ### Dense vs mixture of experts
 
-Switch the model to **MoE** and the feed-forward block splits into experts. A small router sends each token to only a few of them, so a big model runs at the speed of a small one.
+Switch the model to **MoE** and the feed-forward block splits into experts. A small router sends each token to only a few of them, so a big model runs at the speed of a small one. Qwen3.6-35B-A3B picks 8 of its 256 experts for each token, plus one shared expert every token uses; the board draws 7 experts and a shared one.
 
 ### Zoom into a peg
 
@@ -35,7 +43,9 @@ Click any peg (or press **Zoom into a peg**) to see the maths behind it with sma
 
 ### The memory panel
 
-The right-hand panel shows a 24 GB graphics card filling up: the weights sit in memory the whole time, and the KV cache grows with every token. It also shows why writing speed is set by memory speed: every new token has to read every active weight out of memory again.
+The right-hand panel shows a 24 GB graphics card filling up: the weights (4-bit files) sit in memory the whole time, the KV cache grows with every token, and the linear-attention memory stays the same size. It also shows why writing speed is set by memory speed: every new token has to read every active weight out of memory again.
+
+Layer counts, vocabulary, experts and cache sizes come from each model's published `config.json` on Hugging Face (Qwen/Qwen3.6-27B, Qwen/Qwen3.6-35B-A3B). Weight sizes are the Q4_K_M GGUF files. Speeds on a 3090 are rough figures from community reports.
 
 ## The maths in one paragraph
 
@@ -44,11 +54,17 @@ Almost every LLM is a **transformer**, and it uses the same few operations over 
 ## What is real and what is not
 
 - **Real:** the structure. Tokens, embeddings, a stack of layers with attention and feed-forward, the KV cache, scores, temperature, sampling, one pass per token, and the memory arithmetic.
-- **Not real:** the next-word scores. They come from a tiny word table built into the page, not a neural network, so the page runs anywhere with no download. Memory figures are rough.
+- **Not real:** the next-word scores. They come from a tiny word table built into the page, not a neural network, so the page runs anywhere with no download. The token splits and ID numbers are made up too. Memory and speed figures are rough.
 
 ## Render it as a video
 
-The page follows the [HyperFrames](https://github.com/heygen-com/hyperframes) composition format: the root element carries `data-composition-id`, and the animation is a paused GSAP timeline registered on `window.__timelines.plinko`. With Node 22+ and FFmpeg installed, `npx hyperframes render` should turn the default prompt into an MP4. This path has not been tested yet.
+The page follows the [HyperFrames](https://github.com/heygen-com/hyperframes) composition format: the root element carries `data-composition-id`, and the animation is a paused GSAP timeline registered on `window.__timelines.plinko`. With Node 22+ and FFmpeg installed:
+
+```
+npx hyperframes render . -o llm-plinko.mp4 --quality delivery
+```
+
+That renders the default prompt at 1920×1080, which is how [media/llm-plinko.mp4](media/llm-plinko.mp4) was made. The renderer reads the length from `data-duration` on `#stage`; if you change the default prompt or the timing, update it to the new timeline length (run `window.__timelines.plinko.duration()` in the browser console to get it).
 
 ## Roadmap
 
