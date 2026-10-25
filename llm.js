@@ -60,8 +60,8 @@
       return ids;
     }
     function decode(ids) { return utf8d.decode(new Uint8Array(ids.flatMap(id => Array.from(inv[id] || '', c => dec[c])))); }
-    // what a learner sees for one token: its text, with a leading space shown as "·"
-    function piece(id) { const s = decode([id]); return s.replace(/^ /, '·').replace(/\n/g, '⏎') || '∅'; }
+    // what a learner sees for one token: its text, with spaces shown as "·" (newlines ⏎, tabs ⇥)
+    function piece(id) { const s = decode([id]); return s.replace(/ /g, '·').replace(/\n/g, '⏎').replace(/\t/g, '⇥') || '∅'; }
     return { encode, decode, piece, raw: id => inv[id], size: inv.length };
   }
 
@@ -150,40 +150,49 @@
       return topk(buf.logits, n).map(id => ({ id, p: Math.exp(buf.logits[id] - lse) }));
     }
 
-    // Run one token through every layer. With record=true, also return what each layer did.
+    // Run one token through every layer. record=true returns what every sub-step of every layer did;
+    // record='attn' keeps only the attention weights (cheap: no logit lens).
     async function step(state, id, record, lensTop = 3) {
-      const t0 = performance.now(), pos = state.pos, x = buf.x;
+      const t0 = performance.now(), pos = state.pos, x = buf.x, full = record === true;
       x.set(E.subarray(id * D, id * D + D));
       const rec = record ? { id, pos, embed: Array.from(x.subarray(0, 8)), layers: [] } : null;
+      const f6 = a => Array.from(a.subarray(0, 6));
+      const nrm = a => { let s = 0; for (let i = 0; i < a.length; i++) s += a[i] * a[i]; return Math.sqrt(s); };
       let lensMs = 0;
       for (let l = 0; l < L; l++) {
-        const P = layers[l];
+        const P = layers[l], ly = full ? { xin: f6(x), xinNorm: nrm(x) } : {};
         rmsnorm(x, P.ln1, eps, buf.h);
         matvec(P.q, D, D, buf.h, buf.q); matvec(P.k, KVH * HD, D, buf.h, buf.k); matvec(P.v, KVH * HD, D, buf.h, buf.v);
         rope(buf.q, H, pos); rope(buf.k, KVH, pos);
+        if (full) { ly.h1 = f6(buf.h); ly.q = f6(buf.q); ly.k = f6(buf.k); ly.v = f6(buf.v); }
         state.K[l].push(buf.k.slice()); state.Vc[l].push(buf.v.slice());
         const T = pos + 1, weights = record ? new Float32Array(H * T) : null, sc = new Float32Array(T);
+        if (full) ly.sc = new Float32Array(T); // head 1's raw scores, before softmax
         for (let hh = 0; hh < H; hh++) {
           const kv = Math.floor(hh / rep), qo = hh * HD, ko = kv * HD;
           let mx = -Infinity;
           for (let j = 0; j < T; j++) { const kj = state.K[l][j]; let s = 0; for (let i = 0; i < HD; i++) s += buf.q[qo + i] * kj[ko + i]; s /= Math.sqrt(HD); sc[j] = s; if (s > mx) mx = s; }
+          if (full && hh === 0) ly.sc.set(sc);
           let sum = 0; for (let j = 0; j < T; j++) { sc[j] = Math.exp(sc[j] - mx); sum += sc[j]; }
           for (let i = 0; i < HD; i++) buf.att[qo + i] = 0;
           for (let j = 0; j < T; j++) { const w = sc[j] / sum, vj = state.Vc[l][j]; if (weights) weights[hh * T + j] = w; for (let i = 0; i < HD; i++) buf.att[qo + i] += w * vj[ko + i]; }
         }
         matvec(P.o, D, D, buf.att, buf.o);
         for (let i = 0; i < D; i++) x[i] += buf.o[i];
+        if (full) { ly.mix = f6(buf.att); ly.out = f6(buf.o); ly.x1 = f6(x); ly.x1Norm = nrm(x); }
         rmsnorm(x, P.ln2, eps, buf.h);
         matvec(P.gate, F, D, buf.h, buf.g); matvec(P.up, F, D, buf.h, buf.u);
         for (let i = 0; i < F; i++) { const a = buf.g[i]; buf.g[i] = (a / (1 + Math.exp(-a))) * buf.u[i]; } // SwiGLU: silu(gate) * up
         matvec(P.down, D, F, buf.g, buf.d);
         for (let i = 0; i < D; i++) x[i] += buf.d[i];
         if (rec) {
-          let nn = 0; for (let i = 0; i < D; i++) nn += x[i] * x[i];
-          const tl = performance.now();
-          const ly = { attn: weights, heads: H, ffnIn: buf.h.slice(), neurons: topk(buf.g.map(Math.abs), 5).map(i => ({ i, v: buf.g[i] })),
-            first: Array.from(x.subarray(0, 16)), norm: Math.sqrt(nn), lens: l < L - 1 ? lens(x, lensTop) : null };
-          lensMs += performance.now() - tl;
+          ly.attn = weights; ly.heads = H;
+          if (full) {
+            const tl = performance.now();
+            Object.assign(ly, { ffnIn: buf.h.slice(), neurons: topk(buf.g.map(Math.abs), 5).map(i => ({ i, v: buf.g[i] })), down: f6(buf.d),
+              first: Array.from(x.subarray(0, 16)), norm: nrm(x), lens: l < L - 1 ? lens(x, lensTop) : null });
+            lensMs += performance.now() - tl;
+          }
           rec.layers.push(ly);
         }
         if (l % 6 === 5) await tick(); // keep the page responsive
@@ -191,7 +200,7 @@
       rmsnorm(x, normW, eps, buf.hn); matvec(E, V, D, buf.hn, buf.logits);
       state.pos++;
       const logits = buf.logits.slice();
-      if (rec) { const { lse } = softmaxStats(logits); rec.layers[L - 1].lens = topk(logits, lensTop).map(i => ({ id: i, p: Math.exp(logits[i] - lse) })); }
+      if (full) { const { lse } = softmaxStats(logits); rec.layers[L - 1].lens = topk(logits, lensTop).map(i => ({ id: i, p: Math.exp(logits[i] - lse) })); }
       return { logits, rec, ms: performance.now() - t0 - lensMs };
     }
     const embedding = (id, n = 8) => Array.from(E.subarray(id * D, id * D + n));
