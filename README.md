@@ -24,14 +24,16 @@ Both add onto the ball rather than replacing it. Point at any lane in any layer 
 
 A strip above the board shows the whole process, in order, and lights up each step as it runs (click one to jump to it):
 
-1. **Text**: the prompt is just characters.
-2. **Tokenize**: the text is cut into pieces the model knows, and each piece is looked up in the vocabulary to get its ID.
-3. **Embed**: each ID picks one row of a big learned table; that row of numbers is the ball. It carries no word order.
-4. **Layers**: every lane goes through every layer: talk, then think. Word order gets in during talk, where each query and key is rotated by its position (RoPE).
-5. **Unembed**: one more norm, then the ball is compared with every row of an output table, giving one score per token (SmolLM2 reuses its embedding table here).
-6. **Choose**: softmax over the top five, temperature, and a weighted dice roll.
-7. **Detokenize**: the winning ID turns back into text and is added to the output.
-8. **Repeat**: the new token becomes a new lane and goes through alone, reading the KV cache, until an end-of-text token or a length limit.
+1. **Type**: you type a message on your device (the column on the far left).
+2. **Send**: a chat app wraps it in a chat template and sends it over HTTPS to a server with a GPU, where the model runs. (In real model mode nothing is sent: the model runs in your browser tab, and the page says so.)
+3. **Tokenize**: the text is cut into pieces the model knows, and each piece is looked up in the vocabulary to get its ID.
+4. **Embed**: each ID picks one row of a big learned table; that row of numbers is the ball. It carries no word order.
+5. **Layers**: every lane goes through every layer: talk, then think. Word order gets in during talk, where each query and key is rotated by its position (RoPE).
+6. **Unembed**: one more norm, then the ball is compared with every row of an output table, giving one score per token (SmolLM2 reuses its embedding table here).
+7. **Choose**: softmax over the top five, temperature, and a weighted dice roll.
+8. **Detokenize**: the winning ID turns back into text and is added to the output.
+9. **Stream back**: the new piece goes straight back to your device, which is why replies appear word by word.
+10. **Repeat**: the new token becomes a new lane and goes through alone, reading the KV cache, until an end-of-text token or a length limit.
 
 ### Two kinds of attention
 

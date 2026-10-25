@@ -56,7 +56,7 @@ button:hover { border-color: var(--accent); }
 .boardwrap { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 .boardscroll { overflow-x: auto; border-radius: 16px; }
 .swipe { display: none; } @media (max-width: 900px) { .swipe { display: block; } }
-svg#board { width: 100%; height: auto; display: block; min-width: 860px; }
+svg#board { width: 100%; height: auto; display: block; min-width: 960px; }
 .transport { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 #scrub { flex: 1 1 160px; min-width: 0; accent-color: var(--accent); }
 .speed { display: flex; gap: 4px; }
@@ -129,6 +129,11 @@ dt { color: var(--muted); } dd { margin: 0; text-align: right; font-family: var(
 .burst, .lane, .lcol, .lstripe { pointer-events: none; }
 .ptext { font: 500 12px var(--mono); fill: var(--ink); white-space: pre; } .phl { fill: var(--accent); fill-opacity: 0.22; } .cut { stroke: var(--accent); stroke-width: 1.5; }
 .otab { fill: var(--band); stroke: var(--line); } .otflash { fill: var(--accent); }
+.phone { fill: var(--panel); stroke: var(--line); stroke-width: 1.5; }
+.bub.you { fill: var(--accent); fill-opacity: 0.16; stroke: var(--accent); stroke-width: 1; } .bub.them { fill: var(--band); stroke: var(--line); }
+.dtext { font: 500 11px var(--mono); fill: var(--ink); white-space: pre; } .dtext.rep { fill: var(--accent); }
+.wire { fill: none; stroke: var(--muted); stroke-width: 1.6; stroke-dasharray: 5 4; } .wire.local { stroke-dasharray: 1 5; opacity: 0.6; }
+.pkt { fill: var(--accent); } .pktl { fill: none; stroke: var(--panel); stroke-width: 1.2; }
 #dyn * { pointer-events: none; } #dyn .cell { pointer-events: auto; }
 .ball, .arc, .guess, .kvm, .bar, .win, .die, .fly { pointer-events: none; }
 /* Zoom dialog */
@@ -439,25 +444,29 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
       dims: { d: 2048, ff: '512 neurons per expert', heads: '16 query heads share 2 key/value heads', hd: 256, linHeads: '16 key heads and 32 value heads' } },
     real: { label: 'SmolLM2-135M', layers: 30, dims: { d: 576, ff: '1,536 neurons', heads: '9 query heads share 3 key/value heads', hd: 64 } },
   };
-  const PIPE = ['Text', 'Tokenize', 'Embed', 'Layers', 'Unembed', 'Choose', 'Detokenize', 'Repeat'];
+  const PIPE = ['Type', 'Send', 'Tokenize', 'Embed', 'Layers', 'Unembed', 'Choose', 'Detokenize', 'Stream back', 'Repeat'];
   const STAGES = [
-    ['Text', 'This is all the model is given: a string of characters. It cannot read letters; the first step turns them into tokens.'],
-    ['Tokenize', 'The text is cut into pieces the model knows (tokens), and each piece is looked up in the vocabulary to get its ID number. Qwen3.6\'s vocabulary has about 250,000 pieces; in toy mode the cuts and IDs are made up.'],
+    ['Type', 'You type a message in an app on your phone or computer (left). At this point it is just a string of characters.'],
+    ['Send', 'The app wraps your message in a chat template (role markers, often a hidden instruction) and sends it as bytes over an encrypted HTTPS connection to a server with a big GPU, where the model lives. This page leaves the template out so the tokens stay readable.'],
+    ['Tokenize', 'On the server, the text is cut into pieces the model knows (tokens), and each piece is looked up in the vocabulary to get its ID number. Qwen3.6\'s vocabulary has about 250,000 pieces; in toy mode the cuts and IDs are made up.'],
     ['Embed', 'Each ID picks one row of a huge learned table (the embedding table, top left). That row is a list of a few thousand numbers: the ball. The numbers mean nothing one by one, but tokens used in similar ways get similar rows. The embedding says nothing about word order; that comes later.'],
     ['Layers', 'All the lanes move through every layer at the same time. In each layer a token first talks (attention: pink lines to earlier tokens in the full-attention layers, every 4th; the other layers use one fixed memory) and its ball takes on the colours of the tokens it listens to. Word order gets in here, by rotating each query and key by its position. Then each token thinks alone (feed-forward: the burst). Point at any lane in any layer to see the exact steps.'],
     ['Unembed', 'After the last layer comes one more norm, then the ball is compared with every row of an output table: one score for each of about 250,000 tokens.'],
     ['Choose', 'Softmax turns the top five scores into chances, temperature sets how loaded the dice are, and a weighted dice roll picks one.'],
     ['Detokenize', 'The winning ID is turned back into its piece of text and added to the output. It also becomes a new lane.'],
+    ['Stream back', 'The new piece of text is sent back to your device straight away, before the next one exists. That is why chat replies appear word by word.'],
     ['Repeat', 'Only the new lane moves now. In full-attention layers it reads the keys and values earlier lanes left behind (teal ticks) instead of redoing them; linear layers read their memory. Every active weight is read from memory again: one full pass per token. The loop runs until the model writes an end-of-text token or reaches a length limit.'],
   ];
   const STAGES_REAL = [
-    ['Text', 'This is all the model is given: a string of characters. It cannot read letters; the first step turns them into tokens.'],
+    ['Type', 'You type a message (left). At this point it is just a string of characters.'],
+    ['Send', 'In a chat app this is where your message would travel over the internet to a server. Here nothing is sent: the model was downloaded once and runs right in this browser tab, on your computer\'s processor.'],
     ['Tokenize', 'The model\'s own tokenizer cuts your text into pieces it learned from data (49,152 of them) and looks each one up in its vocabulary to get its ID. A dot (·) means the piece starts with a space.'],
     ['Embed', 'Each ID picks one row of the model\'s embedding table (top left): 49,152 rows, one per token, each 576 numbers learned in training. That row is the ball. Tokens used in similar ways get similar rows: point at a strip to see which tokens are closest. The embedding says nothing about word order; that comes later.'],
     ['Layers', 'All the lanes move through all 30 layers at the same time. In each layer a token first talks (attention: the pink lines and the colours it takes on come from the model\'s real attention; word order gets in here, by rotating each query and key by its position) and then thinks alone (feed-forward: the burst is how much it really added). The word above the last ball is what the model would say if it stopped there.'],
     ['Unembed', 'After the last layer comes one more norm, then the ball is compared with every row of the output table, which in SmolLM2 is the embedding table reused: one score for each of the 49,152 tokens. A token scores high when the ball points the same way as its row.'],
     ['Choose', 'Softmax turns the top five scores into chances, temperature sets how loaded the dice are, and a weighted dice roll picks one.'],
     ['Detokenize', 'The tokenizer runs backwards: the winning ID becomes its piece of text and is added to the output. It also becomes a new lane.'],
+    ['Stream back', 'Each new piece goes to the reply on the left the moment it is chosen. In a chat app it would travel back over the internet; here it never leaves your computer.'],
     ['Repeat', 'Only the new lane moves now. Each layer reads the keys and values it kept for earlier lanes (teal ticks) instead of redoing them, but all 269 MB of weights are read again for every new token. The loop runs until the model writes an end-of-text token or reaches a length limit.'],
   ];
   const DONE = ['Done', 'Six new tokens, six passes. A real model keeps going until it writes an end-of-text token or hits a length limit. Press Replay, or type a new prompt.'];
@@ -476,8 +485,8 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
   // ---- board geometry: lanes (one per token) running left to right through every layer ----
   // Each layer is a thin column with two stations: "talk" (attention: tokens share information) and
   // "think" (feed-forward: each token works alone). Both add onto the ball (the residual stream).
-  const VBW = 1000, TOP = 124, ROW0 = 142, RH = 27, SCW = 200, TOKX = 14, TOKW = 92, EMBW = 56;
-  const TBL = { x: 14, y: 24, w: 90, h: 40 }; // the embedding table drawing, top left
+  const VBW = 1140, TOP = 124, ROW0 = 142, RH = 27, SCW = 200, DEVW = 128, TOKX = DEVW + 26, TOKW = 92, EMBW = 56;
+  const TBL = { x: TOKX, y: 24, w: 90, h: 40 }; // the embedding table drawing, top left of the machine
   const vocabSize = () => (isReal() ? 49152 : 248320);
   const rowY = i => ROW0 + i * RH;
   const isFull = l => isReal() || (l + 1) % 4 === 0; // Qwen3.6: every 4th layer full attention; SmolLM2: all
@@ -506,7 +515,15 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
     const N = S.data ? S.data.nP + 6 : 15, real = isReal(); G.N = N; G.outY = rowY(N - 1) + 44; G.vbH = G.outY + 16;
     const top = TOP, bot = rowY(N - 1) + 16;
     $('#board').setAttribute('viewBox', `0 0 ${VBW} ${G.vbH}`);
-    el('rect', { x: 2, y: 2, width: VBW - 4, height: G.vbH - 4, rx: 16, class: 'board' }, g);
+    // left: your device; right: the machine the model runs on; between them, the internet (or nothing, in real mode)
+    el('rect', { x: 2, y: 2, width: DEVW, height: G.vbH - 4, rx: 16, class: 'board' }, g);
+    el('text', { x: 14, y: 20, class: 'lbl' }, g, real ? 'YOU' : 'YOUR DEVICE');
+    el('rect', { x: 12, y: 30, width: DEVW - 20, height: G.vbH - 46, rx: 14, class: 'phone' }, g);
+    el('rect', { x: DEVW + 12, y: 2, width: VBW - DEVW - 14, height: G.vbH - 4, rx: 16, class: 'board' }, g);
+    el('text', { x: VBW - 14, y: 16, 'text-anchor': 'end', class: 'lbl' }, g, real ? 'THE MODEL: RUNNING IN THIS BROWSER TAB, ON YOUR CPU' : 'A SERVER WITH A GPU, WHERE THE MODEL RUNS');
+    G.wireY = TOP - 26;
+    el('path', { d: `M${DEVW - 8} ${G.wireY} L${G.x0 + 40} ${G.wireY}`, class: real ? 'wire local' : 'wire' }, g);
+    el('text', { x: DEVW + 4, y: G.wireY + 13, class: 'tiny' }, g, real ? 'no internet' : 'internet · HTTPS');
     el('text', { x: TOKX + 4, y: TOP + 4, class: 'lbl' }, g, 'TOKENS');
     el('text', { x: TOKX + TOKW + 2, y: TOP + 4, class: 'lbl' }, g, 'EMBED');
     el('text', { x: G.x0, y: TOP - 26, class: 'lbl' }, g, 'PROMPT');
@@ -598,6 +615,21 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
     S.guessEl = real ? el('text', { x: 0, y: 0, class: 'guess', style: 'opacity:0' }, dyn) : null;
     S.balls = ball;
     // the prompt as text, cut into the pieces that become lanes (12px IBM Plex Mono: every character is 7.2 wide)
+    // the device: your message as a chat bubble, and the reply that streams in piece by piece
+    const gDev = el('g', {}, dyn), DX = 20, DCH = 14, dw = 6.6; // 11px IBM Plex Mono: each character 6.6 wide
+    const wrapTo = (str, n) => { const out = []; let line = ''; str.split(/(\s+)/).forEach(w => { if ((line + w).length > n && line.trim()) { out.push(line); line = w.trimStart(); } else line += w; }); if (line) out.push(line); return out; };
+    const youLines = wrapTo(D.prompt, 14).slice(0, 7);
+    const bubY = 52, youH = youLines.length * DCH + 10;
+    const youBub = el('rect', { x: DX + 18, y: bubY - 12, width: DEVW - 50, height: youH, rx: 8, class: 'bub you', style: 'opacity:0' }, gDev);
+    const youTxt = youLines.map((ln, i) => el('text', { x: DX + 24, y: bubY + 2 + i * DCH, class: 'dtext', style: 'opacity:0' }, gDev, ln));
+    // reply: place each new piece where it will sit, wrapping at piece boundaries
+    const repY = bubY + youH + 16, repPieces = []; let cx0 = 0, line = 0;
+    D.gen.forEach(pc => { const txt = pc.replace(/^ /, line || cx0 ? ' ' : ''); if (cx0 + txt.length > 14 && cx0) { line++; cx0 = 0; } const t2 = cx0 ? txt : txt.trimStart(); repPieces.push(el('text', { x: DX + 4 + cx0 * dw, y: repY + 2 + line * DCH, class: 'dtext rep', style: 'opacity:0' }, gDev, t2)); cx0 += t2.length; });
+    const repBub = el('rect', { x: DX - 2, y: repY - 12, width: DEVW - 46, height: (line + 1) * DCH + 10, rx: 8, class: 'bub them', style: 'opacity:0' }, gDev);
+    gDev.insertBefore(repBub, gDev.firstChild);
+    const packet = el('g', { style: 'opacity:0' }, dyn);
+    el('rect', { x: -9, y: -6, width: 18, height: 12, rx: 3, class: 'pkt' }, packet); el('path', { d: 'M-9 -6 L0 1 L9 -6', class: 'pktl' }, packet);
+
     const CW = 7.2, tx0 = G.x0 + 52, ty = TOP - 22, gText = el('g', {}, dyn), segEls = [], cuts = [];
     let chars = 0;
     if (D.cut) { el('text', { x: tx0 - 14, y: ty, class: 'ptext', fill: 'var(--muted)' }, gText, '…'); }
@@ -700,7 +732,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
     const SY = i => TOP + 98 + i * 40, BX = G.scx + 70, BW = VBW - 14 - BX - 50, OT = G.OT;
     function score(k, src, t) {
       // unembed: one more norm, then the ball is compared with every row of the output table
-      mark(4, t); STEPLOG.push([t, -4, 0, k]);
+      mark(5, t); STEPLOG.push([t, -4, 0, k]);
       PASSES[PASSES.length - 1].t1 = t + 0.45;
       const st = steps[k], g = el('g', {}, gScore);
       tl.to(ball[src], { attr: { cx: OT.x + OT.w / 2, cy: OT.y + OT.h / 2 }, duration: 0.45, ease: 'power1.inOut' }, t);
@@ -709,7 +741,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
       tl.to(ball[src], { opacity: 0, duration: 0.2 }, t + 0.5);
       t += 1.0;
       // choose: softmax over the top five, temperature, the dice
-      mark(5, t); STEPLOG.push([t, -1, 0, k]);
+      mark(6, t); STEPLOG.push([t, -1, 0, k]);
       const pos = st.c.map((cd, i) => {
         const w = Math.max(2, cd.p * BW), y = SY(i);
         const wd = el('text', { x: BX - 6, y: y + 4, 'text-anchor': 'end', class: 'word', style: 'opacity:0' }, g, shortW(cd.w));
@@ -730,7 +762,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
       tl.to(win, { opacity: 1, duration: 0.2 }, t);
       t += 0.45;
       // detokenize: the winning ID turns back into its text and becomes a new lane
-      mark(6, t); STEPLOG.push([t, -6, 0, k]);
+      mark(7, t); STEPLOG.push([t, -6, 0, k]);
       const row = nP + k;
       const idTxt = el('text', { x: BX - 6, y: pos[st.pick] - 16, 'text-anchor': 'end', class: 'tiny', style: 'opacity:0' }, g, `ID ${D.ids[row]} → “${st.c[st.pick].w}”`);
       tl.to(idTxt, { opacity: 1, duration: 0.15 }, t);
@@ -741,17 +773,38 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
       tl.to(rows[row].g, { opacity: 1, duration: 0.25 }, t + 0.95);
       tl.to(outW[k], { attr: { 'fill-opacity': 1 }, duration: 0.2 }, t + 1.0);
       t += 1.2;
+      // stream back: the new piece goes to the reply on your device straight away
+      mark(8, t); STEPLOG.push([t, -9, 0, k]);
+      const rp = repPieces[k], rx = +rp.getAttribute('x'), ry = +rp.getAttribute('y') - 4;
+      const pk = el('g', { style: 'opacity:0' }, g);
+      el('rect', { x: -9, y: -6, width: 18, height: 12, rx: 3, class: 'pkt' }, pk); el('path', { d: 'M-9 -6 L0 1 L9 -6', class: 'pktl' }, pk);
+      tl.to(pk, { opacity: 1, duration: 0.1 }, t);
+      tl.fromTo(pk, { attr: { transform: `translate(${TOKX + 30} ${rowY(row)})` } }, { attr: { transform: `translate(${rx + 8} ${ry})` }, duration: real ? 0.5 : 0.9, ease: 'power1.inOut', immediateRender: false }, t);
+      tl.to(pk, { opacity: 0, duration: 0.12 }, t + (real ? 0.5 : 0.9));
+      if (k === 0) tl.to(repBub, { opacity: 1, duration: 0.2 }, t + (real ? 0.4 : 0.8));
+      tl.to(rp, { opacity: 1, duration: 0.15 }, t + (real ? 0.5 : 0.9));
+      t += real ? 0.65 : 1.05;
       info({ gen: k + 1 }, t - 0.2);
       tl.to(g, { opacity: 0, duration: 0.3 }, t);
       return t + 0.35;
     }
 
     let t = 0;
+    // type: the message appears on the device, line by line
     mark(0, t); info({ kv: 0, read: 0, gen: 0 }, t);
+    tl.to(youBub, { opacity: 1, duration: 0.2 }, t);
+    youTxt.forEach((el2, i) => tl.to(el2, { opacity: 1, duration: 0.2 }, t + 0.15 + i * 0.18));
+    t += 0.4 + youTxt.length * 0.18;
+    // send: the message travels to the machine (real mode: it stays on this computer)
+    mark(1, t); STEPLOG.push([t, -8, 0, 0]);
+    tl.to(packet, { opacity: 1, duration: 0.1 }, t);
+    tl.fromTo(packet, { attr: { transform: `translate(${DEVW - 14} ${G.wireY})` } }, { attr: { transform: `translate(${tx0 - 6} ${G.wireY})` }, duration: real ? 0.6 : 1.1, ease: 'power1.inOut', immediateRender: false }, t);
+    tl.to(packet, { opacity: 0, duration: 0.15 }, t + (real ? 0.6 : 1.1));
+    t += real ? 0.7 : 1.2;
     tl.to(segEls.map(s => s.el), { opacity: 1, duration: 0.3 }, t);
-    t += 1.0;
+    t += 0.6;
     // tokenize: cut the text, then each piece is looked up (its ID appears) and becomes a lane
-    mark(1, t);
+    mark(2, t);
     cuts.forEach((c, k) => tl.to(c, { opacity: 1, duration: 0.15 }, t + k * 0.07));
     t += cuts.length * 0.07 + 0.3;
     segEls.forEach((sg, i) => {
@@ -764,24 +817,24 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
       tl.to(rows[i].g, { opacity: 1, duration: 0.2 }, tt + 0.6);
     });
     t += nP * 0.16 + 1.0;
-    mark(2, t);
+    mark(3, t);
     for (let i = 0; i < nP; i++) embed(i, t + i * 0.05);
     t += nP * 0.05 + 0.9;
     // The prompt pass reads each weight once for all prompt tokens together. In the MoE model only the experts
     // those tokens were routed to are read: roughly 1 - (1 - 8/256)^tokens of the expert weights (rough).
     const prefill = real ? 0 : moe ? M.active + (M.weights - M.active) * (1 - Math.pow(1 - 8 / 256, nP)) : M.weights;
-    mark(3, t); info({ kv: D.offset + nP, read: prefill }, t);
+    mark(4, t); info({ kv: D.offset + nP, read: prefill }, t);
     t = pass(0, [...Array(nP).keys()], nP - 1, t, 1);
     for (let i = 0; i < nP - 1; i++) tl.to(ball[i], { opacity: 0, duration: 0.3 }, t);
     t = score(0, nP - 1, t);
     for (let k = 1; k < NG; k++) {
       const c = nP + k - 1;
-      mark(7, t); info({ kv: D.offset + c + 1, read: real ? 0 : prefill + k * M.active }, t);
+      mark(9, t); info({ kv: D.offset + c + 1, read: real ? 0 : prefill + k * M.active }, t);
       embed(c, t); t += 0.55;
       t = pass(k, [c], c, t, 0.5);
       t = score(k, c, t);
     }
-    mark(8, t);
+    mark(10, t);
     tl.to({}, { duration: 2.5 }, t); // hold the finished board (an empty tween: it only lengthens the timeline)
     S.zoom = { word: all[nP - 1], vals: D.bars[nP - 1], prev: D.prev, T: D.T, c: steps[0].c, pick: steps[0].pick };
     tl.timeScale(S.speed);
@@ -795,10 +848,10 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
   function setStage(st) {
     const list = isReal() ? STAGES_REAL : STAGES;
     const [title, text] = list[st] || DONE;
-    $('#capStep').textContent = st < list.length ? 'Step ' + (st + 1) + ' of 8' : 'Finished';
+    $('#capStep').textContent = st < list.length ? 'Step ' + (st + 1) + ' of ' + list.length : 'Finished';
     $('#capTitle').textContent = title;
     $('#capText').textContent = text;
-    pipeBtns.forEach((b, i) => { b.className = i === st ? 'on' : i < st || st === 8 ? 'done' : ''; if (i === 3) b.textContent = MODELS[S.mode].layers + ' layers'; });
+    pipeBtns.forEach((b, i) => { b.className = i === st ? 'on' : i < st || st === PIPE.length ? 'done' : ''; if (i === 4) b.textContent = MODELS[S.mode].layers + ' layers'; });
   }
   const NOTE_TOY = 'Toy model. The board shows how a real LLM is wired, but the next-token scores come from a tiny word table built into this page, not a real model. The token splits, ID numbers, attention and colours are made up too. Memory and speed figures are rough.';
   const NOTE_REAL = 'Real model: SmolLM2-135M (Apache 2.0, by Hugging Face), running in your browser from its published weights with 32-bit maths. Attention lines, colours, bursts, guesses and scores come from its actual numbers. The dice only choose among the top five.';
@@ -880,7 +933,16 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
         nums: 'first 12 of its 576 numbers:\n' + [e.slice(0, 6), e.slice(6, 12)].map(r => r.map(v => (v >= 0 ? ' ' : '−') + Math.abs(v).toFixed(3)).join(' ')).join('\n') + ' …' +
           '\n\nmost similar rows (1 = same direction):\n' + nb.map(n => `  ${S.llm.tok.piece(n.id).padEnd(14)} ${n.sim.toFixed(2)}`).join('\n') };
     }
-    if (si === -7) return { where: 'Text', title: 'The prompt', text: 'A model cannot read letters. All it gets is this string of characters, and the first step cuts it into tokens.' };
+    if (si === -7) return { where: 'Your device', title: 'Type', text: 'You type a message in an app. So far it is only a string of characters; a model cannot read letters, so the first thing it does is cut them into tokens.' };
+    if (si === -8) return real
+      ? { where: 'Send', title: 'Send: nothing leaves this computer', text: 'The model\'s weights were downloaded once (269 MB) and it runs right here, in JavaScript on your computer\'s processor. In a chat app, this is the step where your message would travel over the internet to a server.' }
+      : { where: 'Send', title: 'Send: over the internet to a server', text: 'The app wraps your message in a chat template (for Qwen, role markers like <|im_start|>user … <|im_end|>, and often a hidden instruction), turns it into bytes and sends it over an encrypted HTTPS connection to a machine with a big GPU that holds the model\'s weights in its memory. This page leaves the template out so the tokens stay readable.' };
+    if (si === -9) {
+      const st = D.steps[row - D.nP];
+      return { where: 'Stream back', title: `Stream back: “${st ? st.c[st.pick].w : ''}”`, text: real
+        ? 'The new piece is shown in the reply the moment it is chosen. In a chat app it would travel back over the internet right away; here it never leaves your computer.'
+        : 'The new piece is sent back to your device straight away (streaming), before the next token even exists. That is why chat replies appear word by word: the server can only make one token per full pass through the model.' };
+    }
     if (si === -4) {
       const st = row != null && D.steps[row - D.nP + 1];
       return { where: 'Unembed', title: 'Unembed: compare with every row of the output table',
@@ -913,10 +975,10 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
     if (S.hover) { const h = S.hover; showInspect(inspect(h.si, h.l, h.row, h.which), false); drawHl(h); return; }
     let cur = null; for (const e of STEPLOG) if (e[0] <= time) cur = e;
     const D = S.data;
-    if (st <= 2 || !cur) { showInspect(inspect(st === 0 ? -7 : st === 1 ? -3 : -2, 0, D.nP - 1), true); return; }
-    if (st === 8) { showInspect({ where: 'Finished', title: 'Done', text: 'Point at any lane in any layer to see what that station did' + (D.real ? ', with its real numbers.' : '.') }, true); return; }
+    if (st <= 3 || !cur) { showInspect(inspect([-7, -8, -3, -2][st] || -7, 0, D.nP - 1), true); return; }
+    if (st === 10) { showInspect({ where: 'Finished', title: 'Done', text: 'Point at any lane in any layer to see what that station did' + (D.real ? ', with its real numbers.' : '.') }, true); return; }
     const [, l, which, p] = cur;
-    if (l === -6) { showInspect(inspect(-6, 0, D.nP + p), true); return; }
+    if (l === -6 || l === -9) { showInspect(inspect(l, 0, D.nP + p), true); return; }
     if (l < 0) { showInspect(inspect(l, 0, D.nP - 1 + p), true); return; }
     showInspect(inspect(0, l, PASSES[p] ? PASSES[p].focus : null, which), true);
   }
