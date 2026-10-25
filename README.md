@@ -126,7 +126,7 @@ Ideas for making this a better teaching tool. Contributions welcome.
 
 ## Contributing
 
-Issues and pull requests are welcome. There is no build step: `index.html` is the board (plain HTML, CSS and JavaScript, with [GSAP](https://gsap.com) from a CDN for the animation), `3d.html` is the tower ([three.js](https://threejs.org) from a CDN), and `llm.js` is the real-model engine both pages share (no libraries). Keep it that way so anyone can open the files and read the source.
+Issues and pull requests are welcome. There is no build step: `index.html` is the board (plain HTML, CSS and JavaScript, with [GSAP](https://gsap.com) from a CDN for the animation), `llm.js` is the real-model engine (no libraries), `cloud-data.js` and `cloud-tiny.js` are the token maps, and `prep/cloud_layout.py` makes them. Keep it that way so anyone can open the files and read the source.
 
 ## License
 
