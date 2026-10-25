@@ -272,7 +272,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
         <div id="cBar"></div>
         <canvas id="cloudCv" class="cloudcv" aria-label="Cloud of 2,000 tokens: hover or tap a dot to see its token; in real mode, the ball's path through the layers"></canvas>
         <p class="note" id="cInfo"></p>
-        <p class="note" id="cNote">Each dot is a common token, placed by its real embedding row (similar tokens sit together). With the real model, the line shows where the last token's ball points after each layer, and the candidates light up at the end. The dots are the vocabulary's coordinates, not stored knowledge.</p>
+        <p class="note" id="cNote">Each dot is a common token, placed by its real embedding row (similar tokens sit together). With the real model, dots glow by how strongly the ball points at them at the current layer (its real scores), the line traces the ball after each layer, and the candidates light up at the end. The dots are the vocabulary's coordinates, not stored knowledge.</p>
       </div>
 
       <div class="card" id="realCard" hidden>
@@ -1355,6 +1355,15 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
     const wt = top.map(i => Math.exp(w[i] - mx)), s = wt.reduce((a, b) => a + b, 0);
     return (pathCache[key] = [0, 1].map(d => top.reduce((a, i, k) => a + CLOUD.xy[2 * i + d] / 1000 * wt[k], 0) / s));
   }
+  const heatCache = {};
+  function cloudHeat(rec, l) { // 0..1 per cloud token: its share of the ball's attention among the 2,000, scaled so the top one is 1
+    const key = rec.id + ':' + rec.pos + ':' + l;
+    if (heatCache[key]) return heatCache[key];
+    const w = rec.layers[l] && rec.layers[l].watch; if (!w) return null;
+    let mx = -Infinity; for (let i = 0; i < w.length; i++) if (w[i] > mx) mx = w[i];
+    const e = Float32Array.from(w, v => Math.exp(v - mx)); // the top token gets 1; the rest fall off by their real score gap
+    return (heatCache[key] = Float32Array.from(e, v => Math.sqrt(v)));
+  }
   const rankAt = (rec, l, i) => { const w = rec.layers[l].watch; if (!w) return null; let r = 1; for (let k = 0; k < w.length; k++) if (w[k] > w[i]) r++; return r; };
   let cloudRows = null;
   function cloudNeighbours(i, k = 8) { // real mode: closest by the 576 real numbers; toy mode: closest on the map
@@ -1444,6 +1453,17 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
       const r0 = Math.min(2.6, 1.6 + (this.s - 1) * 0.15);
       for (let i = 0; i < NC; i++) { const [x, y] = this.pt(i); if (x > -4 && x < W + 4 && y > -4 && y < H + 4) c.fillRect(x - r0 / 2, y - r0 / 2, r0, r0); }
       c.globalAlpha = 1;
+      // real mode: every dot glows by the ball's real score for that token at the current layer (softmax over the cloud)
+      const heat = this.st && this.st.rec ? cloudHeat(this.st.rec, this.st.upto) : null;
+      if (heat) {
+        c.fillStyle = acc;
+        for (let i = 0; i < NC; i++) {
+          const h = heat[i]; if (h < 0.02) continue;
+          const [x, y] = this.pt(i); if (x < -8 || x > W + 8 || y < -8 || y > H + 8) continue;
+          c.globalAlpha = 0.15 + 0.75 * h; c.beginPath(); c.arc(x, y, 1.5 + 5 * h, 0, 7); c.fill();
+        }
+        c.globalAlpha = 1;
+      }
       const placed = [];
       c.font = '600 11px "IBM Plex Mono", monospace'; c.textBaseline = 'middle';
       const lab = (t, x, y, col, ax, force) => {
