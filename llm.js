@@ -203,11 +203,13 @@
       const nrm = a => { let s = 0; for (let i = 0; i < a.length; i++) s += a[i] * a[i]; return Math.sqrt(s); };
       let lensMs = 0;
       for (let l = 0; l < L; l++) {
-        const P = layers[l], ly = full ? { xin: f6(x), xinNorm: nrm(x) } : {};
+        // full records also keep every whole vector of the layer (vec), so the page can show each step with real numbers
+        const P = layers[l], ly = full ? { xin: f6(x), xinNorm: nrm(x), vec: { xin: x.slice() } } : {};
         rmsnorm(x, P.ln1, eps, buf.h);
         matvec(P.q, D, D, buf.h, buf.q); matvec(P.k, KVH * HD, D, buf.h, buf.k); matvec(P.v, KVH * HD, D, buf.h, buf.v);
+        if (full) Object.assign(ly.vec, { h1: buf.h.slice(), qPre: buf.q.slice(), kPre: buf.k.slice() });
         rope(buf.q, H, pos); rope(buf.k, KVH, pos);
-        if (full) { ly.h1 = f6(buf.h); ly.q = f6(buf.q); ly.k = f6(buf.k); ly.v = f6(buf.v); }
+        if (full) { ly.h1 = f6(buf.h); ly.q = f6(buf.q); ly.k = f6(buf.k); ly.v = f6(buf.v); Object.assign(ly.vec, { q: buf.q.slice(), k: buf.k.slice(), v: buf.v.slice() }); }
         state.K[l].push(buf.k.slice()); state.Vc[l].push(buf.v.slice());
         const T = pos + 1, weights = record ? new Float32Array(H * T) : null, sc = new Float32Array(T);
         if (full) ly.sc = new Float32Array(T); // head 1's raw scores, before softmax
@@ -222,14 +224,17 @@
         }
         matvec(P.o, D, D, buf.att, buf.o);
         for (let i = 0; i < D; i++) x[i] += buf.o[i];
-        if (full) { ly.mix = f6(buf.att); ly.out = f6(buf.o); ly.outNorm = nrm(buf.o); ly.x1 = f6(x); ly.x1Norm = nrm(x); }
+        if (full) { ly.mix = f6(buf.att); ly.out = f6(buf.o); ly.outNorm = nrm(buf.o); ly.x1 = f6(x); ly.x1Norm = nrm(x); Object.assign(ly.vec, { mix: buf.att.slice(), out: buf.o.slice(), x1: x.slice() }); }
         rmsnorm(x, P.ln2, eps, buf.h);
         matvec(P.gate, F, D, buf.h, buf.g); matvec(P.up, F, D, buf.h, buf.u);
+        if (full) Object.assign(ly.vec, { h2: buf.h.slice(), gate: buf.g.slice(), up: buf.u.slice() });
         for (let i = 0; i < F; i++) { const a = buf.g[i]; buf.g[i] = (a / (1 + Math.exp(-a))) * buf.u[i]; } // SwiGLU: silu(gate) * up
         matvec(P.down, D, F, buf.g, buf.d);
         for (let i = 0; i < D; i++) x[i] += buf.d[i];
+        if (full) Object.assign(ly.vec, { act: buf.g.slice(), down: buf.d.slice(), xout: x.slice() });
         if (rec) {
           ly.attn = weights; ly.heads = H;
+          if (!full) ly.first = Array.from(x.subarray(0, 16)); // every lane keeps its ball's first 16 numbers after each layer
           if (full) {
             const tl = performance.now();
             Object.assign(ly, { ffnIn: buf.h.slice(), neurons: topk(buf.g.map(Math.abs), 5).map(i => ({ i, v: buf.g[i] })), down: f6(buf.d), downNorm: nrm(buf.d),

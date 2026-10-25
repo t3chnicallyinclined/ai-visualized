@@ -183,6 +183,13 @@ dt { color: var(--muted); } dd { margin: 0; text-align: right; font-family: var(
 .lcol.future { opacity: 0.4; } .lcol.now { fill: #2c3352; }
 .lstripe.full { fill: var(--attn); } .lstripe.lin { fill: var(--lin); fill-opacity: 0.7; }
 .lane { stroke: var(--st-rail); stroke-width: 1; }
+.kbank { opacity: 0.32; pointer-events: none; } .kbank.now { opacity: 0.95; }
+.strip16 rect { pointer-events: none; } .plus { font: 700 13px var(--mono); fill: var(--score); pointer-events: none; }
+.lystep { border-top: 1px solid var(--line); padding-top: 4px; margin-top: 8px; }
+.lystrip { display: grid; grid-template-columns: 9em minmax(0, 1fr); gap: 8px; align-items: center; margin: 3px 0; } .lylab { font: 12px var(--mono); color: var(--muted); }
+.lycv { width: 100%; display: block; border-radius: 3px; } .lymv { margin: 6px 0 10px; } .lymvcv { cursor: crosshair; }
+.lymvbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; } .lymvbar button { padding: 4px 10px; font-size: 13px; }
+.lyinfo { position: sticky; bottom: -20px; margin: 10px -20px -20px; padding: 10px 20px; background: var(--panel); border-top: 1px solid var(--line); font-size: 12.5px; min-height: 2.6em; }
 .knob circle { fill: var(--st-bg); stroke: var(--wt); stroke-opacity: 0.55; stroke-width: 1.2; } .knob line { stroke: var(--st-ink2); stroke-width: 1.4; stroke-linecap: round; }
 .knob.read circle { stroke-opacity: 0.8; } .knob.now circle { fill: #3b3170; stroke-opacity: 1; filter: drop-shadow(0 0 4px var(--wt)); } .knob.now line { stroke: var(--st-ink); }
 .leg.knob { fill: var(--st-bg); stroke: var(--wt); stroke-width: 1.4; }
@@ -249,7 +256,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
 <div id="page">
   <header>
     <h1>LLM Plinko</h1>
-    <p>Watch a language model pick its next word. Your prompt leaves your device, becomes numbers, falls through every layer, and lands in the token cloud, where the model's options light up and a dice roll picks one.</p>
+    <p>Watch a real language model pick its next word, running in your browser: every number on this page is the model's own. Your prompt becomes numbers, falls through every layer of knobs, and lands in the token cloud, where the model's options light up and a dice roll picks one.</p>
   </header>
 
   <div class="sysrow" id="sysRow" hidden>
@@ -260,14 +267,12 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
   </div>
   <div class="topbar">
     <form id="promptForm" autocomplete="off">
-      <input id="prompt" type="text" maxlength="120" value="the fighter blocked the fireball and" aria-label="Prompt">
+      <input id="prompt" type="text" maxlength="120" value="Once upon a time, there was a little" aria-label="Prompt">
       <button id="drop" type="submit">Drop it</button>
     </form>
     <div class="seg" role="group" aria-label="Model">
-      <button type="button" data-mode="dense" aria-pressed="true">Toy: dense 27B</button>
-      <button type="button" data-mode="moe" aria-pressed="false">Toy: MoE 35B-A3B</button>
-      <button type="button" data-mode="real" aria-pressed="false">Real chat model: SmolLM2-135M-Instruct</button>
-      <button type="button" data-mode="tiny" aria-pressed="false">Real tiny model: TinyStories 15M</button>
+      <button type="button" data-mode="tiny" aria-pressed="true">TinyStories 15M · 30 MB</button>
+      <button type="button" data-mode="real" aria-pressed="false">Chat model: SmolLM2-135M-Instruct · 269 MB</button>
     </div>
   </div>
   <div class="realload" id="realLoad" hidden>
@@ -317,7 +322,8 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
       <button type="button" data-speed="1" aria-pressed="true">1×</button>
       <button type="button" data-speed="2" aria-pressed="false">2×</button>
     </div>
-    <button id="zoomBtn" type="button" title="Or click any think station">Zoom into a neuron</button>
+    <button id="layerBtn" type="button" title="Or click any layer on the board">Look inside a layer</button>
+    <button id="zoomBtn" type="button">Zoom into a neuron</button>
     <button id="embBtn" type="button" title="Or click any token's strip">Explore embeddings</button>
     <button id="parBtn" type="button">What are the parameters?</button>
     <button id="trainBtn" type="button">How training sets the knobs</button>
@@ -393,6 +399,13 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
     <pre class="enums" id="pDNums"></pre>
   </div>
   <p class="note" id="pNote"></p>
+</dialog>
+
+<dialog id="layerDlg" class="dlg wide" aria-labelledby="lyTitle">
+  <div class="zhead"><p class="eyebrow" id="lyWhere"></p><span class="lynav"><button id="lyPrev" type="button">← Layer</button> <button id="lyNext" type="button">Layer →</button> <button id="lyClose" type="button">Close</button></span></div>
+  <h2 id="lyTitle"></h2>
+  <p id="lyLead"></p>
+  <div id="lyBody"></div>
 </dialog>
 
 <dialog id="train" class="dlg wide" aria-labelledby="trTitle">
@@ -611,7 +624,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
       ['Send', 'In a chat app this is where your message would travel over the internet to a server. Here nothing is sent: the model was downloaded once and runs right in this browser tab, on your computer\'s processor.' + (chat ? ' The app first wraps everything in the model\'s chat template: the system prompt, then your message, each between <|im_start|> and <|im_end|> markers, then "assistant", where the model starts writing.' : ' A start-of-text token (<s>) goes in front, as in training.')],
       ['Tokenize', `The model's own tokenizer cuts the text into pieces it learned from data (${nf(R.V)} of them) and looks each one up to get its ID. A dot (·) means the piece starts with a space.` + (chat ? ' The system prompt and the template markers are tokens like any other; long stretches share one band lane on the board (sys, tpl).' : '')],
       ['Embed', `Each ID picks one row of the model's embedding table (top left): ${nf(R.V)} rows, one per token, each ${R.D} numbers learned in training. That row is the ball. The embedding says nothing about word order; that comes later.`],
-      ['Layers', `All the lanes move through all ${R.L} layers at the same time. Each layer is a bank of knobs (its weights), set once in training and never moved while it runs: the ball is multiplied through them. In each layer a token first talks (attention: the pink lines are the model's real attention; this is the only place it can read earlier tokens` + (chat ? ', including the system prompt' : '') + `) and then thinks alone (feed-forward: the amber burst is how much it really added). After every layer the cloud reads the ball with the model's final reader and lights up every token by the chance it would give it.`],
+      ['Layers', `All the lanes move through all ${R.L} layers at the same time. Each layer is a bank of knobs (its weights), set once in training and never moved while it runs: the ball is multiplied through them. In each layer a token first talks (attention: the pink lines are the model's real attention; this is the only place it can read earlier tokens` + (chat ? ', including the system prompt' : '') + `) and then thinks alone (feed-forward: the amber burst is how much it really added). After every layer the cloud reads the ball with the model's final reader and lights up every token by the chance it would give it. The little bar under the last ball is its first 16 numbers, changing as each + is added. Click any layer to look inside it.`],
       ['Unembed', `After the last layer comes one more norm, then the ball leaves the board and is compared with every row of the output table, which here is the embedding table reused: one score for each of the ${nf(R.V)} tokens. A token scores high when the ball points the same way as its row.` + (chat ? ' The context decides which way the ball points, so the right context lights up the tokens that fit it.' : '')],
       ['Choose', 'Softmax turns the top five scores into chances, temperature sets how loaded the dice are, and a weighted dice roll picks one: watch the dice hop between the candidates in the cloud.'],
       ['Detokenize', 'The tokenizer runs backwards: the winning ID becomes its piece of text and is added to the output. It also becomes a new lane.'],
@@ -620,7 +633,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
     ];
   };
   const DONE = ['Done', 'Six new tokens, six passes. A real model keeps going until it writes an end-of-text token or hits a length limit. Press Replay, or type a new prompt.'];
-  const S = { mode: 'dense', speed: 1, data: null, llm: null, loading: null, wantReal: false, hover: null, pinned: false, mem: [], nb: {} };
+  const S = { mode: 'tiny', wantMode: 'tiny', speed: 1, data: null, llm: null, loading: null, wantReal: false, hover: null, pinned: false, mem: [], nb: {} };
   let tl = null, CAPS = [], INFOS = [], LENS = [], PASSES = [], STEPLOG = [], CHOOSE = [], G = null;
   const isReal = () => S.mode === 'real' || S.mode === 'tiny';
   const RKEY = { real: 'smollm2-instruct', tiny: 'tiny-stories' };
@@ -640,7 +653,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
   // ---- board geometry: lanes (one per token) running left to right through every layer ----
   // Each layer is a thin column with two stations: "talk" (attention: tokens share information) and
   // "think" (feed-forward: each token works alone). Both add onto the ball (the residual stream).
-  const VBW = 980, TOP = 124, ROW0 = 176, RH = 27, SCW = 44, DEVW = 128, TOKX = DEVW + 26, TOKW = 92, EMBW = 56;
+  const VBW = 980, TOP = 124, ROW0 = 152, RH = 27, SCW = 44, DEVW = 128, TOKX = DEVW + 26, TOKW = 92, EMBW = 56;
   const TBL = { x: TOKX, y: 24, w: 90, h: 40 }; // the embedding table drawing, top left of the machine
   const vocabSize = () => (isReal() ? RM().V : 248320);
   const rowY = i => ROW0 + i * RH;
@@ -690,7 +703,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
     // header: what the columns are, and a legend
     el('text', { x: G.x0, y: 16, class: 'secname' }, g, `${G.L} layers, left to right. Each: talk, then think`);
     const leg = real
-      ? [['knob', 'knobs: the layer\'s weights (each needle is one real weight); lit while read, never turned'], ['att', 'talk: attention'], ['kvt', 'KV cache'], ['ff', 'think: feed-forward']]
+      ? [['knob', 'column = that layer\'s knobs (real weights), the same for every token; click one to look inside'], ['att', 'talk: attention'], ['kvt', 'KV cache'], ['ff', 'think: feed-forward (+ = added onto the ball)']]
       : [['knob', 'knobs: the layer\'s weights; lit while read, never turned'], ['att', 'full attention (every 4th layer)'], ['lin', 'linear attention: one fixed memory'], ['kvt', 'KV cache'], ['ff', 'think: feed-forward']];
     let lx = G.x0;
     let ly = 28;
@@ -707,14 +720,9 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
       G.cols.push(el('rect', { x: x + 0.6, y: top, width: G.LW - 1.2, height: bot - top, rx: Math.min(3, G.LW / 3), class: 'lcol' + (full ? ' full' : ' lin') }, g));
       el('rect', { x: x + 0.6, y: top, width: G.LW - 1.2, height: 4, class: 'lstripe' + (full ? ' full' : ' lin') }, g);
       if (!full) S.mem[l] = el('rect', { x: G.talkX(l) - Math.max(1.5, G.LW * 0.25), y: top + 8, width: Math.max(3, G.LW * 0.5), height: 5, rx: 1, class: 'mem', 'fill-opacity': 0.25 }, g);
-      // the knobs: one dial for the talk weights, one for the think weights (the needle is one real weight, or made up in toy mode)
-      const stack = G.LW < 40, kr = stack ? Math.min(G.LW * 0.36, 8) : Math.min(G.LW * 0.22, 9), kc = G.lx(l) + G.LW / 2, kg = el('g', { class: 'knob' }, g);
-      (stack ? [[kc, top + 18, 'q'], [kc, top + 18 + 2 * kr + 4, 'gate']] : [[G.talkX(l), top + 26, 'q'], [G.thinkX(l), top + 26, 'gate']]).forEach(([kx, ky, mat]) => {
-        const v = knobValue(l, mat), a = v * 0.75 * Math.PI - Math.PI / 2;
-        el('circle', { cx: kx, cy: ky, r: kr }, kg);
-        el('line', { x1: kx, y1: ky, x2: kx + Math.cos(a) * kr * 0.9, y2: ky + Math.sin(a) * kr * 0.9 }, kg);
-      });
-      G.knobs.push(kg);
+      // the column is the layer's knob bank: its real weights, the talk grids (q, k, v, o) on the left half, the think grids
+      // (gate, up, down) on the right half. Every lane passes through the same knobs.
+      if (real && S.llm) G.knobs.push(el('image', { href: knobBank(l), x: x + 0.6, y: top + 5, width: G.LW - 1.2, height: bot - top - 5, preserveAspectRatio: 'none', class: 'kbank' }, g));
       const every = real ? (G.L > 10 ? 5 : 1) : 4;
       if (l === 0 || (l + 1) % every === 0) el('text', { x: x + G.LW / 2, y: top - 4, 'text-anchor': 'middle', class: 'tiny' }, g, String(l + 1));
     }
@@ -775,6 +783,8 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
     el('tspan', { class: 'outp' }, out, D.prompt.length > 60 ? '…' + D.prompt.slice(-59) : D.prompt);
     const outW = D.gen.map(gx => el('tspan', { class: 'outg', 'fill-opacity': 0 }, out, gx));
     S.guessEl = real ? el('text', { x: 0, y: 0, class: 'guess', style: 'opacity:0' }, dyn) : null;
+    S.strip = real ? el('g', { class: 'strip16', style: 'opacity:0' }, dyn) : null;
+    S.stripCells = real ? Array.from({ length: 16 }, (_, k) => el('rect', { x: k * 2.6, y: 0, width: 2.2, height: 7, rx: 0.4 }, S.strip)) : null;
     S.balls = ball;
     // the prompt as text, cut into the pieces that become lanes (12px IBM Plex Mono: every character is 7.2 wide)
     // the device: your message as a chat bubble, and the reply that streams in piece by piece
@@ -884,6 +894,8 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
           });
           tl.to(m, { attr: { 'fill-opacity': 0.8 }, duration: d * 0.15 }, t + d * 0.2); tl.to(m, { attr: { 'fill-opacity': 0.25 }, duration: d * 0.3 }, t + d * 0.55);
         }
+        // the + where each change is added onto the focus ball (after talk, after think)
+        [[tx, d * 0.42], [hx, d * 0.84]].forEach(([px, at]) => { const pl = el('text', { x: px + 4, y: rowY(focus) - 7, class: 'plus', style: 'opacity:0' }, gArcs, '+'); tl.to(pl, { opacity: 1, duration: d * 0.06 }, t + at); tl.to(pl, { opacity: 0, duration: d * 0.2 }, t + at + d * 0.12); });
         // think: move on, and a burst shows how much the feed-forward block added
         cols.forEach(i => {
           tl.to(ball[i], { attr: { cx: hx }, duration: d * 0.42, ease: 'power1.inOut' }, t + d * 0.5);
@@ -1160,7 +1172,11 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
         S.guessEl.setAttribute('x', x); S.guessEl.setAttribute('y', y - 11); S.guessEl.setAttribute('text-anchor', 'middle');
         S.guessEl.textContent = S.llm.tok.piece(top.id) + ' ' + fmtPct(top.p);
         S.guessEl.style.opacity = 1;
-      } else S.guessEl.style.opacity = 0;
+        // the ball's first 16 numbers after this layer (real), under the ball
+        const rec = D.recs[cur[1]], f = rec.layers[cur[2]].first, sc = rec.sc16 || (rec.sc16 = Math.max(1e-6, ...rec.layers.flatMap(q => q.first.map(Math.abs)))), bg = hexRgb(css('--st-bg'));
+        S.strip.setAttribute('transform', `translate(${x - 20.8} ${y + 8})`); S.strip.style.opacity = 1;
+        S.stripCells.forEach((c, k) => c.setAttribute('fill', rgbStr(cellCol(f[k], sc, bg))));
+      } else { S.guessEl.style.opacity = 0; S.strip.style.opacity = 0; }
     }
     $('#gStrip').hidden = !D.real;
     if (!D.real) { $('#gLine').textContent = ''; return; }
@@ -1218,18 +1234,32 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
     if ($('#bTitle').textContent !== $('#capTitle').textContent) $('#bTitle').textContent = $('#capTitle').textContent;
     if ($('#bText').textContent !== $('#capText').textContent) $('#bText').textContent = $('#capText').textContent;
   }
-  // one real weight per dial: element 1000 of that layer's query (talk) or gate (think) grid, against the grid's spread
-  function knobValue(l, mat) {
-    if (!isReal() || !S.llm) return ((hash(S.mode + l + mat) % 200) - 100) / 100 * 0.8;
-    const m = S.llm.mats.layers[l][mat], k = S.knobScale || (S.knobScale = {}), id = S.llm.meta.key + l + mat;
-    if (!k[id]) { const a = Array.from({ length: 512 }, (_, i) => Math.abs(m[i * 97 % m.length])).sort((x, y) => x - y); k[id] = a[506] || 1; }
-    return Math.max(-1, Math.min(1, m[1000] / k[id]));
+  // a layer's knob bank as a picture: its real weights, the talk grids stacked on the left half and the think grids on the
+  // right half; each pixel is one real weight (warm positive, blue negative), sampled evenly. Cached per model and layer.
+  function knobBank(l) {
+    const key = S.llm.meta.key + ':' + l; S.banks = S.banks || {}; if (S.banks[key]) return S.banks[key];
+    const P = S.llm.mats.layers[l], W = 24, H = 360, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+    const c = cv.getContext('2d'), img = c.createImageData(W, H), bg = hexRgb(css('--st-bg'));
+    const half = (mats, x0) => {
+      const rows = mats.map(([m, r]) => r), tot = rows.reduce((a, b) => a + b, 0);
+      mats.forEach(([m]) => { m.sc = m.sc || p98v(m.subarray(0, 65536)); });
+      for (let y = 0; y < H; y++) {
+        let r = Math.floor(y / H * tot), k = 0; while (r >= rows[k]) r -= rows[k++];
+        const [m, , cols] = mats[k];
+        for (let x = 0; x < W / 2; x++) { const col = cellCol(m[r * cols + Math.floor(x / (W / 2) * cols)], m.sc, bg), o = (y * W + x0 + x) * 4; img.data[o] = col[0]; img.data[o + 1] = col[1]; img.data[o + 2] = col[2]; img.data[o + 3] = 255; }
+      }
+    };
+    const D = S.llm.D, KV = S.llm.KVH * S.llm.HD, F = S.llm.F;
+    half([[P.q, D, D], [P.k, KV, D], [P.v, KV, D], [P.o, D, D]], 0);
+    half([[P.gate, F, D], [P.up, F, D], [P.down, D, F]], W / 2);
+    c.putImageData(img, 0, 0);
+    return (S.banks[key] = cv.toDataURL());
   }
   function syncLayers(time) {
     let cur = null; for (const e of STEPLOG) if (e[0] <= time) cur = e;
     const p = cur && cur[1] >= 0 ? PASSES[cur[3]] : null, l = p && time <= (p.t1 || 1e9) ? cur[1] : -1;
     G.cols.forEach((c, i) => c.setAttribute('class', c.getAttribute('class').replace(/ (now|future)/g, '') + (l < 0 ? '' : i === l ? ' now' : i > l ? ' future' : '')));
-    G.knobs.forEach((k, i) => k.setAttribute('class', 'knob' + (l < 0 ? '' : i === l ? ' now' : i < l ? ' read' : '')));
+    G.knobs.forEach((k, i) => k.setAttribute('class', 'kbank' + (l < 0 ? '' : i === l ? ' now' : '')));
   }
   function setPlayLabel() {
     const lab = tl.isActive() ? 'Pause' : tl.progress() >= 1 ? 'Replay' : 'Play';
@@ -2318,6 +2348,131 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
     $('#train').showModal(); requestAnimationFrame(trDraw);
   }
 
+  // ---- inside one layer: one token's ball going through every step, with the model's own numbers ----
+  // Each "knobs × ball" step is drawn as the real knob grid: the ball across the top, one output number per row on the
+  // right. Every output is the whole ball multiplied by that row of knobs and added up. All values come from the engine's
+  // record of this token (vec), and the page recomputes the products from the real weights to show they match.
+  const LY = { l: 0, rec: null, row: 0, anims: [] };
+  const p98v = a => { const b = Array.from(a, Math.abs).sort((x, y) => x - y); return b[Math.floor(b.length * 0.98)] || 1; };
+  const POS = [239, 228, 204], NEG = [111, 134, 201];
+  const cellCol = (v, sc, bg) => { const a = Math.min(1, Math.abs(v) / sc) ** 0.7, c = v >= 0 ? POS : NEG; return [bg[0] + (c[0] - bg[0]) * a, bg[1] + (c[1] - bg[1]) * a, bg[2] + (c[2] - bg[2]) * a]; };
+  const f4 = v => (v < 0 ? '−' : '') + Math.abs(v).toFixed(4);
+  function lyStrip(box, vals, label, info, scale) { // a vector as a row of cells (every number, squeezed to the width)
+    const wrap = mk('div', 'lystrip', null, box); mk('span', 'lylab', label, wrap);
+    const cv = mk('canvas', 'lycv', null, wrap);
+    requestAnimationFrame(() => {
+      const W = cv.clientWidth || 600, H = 18, dpr = Math.min(2, devicePixelRatio || 1); cv.width = Math.round(W * dpr); cv.height = H * dpr; cv.style.height = H + 'px';
+      const c = cv.getContext('2d'), img = c.createImageData(cv.width, cv.height), bg = hexRgb(css('--st-bg')), sc = scale || p98v(vals);
+      for (let x = 0; x < cv.width; x++) { const v = vals[Math.min(vals.length - 1, Math.floor(x / cv.width * vals.length))], col = cellCol(v, sc, bg); for (let y = 0; y < cv.height; y++) { const o = (y * cv.width + x) * 4; img.data[o] = col[0]; img.data[o + 1] = col[1]; img.data[o + 2] = col[2]; img.data[o + 3] = 255; } }
+      c.putImageData(img, 0, 0);
+    });
+    cv.addEventListener('pointermove', e => { const i = Math.min(vals.length - 1, Math.floor(e.offsetX / cv.clientWidth * vals.length)); info.textContent = `${label}: number ${i + 1} of ${vals.length} = ${f4(vals[i])}`; });
+    return cv;
+  }
+  function lyMatVec(box, W, rows, cols, x, y, name, info, inName) { // y = W · x, drawn as the knob grid with the ball on top and the outputs on the right
+    const wrap = mk('div', 'lymv', null, box), cv = mk('canvas', 'pcv lymvcv', null, wrap), bar = mk('div', 'lymvbar', null, wrap);
+    const go = mk('button', '', 'Multiply, row by row', bar); go.type = 'button';
+    const chk = mk('span', 'note', null, bar);
+    let maxErr = 0; for (let r = 0; r < rows; r += Math.max(1, Math.floor(rows / 64))) { let s = 0; for (let c = 0; c < cols; c++) s += W[r * cols + c] * x[c]; maxErr = Math.max(maxErr, Math.abs(s - y[r])); }
+    chk.textContent = `${name}: ${nf(rows)} rows × ${nf(cols)} knobs = ${nf(rows * cols)} knobs. ${maxErr < 1e-3 ? '✓ recomputed from the real weights, it matches the model\'s own numbers' : 'recomputed difference ' + maxErr.toExponential(1)}.`;
+    const G2 = { r: -1 }, off = document.createElement('canvas');
+    function layout() {
+      const Wd = cv.clientWidth || 600, dpr = Math.min(2, devicePixelRatio || 1), gh = Math.min(240, Math.max(90, Math.round(rows / cols * (Wd - 60) * 0.5))), H = gh + 34;
+      return { Wd, H, dpr, gx: 4, gy: 30, gw: Wd - 48, gh };
+    }
+    function bake() {
+      const L = layout(); cv.width = Math.round(L.Wd * L.dpr); cv.height = Math.round(L.H * L.dpr); cv.style.height = L.H + 'px';
+      off.width = cv.width; off.height = cv.height;
+      const c = off.getContext('2d'), img = c.createImageData(off.width, off.height), bg = hexRgb(css('--st-bg')), scW = p98v(W.subarray(0, Math.min(W.length, 65536))), scX = p98v(x), scY = p98v(y);
+      for (let i = 0; i < img.data.length; i += 4) { img.data[i] = bg[0]; img.data[i + 1] = bg[1]; img.data[i + 2] = bg[2]; img.data[i + 3] = 255; }
+      const put = (px, py, col) => { const o = (py * off.width + px) * 4; img.data[o] = col[0]; img.data[o + 1] = col[1]; img.data[o + 2] = col[2]; };
+      const d = L.dpr, gx = Math.round(L.gx * d), gy = Math.round(L.gy * d), gw = Math.round(L.gw * d), gh = Math.round(L.gh * d);
+      for (let py = 0; py < gh; py++) { const r = Math.floor(py / gh * rows); for (let px = 0; px < gw; px++) put(gx + px, gy + py, cellCol(W[r * cols + Math.floor(px / gw * cols)], scW, bg)); }
+      for (let px = 0; px < gw; px++) { const col = cellCol(x[Math.floor(px / gw * cols)], scX, bg); for (let py = Math.round(15 * d); py < Math.round(26 * d); py++) put(gx + px, py, col); }
+      for (let py = 0; py < gh; py++) { const col = cellCol(y[Math.floor(py / gh * rows)], scY, bg); for (let px = gx + gw + Math.round(6 * d); px < gx + gw + Math.round(22 * d); px++) put(px, gy + py, col); }
+      c.putImageData(img, 0, 0); G2.L = L; draw();
+    }
+    function draw() {
+      const L = G2.L, c = cv.getContext('2d'); c.setTransform(1, 0, 0, 1, 0, 0); c.drawImage(off, 0, 0); c.setTransform(L.dpr, 0, 0, L.dpr, 0, 0);
+      if (G2.r >= 0) { // the row being multiplied, and the outputs not made yet dimmed
+        const ry = L.gy + (G2.r + 0.5) / rows * L.gh;
+        c.fillStyle = css('--st-bg'); c.globalAlpha = 0.72; c.fillRect(L.gx + L.gw + 6, ry, 16, L.gy + L.gh - ry); c.globalAlpha = 1;
+        c.strokeStyle = css('--score'); c.lineWidth = 2; c.beginPath(); c.moveTo(L.gx, ry); c.lineTo(L.gx + L.gw + 22, ry); c.stroke();
+      }
+      c.fillStyle = css('--st-ink2'); c.font = '10px "IBM Plex Mono", monospace'; c.fillText(`${inName || 'ball'} in: ${nf(cols)} numbers (one per column)`, L.gx, 10);
+      c.save(); c.translate(L.gx + L.gw + 28, L.gy); c.rotate(Math.PI / 2); c.fillText(`out: ${nf(rows)} numbers, one per row`, 0, 0); c.restore();
+    }
+    requestAnimationFrame(bake);
+    go.addEventListener('click', () => {
+      const t0 = performance.now(), run = now => { const u = Math.min(1, (now - t0) / 2600); G2.r = Math.floor(u * (rows - 1)); draw(); if (u < 1 && cv.isConnected) requestAnimationFrame(run); else { G2.r = -1; draw(); } };
+      requestAnimationFrame(run);
+    });
+    cv.addEventListener('pointermove', e => {
+      const L = G2.L; if (!L) return; const r = Math.max(0, Math.min(rows - 1, Math.floor((e.offsetY - L.gy) / L.gh * rows)));
+      let s = 0; for (let c2 = 0; c2 < cols; c2++) s += W[r * cols + c2] * x[c2];
+      info.textContent = `${name}, row ${r + 1}: ${f4(W[r * cols])} × ${f4(x[0])} + ${f4(W[r * cols + 1])} × ${f4(x[1])} + ${f4(W[r * cols + 2])} × ${f4(x[2])} + … (all ${nf(cols)} pairs) = ${f4(s)}; the model's number: ${f4(y[r])}`;
+      G2.r = r; draw();
+    });
+    cv.addEventListener('pointerleave', () => { G2.r = -1; if (G2.L) draw(); });
+  }
+  function openLayer(l, row) {
+    const D = S.data; if (!D || !D.real) return;
+    if (tl.isActive()) { tl.pause(); setPlayLabel(); }
+    // full numbers are kept for the last prompt token and each new token
+    let rec = D.rowRecs[row] && D.rowRecs[row].layers[0].vec ? D.rowRecs[row] : D.recs[0], r2 = D.rowRecs.indexOf(rec);
+    LY.l = Math.max(0, Math.min(S.llm.L - 1, l)); LY.rec = rec; LY.row = r2;
+    lyRender(row !== r2 ? `Full numbers are kept for the last prompt token and each new token, so this shows “${D.all[r2]}”.` : '');
+    if (!$('#layerDlg').open) $('#layerDlg').showModal();
+  }
+  function lyRender(note) {
+    const m = S.llm, l = LY.l, ly = LY.rec.layers[l], v = ly.vec, P = m.mats.layers[l], D = m.D, KV = m.KVH * m.HD, F = m.F, eps = m.cfg.rms_norm_eps, word = S.data.all[LY.row];
+    $('#lyWhere').textContent = `${m.name} · layer ${l + 1} of ${m.L} · token “${word}”`;
+    $('#lyTitle').textContent = `Inside layer ${l + 1}: what the knobs do to the ball`;
+    $('#lyLead').textContent = (note ? note + ' ' : '') + `The ball is the token's ${D} numbers. A layer never swaps it for a new one: it works out two changes (talk, then think) and adds each onto the ball. Each "knobs × ball" step multiplies the whole ball by every row of a grid of knobs; each row gives one new number. These are the model's real numbers for “${word}” at this layer: point at anything to read it, or press "Multiply, row by row".`;
+    const box = $('#lyBody'); box.innerHTML = '';
+    const info = mk('p', 'lyinfo mono', 'Point at a strip or a grid to read its numbers.', null);
+    const step = (n, title, text) => { const s2 = mk('section', 'lystep', null, box); mk('h3', 'eh3', `${n} · ${title}`, s2); if (text) mk('p', 'note', text, s2); return s2; };
+    const rms = Math.sqrt(v.xin.reduce((a, b) => a + b * b, 0) / D + eps), rms2 = Math.sqrt(v.x1.reduce((a, b) => a + b * b, 0) / D + eps);
+    let s1 = step(1, 'The ball arrives', `It came out of layer ${l} (or from the embedding table, for layer 1). Its length is ${ly.xinNorm.toFixed(2)}.`);
+    lyStrip(s1, v.xin, 'ball', info);
+    s1 = step(2, 'Rescale it (RMS norm)', `Each number is divided by the ball's root-mean-square size (${rms.toFixed(4)}) and multiplied by its own knob from this layer's norm (${D} knobs), so the layer always sees a ball of steady size.`);
+    lyStrip(s1, P.ln1, 'norm knobs', info); lyStrip(s1, v.h1, 'rescaled ball', info);
+    s1 = step(3, 'Talk, part 1: query, key and value = knobs × ball', `Three grids of knobs turn the ball into a query (what this token is looking for), a key (what it offers) and a value (what it passes on). ${m.H} query heads${m.KVH < m.H ? ` share ${m.KVH} key/value heads` : ', each with its own key and value'}, ${m.HD} numbers each.`);
+    lyMatVec(s1, P.q, D, D, v.h1, v.qPre, 'query knobs', info); lyMatVec(s1, P.k, KV, D, v.h1, v.kPre, 'key knobs', info); lyMatVec(s1, P.v, KV, D, v.h1, v.v, 'value knobs', info);
+    s1 = step(4, 'Turn the query and key by position (RoPE)', 'This is where word order gets in: pairs of numbers are rotated by an angle that grows with the token\'s position, so the comparison in the next step depends on how far apart two tokens are.');
+    lyStrip(s1, v.qPre, 'query before', info); lyStrip(s1, v.q, 'query after', info);
+    s1 = step(5, 'Talk, part 2: compare with every earlier token and blend', 'Each head compares its query with the key of every earlier token (kept in the KV cache), turns the scores into weights that add up to 100% (softmax), and blends those tokens\' values with them. This is the only place a token reads the others.');
+    const T = LY.rec.pos + 1, H = ly.heads, hm = mk('canvas', 'pcv lyheat', null, s1);
+    requestAnimationFrame(() => {
+      const Wd = hm.clientWidth || 600, rowH = 14, Hh = H * rowH + 40, dpr = Math.min(2, devicePixelRatio || 1); hm.width = Math.round(Wd * dpr); hm.height = Math.round(Hh * dpr); hm.style.height = Hh + 'px';
+      const c = hm.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0); c.fillStyle = css('--st-bg'); c.fillRect(0, 0, Wd, Hh);
+      const x0 = 56, cw = (Wd - x0 - 6) / T, sc = hexRgb(css('--attn'));
+      c.font = '10px "IBM Plex Mono", monospace'; c.fillStyle = css('--st-ink2');
+      for (let h = 0; h < H; h++) { c.fillText(`head ${h + 1}`, 4, 14 + h * rowH + 10); for (let j = 0; j < T; j++) { const w = ly.attn[h * T + j]; c.fillStyle = `rgba(${sc.join(',')},${Math.min(1, Math.sqrt(w))})`; c.fillRect(x0 + j * cw, 14 + h * rowH, Math.max(1, cw - 1), rowH - 2); } c.fillStyle = css('--st-ink2'); }
+      const avg = Array.from({ length: T }, (_, j) => { let s = 0; for (let h = 0; h < H; h++) s += ly.attn[h * T + j]; return s / H; });
+      avg.map((w, j) => [w, j]).sort((a, b) => b[0] - a[0]).slice(0, 6).forEach(([w, j]) => { c.fillStyle = css('--st-ink'); c.fillText(m.tok.piece(S.data.allIds[j]), Math.min(Wd - 60, x0 + j * cw), 14 + H * rowH + 14); });
+      c.fillStyle = css('--st-ink2'); c.fillText('earlier tokens →  (the most-read ones are named)', x0, 10);
+      hm.onpointermove = e => { const j = Math.floor((e.offsetX - x0) / cw), h = Math.floor((e.offsetY - 14) / rowH); if (j >= 0 && j < T && h >= 0 && h < H) info.textContent = `head ${h + 1} gives “${m.tok.piece(S.data.allIds[j])}” (token ${j + 1}) ${fmtPct(ly.attn[h * T + j])} of its attention`; };
+    });
+    lyStrip(s1, v.mix, 'blended values', info);
+    s1 = step(6, 'Talk, part 3: output knobs × blend', 'One more grid of knobs mixes the heads\' blended values into a change for the ball.');
+    lyMatVec(s1, P.o, D, D, v.mix, v.out, 'output knobs', info, 'blend');
+    s1 = step(7, 'Add the change onto the ball', `The ball keeps everything it had; the change (length ${ly.outNorm.toFixed(2)}) is added on top. New length: ${ly.x1Norm.toFixed(2)}.`);
+    { const k = p98v(v.x1); lyStrip(s1, v.xin, 'ball', info, k); lyStrip(s1, v.out, '+ change', info, k); lyStrip(s1, v.x1, '= new ball', info, k); } // one colour scale, so the sum reads
+    s1 = step(8, 'Think, part 1: rescale, then gate and up = knobs × ball', `The ball is rescaled again (divided by ${rms2.toFixed(4)}, times this norm's knobs), then two grids of ${nf(F)} rows each check it for ${nf(F)} patterns: every row is one neuron.`);
+    lyStrip(s1, v.h2, 'rescaled ball', info);
+    lyMatVec(s1, P.gate, F, D, v.h2, v.gate, 'gate knobs', info); lyMatVec(s1, P.up, F, D, v.h2, v.up, 'up knobs', info);
+    s1 = step(9, 'Think, part 2: the neurons fire', `Each neuron's output is SiLU(gate) × up: SiLU squeezes negative gates towards 0, so only some neurons fire strongly. Busiest here: ${ly.neurons.slice(0, 4).map(n => '#' + n.i + ' (' + n.v.toFixed(2) + ')').join(', ')}.`);
+    lyStrip(s1, v.act, `${nf(F)} neurons`, info);
+    const zb = mk('button', '', 'Work out one neuron by hand', s1); zb.type = 'button'; zb.addEventListener('click', () => { $('#layerDlg').close(); openZoom(l); });
+    s1 = step(10, 'Think, part 3: down knobs × neurons', `A grid of ${D} × ${nf(F)} knobs turns the neurons' outputs back into a change for the ball.`);
+    lyMatVec(s1, P.down, D, F, v.act, v.down, 'down knobs', info, 'neurons');
+    s1 = step(11, 'Add the change onto the ball', `Change length ${ly.downNorm.toFixed(2)}; the ball leaves the layer with length ${ly.norm.toFixed(2)}` + (l < m.L - 1 ? ` and goes into layer ${l + 2}.` : ' and goes to the final norm and the output table.') + (ly.lens ? ` If the model stopped here, it would say: ${ly.lens.map(g => m.tok.piece(g.id) + ' ' + fmtPct(g.p)).join(', ')}.` : ''));
+    { const k = p98v(v.xout); lyStrip(s1, v.x1, 'ball', info, k); lyStrip(s1, v.down, '+ change', info, k); lyStrip(s1, v.xout, '= ball out', info, k); }
+    box.appendChild(info);
+    $('#lyPrev').disabled = l === 0; $('#lyNext').disabled = l === m.L - 1;
+  }
+
   // ---- pointing and clicking: token chips and strips are cells; in the layers the pointer picks lane, layer, station ----
   function pick(e) {
     const c = e.target.closest && e.target.closest('.cell');
@@ -2338,7 +2493,7 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
     S.hover = h; S.pinned = true;
     if (tl.isActive()) { tl.pause(); setPlayLabel(); }
     sync();
-    if (h.si === 0 && h.which === 1) openZoom(h.l);
+    if (h.si === 0 && S.data.real) openLayer(h.l, h.row);
     if (h.si === -2) openEmb(h.row);
   });
   $('#zoomBtn').addEventListener('click', () => openZoom(0));
@@ -2350,10 +2505,14 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
   $('#tourBtn').addEventListener('click', startTour);
   $('#trainBtn').addEventListener('click', openTrain); $('#pTrain').addEventListener('click', () => { $('#params').close(); openTrain(); });
   $('#trClose').addEventListener('click', () => $('#train').close());
+  $('#lyClose').addEventListener('click', () => $('#layerDlg').close());
+  $('#lyPrev').addEventListener('click', () => { LY.l--; lyRender(''); $('#layerDlg').scrollTop = 0; });
+  $('#lyNext').addEventListener('click', () => { LY.l++; lyRender(''); $('#layerDlg').scrollTop = 0; });
+  $('#layerBtn').addEventListener('click', () => { let cur = null; const tm = tl.time(); for (const e of STEPLOG) if (e[0] <= tm && e[1] >= 0) cur = e; openLayer(cur ? cur[1] : 0, S.data.nP - 1); });
   $('#nClose').addEventListener('click', () => $('#narrDlg').close());
   $('#parBtn').addEventListener('click', openParams);
   $('#pClose').addEventListener('click', () => $('#params').close());
-  ['#narrDlg', '#params', '#train'].forEach(d => $(d).addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.close(); }));
+  ['#narrDlg', '#params', '#train', '#layerDlg'].forEach(d => $(d).addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.close(); }));
   $('#zClose').addEventListener('click', () => $('#zoom').close());
   $('#zoom').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.close(); });
 
@@ -2379,12 +2538,7 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
     if (mode === 'real' || mode === 'tiny') {
       S.wantMode = mode;
       if (S.models && S.models[rkey(mode)]) { runReal(true, mode); return; }
-      const R = RM(mode);
-      S.wantReal = true; $('#realLoad').hidden = false; $('#realGo').hidden = !!(S.loadings && S.loadings[R.key]); $('#realIntro').hidden = false; $('#prog').hidden = false; status('', 0);
-      $('#realIntro').textContent = mode === 'tiny'
-        ? `Runs TinyStories 15M in your browser: a 6-layer model that only ever read children's stories, small enough to see every layer and every knob clearly. It downloads ${R.mb} MB from Hugging Face once.`
-        : `Runs SmolLM2-135M-Instruct in your browser: a 30-layer chat model that reads a system prompt before your message, and shows its actual numbers. It downloads ${R.mb} MB from Hugging Face once (your browser keeps a copy) and uses about 900 MB of memory, so a laptop or desktop works best.`;
-      $('#realGo').textContent = `Download and run (${R.mb} MB)`;
+      showLoad(mode);
       document.querySelectorAll('.seg button').forEach(x => x.setAttribute('aria-pressed', x === b));
       return;
     }
@@ -2392,6 +2546,14 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
     setMode(mode); drawStatic(); runToy(false);
   }));
   $('#realGo').addEventListener('click', () => runReal(true, S.wantMode));
+  function showLoad(mode) { // the download panel for a model that is not loaded yet (the tiny one starts by itself)
+    const R = RM(mode);
+    S.wantReal = true; $('#realLoad').hidden = false; $('#realGo').hidden = mode === 'tiny' || !!(S.loadings && S.loadings[R.key]); $('#realIntro').hidden = false; $('#prog').hidden = false; status('', 0);
+    $('#realIntro').textContent = mode === 'tiny'
+      ? `Loading TinyStories 15M, a real 6-layer model that only ever read children's stories: small enough to see every layer and every knob clearly. It downloads ${R.mb} MB from Hugging Face once and then runs in your browser.`
+      : `SmolLM2-135M-Instruct is a real 30-layer chat model that reads a system prompt before your message. It downloads ${R.mb} MB from Hugging Face once (your browser keeps a copy) and uses about 900 MB of memory, so a laptop or desktop works best.`;
+    $('#realGo').textContent = `Download and run (${R.mb} MB)`;
+  }
   // each kind of model gets a prompt it can do something with, unless you typed your own
   const DEFAULT_PROMPT = { toy: 'the fighter blocked the fireball and', real: 'What is a fireball?', tiny: 'Once upon a time, there was a little' };
   function swapPrompt(mode) {
@@ -2404,11 +2566,13 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
   $('#temp').addEventListener('change', () => { if (isReal()) runReal(false); else runToy(false); });
   window.__plinko = { px: PX, get data() { return S.data; }, get mode() { return S.mode; }, get caps() { return CAPS; }, get choose() { return CHOOSE; }, cloud: cardView }; // for testing and the curious
 
+  // start: load the tiny real model (30 MB), run the prompt, then (first visit) the guided tour plays one token step by step
   drawStatic();
-  runToy(false);
-  // first visit: the guided tour plays one token, step by step
-  let toured = true; try { toured = !!localStorage.getItem('plinko-toured'); } catch (e) { /* storage blocked: no tour by default */ }
-  if (!toured) startTour();
+  showLoad('tiny');
+  runReal(false, 'tiny').then(() => {
+    let toured = true; try { toured = !!localStorage.getItem('plinko-toured'); } catch (e) { /* storage blocked: no tour by default */ }
+    if (!toured && S.data) startTour();
+  });
 })();
 </script>
 </body>
