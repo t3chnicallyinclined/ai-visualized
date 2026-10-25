@@ -46,6 +46,15 @@ Every layer has its own cache or memory, because each layer stores keys and valu
 
 Switch the model to **MoE** and the feed-forward block splits into experts. A small router sends each token to only a few of them, so a big model runs at the speed of a small one. Qwen3.6-35B-A3B picks 8 of its 256 experts for each token, plus one shared expert every token uses; the board draws 7 experts and a shared one.
 
+### The embedding explorer
+
+Click any token's strip (or **Explore embeddings**) to see what embedding really is:
+
+- **The table**: the real rows around the token's ID as a heat map (teal positive, pink negative), with its row sliding out to become the ball. Neighbouring IDs mean nothing; an ID is just a position in the vocabulary.
+- **Meaning map**: 223 everyday words placed by their real SmolLM2 rows, flattened from 576 dimensions to 2 with t-SNE (computed once from the real rows and stored in the page, so it works in toy mode too). Colours, numbers, days, animals, feelings and fighting words form their own neighbourhoods. Your prompt's tokens drop onto it.
+- **Nearest tokens**: the 8 most similar rows out of all 49,152, with cosine similarity worked out for the closest.
+- **Compare two**: any two words, their rows side by side, the pairwise products and the similarity (·cat/·dog 0.59, ·cat/·car 0.26, ·happy/·sad 0.49: opposites are used in the same places).
+
 ### Real model mode
 
 Pick **Real: SmolLM2-135M** and the page downloads a real small language model ([SmolLM2-135M](https://huggingface.co/HuggingFaceTB/SmolLM2-135M), Apache 2.0, 269 MB, kept by your browser after the first time) and runs it in your browser with plain JavaScript. Then everything on the board is the model's actual output:

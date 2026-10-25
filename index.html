@@ -145,6 +145,29 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
 .zt td { text-align: right; padding: 4px 6px; }
 .zt th:first-child, .zt td:first-child { text-align: left; }
 .zt tr.hi td { color: var(--accent); font-weight: 600; }
+dialog#emb { width: min(900px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); box-sizing: border-box; overflow: auto;
+  border: 1px solid var(--line); border-radius: 14px; background: var(--panel); color: var(--ink); padding: 20px; }
+dialog#emb::backdrop { background: rgb(10 12 30 / 0.5); }
+dialog#emb h2 { font: 800 22px/1.15 var(--display); margin: 6px 0 10px; color: var(--accent); }
+dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
+.etoks, .etabs, .epresets { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.etoks button { font: 500 12px var(--mono); padding: 4px 8px; }
+.etoks button[aria-pressed="true"], .etabs button[aria-selected="true"] { border-color: var(--accent); color: var(--accent); }
+.epresets button { font: 500 12px var(--mono); padding: 4px 8px; }
+.egrid { display: grid; gap: 2px; margin-bottom: 10px; }
+.erow { display: grid; grid-template-columns: 9.5em minmax(0, 1fr); gap: 8px; align-items: center; }
+.erow.sel .elab { color: var(--accent); font-weight: 600; } .erow.sel .estrip { outline: 2px solid var(--accent); outline-offset: 1px; }
+.elab { font: 11px var(--mono); color: var(--muted); white-space: pre; overflow: hidden; text-overflow: ellipsis; }
+.estrip { width: 100%; height: 12px; display: block; border-radius: 2px; } .estrip.big { height: 24px; margin-bottom: 8px; }
+.eout { display: flex; flex-direction: column; gap: 4px; margin: 6px 0 8px; }
+.emap { width: 100%; display: block; background: var(--band); border-radius: 10px; margin-bottom: 8px; }
+.elegend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+.elegend i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 4px; }
+.enear { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+.eh3 { font: 700 16px var(--display); margin: 8px 0 6px; }
+.enums { font: 12.5px/1.6 var(--mono); background: var(--band); border-radius: 8px; padding: 8px 10px; white-space: pre-wrap; overflow-wrap: anywhere; margin: 0 0 10px; }
+.ecmp { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.ecmp input { flex: 1 1 140px; min-width: 0; font: 500 15px var(--mono); padding: 8px 10px; border-radius: 8px; border: 1.5px solid var(--line); background: var(--panel); color: var(--ink); }
 .zsum { font-size: 14px; background: var(--band); border-radius: 8px; padding: 8px 10px; overflow-wrap: anywhere; }
 /* Full-screen 1080p (and the 1920x1080 video render): board large on the left, panels on the right. */
 @media (min-width: 1800px) and (min-height: 1040px) {
@@ -191,7 +214,8 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
           <button type="button" data-speed="1" aria-pressed="true">1×</button>
           <button type="button" data-speed="2" aria-pressed="false">2×</button>
         </div>
-        <button id="zoomBtn" type="button" title="Or click any feed-forward square">Zoom into a neuron</button>
+        <button id="zoomBtn" type="button" title="Or click any think station">Zoom into a neuron</button>
+        <button id="embBtn" type="button" title="Or click any token's strip">Explore embeddings</button>
       </div>
       <div class="card" id="inspector">
         <p class="eyebrow" id="iWhere">Now processing</p>
@@ -281,6 +305,19 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
   <ol class="zsteps" id="zSteps"></ol>
   <table class="zt" id="zSoft"></table>
   <p class="note" id="zNote"></p>
+</dialog>
+
+<dialog id="emb" aria-labelledby="eTitle">
+  <div class="zhead"><p class="eyebrow">Embedding explorer</p><button id="eClose" type="button">Close</button></div>
+  <h2 id="eTitle"></h2>
+  <div class="etoks" id="eToks" aria-label="Pick a token"></div>
+  <div class="etabs" role="tablist">
+    <button type="button" role="tab" data-tab="table" aria-selected="true">The table</button>
+    <button type="button" role="tab" data-tab="map" aria-selected="false">Meaning map</button>
+    <button type="button" role="tab" data-tab="near" aria-selected="false">Nearest tokens</button>
+    <button type="button" role="tab" data-tab="cmp" aria-selected="false">Compare two</button>
+  </div>
+  <div id="eBody"></div>
 </dialog>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
@@ -836,7 +873,7 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
     }
     if (si === -2) {
       const id = D.ids[row], dims = MODELS[S.mode].dims;
-      const text = `The model looks up row ${id.toLocaleString('en-US')} of its embedding table (${real ? '49,152' : 'about 250,000'} rows, one per token): a list of ${dims.d.toLocaleString('en-US')} numbers learned in training. That list is the ball the layers work on. No single number means anything readable; what matters is that tokens used in similar ways end up with similar lists.`;
+      const text = `The model looks up row ${id.toLocaleString('en-US')} of its embedding table (${real ? '49,152' : 'about 250,000'} rows, one per token): a list of ${dims.d.toLocaleString('en-US')} numbers learned in training. That list is the ball the layers work on. No single number means anything readable; what matters is that tokens used in similar ways end up with similar lists. Click the strip to open the embedding explorer.`;
       if (!real) return { where: 'Embed · ' + who, title: `Embed ${who}: look up row ${id}`, text, nums: 'Toy mode: the strip is made up. Pick "Real: SmolLM2-135M" to see real rows and which tokens are closest.' };
       const e = D.embeds[row], nb = S.nb[id] || (S.nb[id] = S.llm.neighbors(id, 5));
       return { where: 'Embed · ' + who, title: `Embed ${who}: look up row ${id}`, text,
@@ -1057,6 +1094,173 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
     $('#zoom').showModal();
   }
 
+  // ---- the embedding explorer: the table itself, a meaning map, nearest tokens, and comparing two ----
+  // EMAP: 223 everyday words, their SmolLM2 token IDs, and 2D positions from t-SNE run once over their real
+  // embedding rows (cosine distance, fixed seed). Close on the map means close in the model's 576 numbers.
+  const EMAP = {"groups":["numbers","colours","animals","family","body","food","time","places","weather","fight","feelings","tech","size","verbs","function"],"words":["one","two","three","four","five","six","seven","eight","nine","ten","hundred","thousand","million","first","second","third","red","blue","green","yellow","black","white","orange","purple","pink","brown","grey","gold","silver","cat","dog","horse","bird","fish","cow","pig","sheep","lion","tiger","bear","wolf","mouse","snake","eagle","rabbit","duck","chicken","monkey","elephant","mother","father","brother","sister","son","daughter","wife","husband","baby","child","uncle","aunt","friend","king","queen","prince","hand","head","eye","face","arm","leg","foot","heart","mouth","hair","nose","ear","finger","back","skin","blood","bread","milk","water","coffee","tea","apple","rice","meat","cheese","sugar","salt","egg","cake","soup","wine","beer","Monday","Tuesday","Friday","Sunday","morning","night","evening","week","month","year","today","tomorrow","yesterday","January","March","summer","winter","city","house","school","church","river","mountain","sea","forest","street","road","town","village","island","garden","office","hospital","rain","snow","wind","sun","storm","cloud","cold","hot","ice","fire","punch","kick","block","jump","attack","fight","hit","throw","strike","defend","win","lose","match","round","player","fighter","super","happy","sad","angry","afraid","love","hate","fear","joy","calm","proud","computer","phone","code","data","software","internet","screen","keyboard","network","server","memory","chip","robot","big","small","large","tiny","fast","slow","tall","short","long","old","new","young","run","walk","eat","drink","sleep","read","write","speak","think","see","hear","give","take","make","go","come","the","and","of","to","in","that","is","was","for","with","as","on","at","by","it"],"g":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,8,8,8,8,8,8,8,8,8,8,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,10,10,10,10,10,10,10,10,10,10,11,11,11,11,11,11,11,11,11,11,11,11,11,12,12,12,12,12,12,12,12,12,12,12,12,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14],"ids":[582,827,1296,1876,2531,2976,4962,4475,7462,3772,3822,7557,2215,808,1796,3464,2382,4461,2654,5724,2632,2537,10245,14230,11986,6354,13917,4231,8499,2644,2767,6391,5615,2698,9956,6342,11108,16433,21957,7012,14600,9444,14321,22261,16024,21881,9610,19660,17032,3379,4083,5717,10243,4132,7388,6221,8360,4516,811,22534,31164,3289,4197,15731,21353,1369,1680,3323,2715,5026,1475,3374,1911,4388,4416,8166,6923,8400,1056,2574,1670,6956,4788,913,6728,7188,11977,7341,5176,10421,3982,5420,3785,16253,14562,8289,12682,12397,14801,11655,10528,5738,3163,9053,2605,3531,713,1834,13759,18400,4450,3903,4018,4339,2240,2291,1125,4538,4626,6740,3426,3150,7280,3398,3102,6560,5432,4480,4608,5625,5249,5806,2251,2388,5670,6249,4011,3380,3908,2892,21461,16627,3608,7379,3414,3568,5380,10899,9422,8330,4726,5946,5758,5075,7081,21529,2076,5587,8177,12575,11830,2606,13735,3696,7697,9071,9723,2583,5460,2909,940,3197,5594,5078,13473,3082,6064,3500,13027,8085,2066,1165,1507,5383,3538,2890,6780,1890,986,1573,725,1805,1658,4549,3134,5968,2801,1012,2965,3287,1510,963,4875,1928,1188,919,685,1690,260,284,282,288,281,338,314,436,327,351,347,335,418,411,357],"xy":[[0.9191,0.4378],[0.0086,0.5765],[0.84,0.404],[0.8282,0.3933],[0.8378,0.3742],[0.8212,0.3739],[0.8153,0.3575],[0.8023,0.3713],[0.8011,0.354],[0.8456,0.3485],[0.4772,0.5052],[0.4764,0.5056],[0.1932,0.6403],[0.5914,0.0153],[0.5773,0.004],[0.5723,0],[0.537,0.3176],[0.5192,0.3387],[0.5327,0.3494],[0.5052,0.3562],[0.5633,0.3064],[0.5614,0.307],[0.4801,0.3621],[0.4882,0.3777],[0.4822,0.3809],[0.5156,0.3799],[0.5002,0.3993],[0,0.4044],[0.0003,0.4044],[0.2214,0.7095],[0.2239,0.7076],[0.2558,0.6824],[0.3166,0.6857],[0.3095,0.7039],[0.2737,0.6354],[0.2909,0.6109],[0.2899,0.6515],[0.3453,0.5576],[0.3479,0.5751],[0.3145,0.5519],[0.3598,0.5739],[0.3744,0.6949],[0.3445,0.6561],[0.3277,0.5812],[0.3315,0.6333],[0.3087,0.622],[0.3132,0.6474],[0.3379,0.6234],[0.3443,0.596],[0.5177,0.1586],[0.5176,0.1588],[0.3565,0.8518],[0.3578,0.8467],[0.3761,0.8052],[0.3738,0.8076],[0.2278,0.5103],[0.5416,0.7052],[0.7745,0.0337],[0.7746,0.0336],[0.263,0.5303],[0.2611,0.5294],[0.3501,0.874],[0.4059,0.1144],[0.4054,0.1201],[0.4046,0.1331],[0.4799,0.7906],[0.3998,1],[0.3063,0.2105],[0.3996,0.9999],[0.5324,0.7915],[0.5248,0.79],[0.4936,0.7843],[0.33,0.2063],[0.2772,0.2494],[0.3403,0.2848],[0.2871,0.2432],[0.299,0.2163],[0.466,0.7636],[0.8689,0.5136],[0.3493,0.2751],[0.3694,0.2474],[0.2897,0.4075],[0.3236,0.4634],[0.3884,0.2472],[0.2269,0.4379],[0.2298,0.4396],[0.3673,0.6267],[0.3251,0.3921],[0.3085,0.4271],[0.2953,0.4548],[0.3702,0.374],[0.3752,0.3714],[0.3371,0.4731],[0.2861,0.4712],[0.2593,0.4657],[0.265,0.4209],[0.2697,0.4295],[0.0437,0.2521],[0.0403,0.2571],[0.0262,0.2504],[0.0378,0.2348],[0.9704,0.2921],[0.9534,0.3055],[0.9657,0.2957],[0.0366,0.7326],[0.0369,0.7326],[0.7642,0.5169],[0.6974,0.7645],[0.679,0.7576],[0.6778,0.7571],[0.6894,0.8937],[0.6894,0.8938],[0.914,0.2243],[0.914,0.2243],[0.475,0.9013],[0.0891,0.5632],[0.0857,0.489],[0.0986,0.4974],[0.5872,0.5819],[0.5683,0.5786],[0.6049,0.5868],[0.2914,0.3326],[0.6279,0.6431],[0.6281,0.6425],[0.4749,0.889],[0.4749,0.8794],[0.5569,0.5795],[0.2846,0.339],[0.1045,0.5372],[0.1102,0.5132],[0.6212,0.4744],[0.5943,0.4799],[0.6493,0.4799],[0.6342,0.495],[0.626,0.4513],[0.5737,0.458],[0.4719,0.2457],[0.4718,0.2457],[0.587,0.488],[0.6412,0.4333],[0.2827,0.5746],[0.396,0.4797],[0.1485,0.7342],[0.4015,0.487],[0.1669,0.574],[0.1899,0.5707],[0.729,0.625],[0.407,0.4591],[0.7266,0.6278],[0.1937,0.539],[0.2438,0.3869],[0.1994,0.3286],[0.2293,0.6054],[0.7897,0.5101],[0.4004,0.6541],[0.2042,0.5566],[0.0728,0.8325],[0.1774,0.8237],[0.1891,0.8071],[0.2195,0.8177],[0.2356,0.8201],[0.2498,0.8903],[0.2474,0.8813],[0.2513,0.8223],[0.1788,0.846],[0.2658,0.7612],[0.2073,0.834],[0.4941,0.6356],[0.4549,0.6428],[0.5228,0.6509],[0.2467,0.1431],[0.5029,0.6416],[0.4845,0.6144],[0.3908,0.7296],[0.3872,0.7114],[0.4785,0.5898],[0.4234,0.6105],[0.563,0.7945],[0.4142,0.5762],[0.4055,0.6043],[0.6566,0.222],[0.6697,0.203],[0.661,0.2154],[0.0731,0.6368],[0.5546,0.9946],[0.5546,0.9945],[0.3766,0.5388],[0.67,0.0978],[0.6701,0.0979],[0.7825,0.1428],[0.7872,0.1483],[0.7698,0.1281],[0.7777,0.268],[0.1682,0.42],[0.1602,0.3839],[0.1597,0.3957],[0.1252,0.4046],[0.1616,0.6777],[0.4369,0.7083],[0.1516,0.3609],[0.152,0.3047],[0.176,0.2947],[0.1846,0.3112],[0.7024,0.3102],[0.7129,0.3006],[0.6987,0.3145],[0.7381,0.2792],[0.7404,0.2759],[0.9205,0.4796],[0.9437,0.4902],[0.9667,0.4706],[0.9367,0.5126],[0.9613,0.5023],[0.7484,0.2078],[0.9117,0.5412],[0.9071,0.5488],[0.955,0.5196],[0.9817,0.5268],[0.9588,0.5456],[0.9732,0.4969],[0.6405,0.1629],[1,0.5084],[0.8995,0.4789]]};
+  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const hexRgb = h => { h = h.replace('#', ''); if (h.length === 3) h = h.split('').map(c => c + c).join(''); const n = parseInt(h, 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
+  const E = { row: 0, tab: 'table', mapRows: null };
+  function eTokId(row) { return S.data.ids[row]; }
+  function unit(v) { const n = Math.hypot(...v) || 1; return v.map(x => x / n); }
+  function cosine(a, b) { let d = 0, na = 0, nb = 0; for (let i = 0; i < a.length; i++) { d += a[i] * b[i]; na += a[i] * a[i]; nb += b[i] * b[i]; } return { d, na: Math.sqrt(na), nb: Math.sqrt(nb), cos: d / Math.sqrt(na * nb) }; }
+  // a strip of numbers as coloured cells: teal positive, pink negative, stronger = bigger
+  function strip(cv, vals, mx, h) {
+    const dpr = Math.min(2, devicePixelRatio || 1), W = cv.clientWidth || 576; cv.width = W * dpr; cv.height = h * dpr;
+    const c = cv.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const pos = hexRgb(css('--kv')), neg = hexRgb(css('--accent')), cw = W / vals.length;
+    vals.forEach((v, i) => { const a = Math.min(1, Math.abs(v) / mx); c.fillStyle = `rgba(${(v >= 0 ? pos : neg).join(',')},${0.08 + 0.92 * a})`; c.fillRect(i * cw, 0, Math.ceil(cw), h); });
+  }
+  const p98 = arr => { const a = arr.map(Math.abs).sort((x, y) => x - y); return a[Math.floor(a.length * 0.98)] || 1; };
+  function needReal(box) {
+    box.innerHTML = '';
+    const p = document.createElement('p'); p.className = 'note';
+    p.textContent = 'This view uses the real embedding table. Pick "Real: SmolLM2-135M" in the Model card (a 269 MB download) to see it.';
+    box.appendChild(p);
+  }
+  function openEmb(row, tab) {
+    if (tl.isActive()) { tl.pause(); setPlayLabel(); }
+    E.row = row; if (tab) E.tab = tab;
+    const toks = $('#eToks'); toks.innerHTML = '';
+    for (let i = 0; i < S.data.nP + 6; i++) {
+      if (i >= S.data.nP + 5) break;
+      const b = document.createElement('button'); b.type = 'button'; b.textContent = S.data.all[i]; b.setAttribute('aria-pressed', i === row);
+      b.addEventListener('click', () => { E.row = i; openEmb(i); }); toks.appendChild(b);
+    }
+    document.querySelectorAll('.etabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === E.tab));
+    const real = isReal(), id = eTokId(row);
+    $('#eTitle').textContent = `“${S.data.all[row]}” → row ${id.toLocaleString('en-US')}`;
+    const box = $('#eBody'); box.innerHTML = '';
+    ({ table: tabTable, map: tabMap, near: tabNear, cmp: tabCmp })[E.tab](box, real, id);
+    if (!$('#emb').open) $('#emb').showModal();
+  }
+  const mk = (tag, cls, text, parent) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; if (parent) parent.appendChild(e); return e; };
+
+  function tabTable(box, real, id) {
+    mk('p', '', real
+      ? `The embedding table has 49,152 rows, one per token, and 576 columns. Here are rows ${Math.max(0, id - 7).toLocaleString('en-US')} to ${(Math.max(0, id - 7) + 14).toLocaleString('en-US')}: each row is a token and each tiny cell one of its 576 learned numbers (teal positive, pink negative). The token's ID simply picks its row, which slides out to become its ball.`
+      : 'The embedding table has one row per token (about 250,000 for Qwen3.6) and one column per number (5,120). The ID picks a row, and that row becomes the ball.', box);
+    if (!real) return needReal(mk('div', '', null, box));
+    const m = S.llm, start = Math.min(m.V - 15, Math.max(0, id - 7)), rows = Array.from({ length: 15 }, (_, r) => m.embedding(start + r, m.D));
+    const mx = p98(rows.flat()), grid = mk('div', 'egrid', null, box);
+    rows.forEach((vals, r) => {
+      const line = mk('div', 'erow' + (start + r === id ? ' sel' : ''), null, grid);
+      mk('span', 'elab', `${start + r}  ${m.tok.piece(start + r)}`, line);
+      const cv = mk('canvas', 'estrip', null, line); requestAnimationFrame(() => strip(cv, vals, mx, 12));
+    });
+    mk('p', 'note', 'Neighbouring rows have nothing to do with each other: an ID is just a position in the vocabulary list. No single column has a simple meaning either; meaning lives in the pattern across all 576.', box);
+    const out = mk('div', 'eout', null, box);
+    mk('p', 'eyebrow', `The ball for “${m.tok.piece(id)}”: row ${id}, all 576 numbers`, out);
+    const cv = mk('canvas', 'estrip big', null, out);
+    requestAnimationFrame(() => {
+      strip(cv, m.embedding(id, m.D), mx, 26);
+      const sel = grid.querySelector('.sel .estrip');
+      if (sel && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        const dy = sel.getBoundingClientRect().top - cv.getBoundingClientRect().top;
+        cv.animate([{ transform: `translateY(${dy}px) scaleY(0.46)`, opacity: 0.6 }, { transform: 'none', opacity: 1 }], { duration: 900, easing: 'cubic-bezier(.4,0,.2,1)' });
+      }
+    });
+  }
+
+  function mapRows() { // normalised real rows for the map words (real mode only)
+    if (!E.mapRows) E.mapRows = EMAP.ids.map(i => unit(S.llm.embedding(i, S.llm.D)));
+    return E.mapRows;
+  }
+  function placeOnMap(row, real) { // where a prompt token lands: exactly, or among its 5 closest map words
+    const w = S.data.all[row].replace(/^·/, '').toLowerCase(), k = EMAP.words.findIndex(x => x.toLowerCase() === w);
+    if (k >= 0) return { xy: EMAP.xy[k], near: [k], exact: true };
+    if (!real) return null;
+    const v = unit(S.llm.embedding(eTokId(row), S.llm.D)), R = mapRows();
+    const sims = R.map((r, i) => [i, r.reduce((a, x, j) => a + x * v[j], 0)]).sort((a, b) => b[1] - a[1]).slice(0, 5);
+    const wsum = sims.reduce((a, s) => a + Math.max(0, s[1]) ** 2, 0) || 1;
+    const xy = [0, 1].map(d => sims.reduce((a, [i, s]) => a + EMAP.xy[i][d] * Math.max(0, s) ** 2, 0) / wsum);
+    return { xy, near: sims.map(s => s[0]), exact: false };
+  }
+  function tabMap(box, real) {
+    mk('p', '', 'Each dot is an everyday word, placed by its real row in SmolLM2\'s embedding table, squashed from 576 dimensions down to 2. Words the model uses in similar ways land near each other. Your prompt\'s tokens are the large rings.', box);
+    const cv = mk('canvas', 'emap', null, box);
+    const leg = mk('div', 'elegend', null, box);
+    const hues = EMAP.groups.map((_, i) => (i * 360 / EMAP.groups.length + 200) % 360);
+    EMAP.groups.forEach((g, i) => { const s = mk('span', '', null, leg); const d = mk('i', '', null, s); d.style.background = `hsl(${hues[i]} 60% 55%)`; s.append(g); });
+    mk('p', 'note', 'How to read it: the flattening (t-SNE, run once on the real rows) keeps close neighbours close, so tight groups are real, but the distance between two far-apart groups means little. The colours are our own word groups; the positions come from the model. ' + (real ? 'Tokens not on the map are placed among their 5 closest map words (the lines).' : 'Toy mode can only place prompt words that are on the map; the real model places every token.'), box);
+    requestAnimationFrame(() => {
+      const dpr = Math.min(2, devicePixelRatio || 1), W = cv.clientWidth, H = Math.round(Math.min(460, Math.max(320, W * 0.62)));
+      cv.width = W * dpr; cv.height = H * dpr; cv.style.height = H + 'px';
+      const c = cv.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const X = x => 18 + x * (W - 90), Y = y => 14 + y * (H - 28), ink = css('--ink'), muted = css('--muted'), acc = css('--accent');
+      const placed = [];
+      const free = (x, y, w, h) => !placed.some(r => x < r[0] + r[2] && x + w > r[0] && y < r[1] + r[3] && y + h > r[1]);
+      // prompt tokens first, so their labels win
+      const mine = [];
+      for (let i = 0; i < S.data.nP + 5; i++) { const pl = placeOnMap(i, real); if (pl) mine.push([i, pl]); }
+      const sel = mine.find(([i]) => i === E.row);
+      if (sel && !sel[1].exact) sel[1].near.forEach(k => { c.strokeStyle = acc; c.globalAlpha = 0.45; c.lineWidth = 1.2; c.beginPath(); c.moveTo(X(sel[1].xy[0]), Y(sel[1].xy[1])); c.lineTo(X(EMAP.xy[k][0]), Y(EMAP.xy[k][1])); c.stroke(); c.globalAlpha = 1; });
+      c.font = '500 11px "IBM Plex Mono", monospace'; c.textBaseline = 'middle';
+      EMAP.words.forEach((w, k) => {
+        const x = X(EMAP.xy[k][0]), y = Y(EMAP.xy[k][1]);
+        c.fillStyle = `hsl(${hues[EMAP.g[k]]} 60% 55%)`; c.beginPath(); c.arc(x, y, 3, 0, 7); c.fill();
+      });
+      mine.forEach(([i, pl]) => {
+        const x = X(pl.xy[0]), y = Y(pl.xy[1]), on = i === E.row;
+        c.strokeStyle = acc; c.lineWidth = on ? 3 : 1.8; c.beginPath(); c.arc(x, y, on ? 8 : 6, 0, 7); c.stroke();
+        c.font = `600 ${on ? 13 : 12}px "IBM Plex Mono", monospace`; c.fillStyle = acc;
+        const t = S.data.all[i], tw = c.measureText(t).width; c.fillText(t, x + 10, y); placed.push([x + 9, y - 8, tw + 4, 16]);
+      });
+      c.font = '500 11px "IBM Plex Mono", monospace';
+      EMAP.words.forEach((w, k) => {
+        const x = X(EMAP.xy[k][0]) + 5, y = Y(EMAP.xy[k][1]), tw = c.measureText(w).width;
+        if (free(x, y - 7, tw + 2, 14)) { c.fillStyle = muted; c.fillText(w, x, y); placed.push([x, y - 7, tw + 2, 14]); }
+      });
+    });
+  }
+
+  function tabNear(box, real, id) {
+    if (!real) { mk('p', '', 'The tokens whose rows point most nearly the same way as this one.', box); return needReal(mk('div', '', null, box)); }
+    const m = S.llm, nb = S.nb8 && S.nb8[id] || ((S.nb8 = S.nb8 || {})[id] = m.neighbors(id, 8));
+    mk('p', '', `The 8 tokens (out of all 49,152) whose rows point most nearly the same way as “${m.tok.piece(id)}”. 1 means exactly the same direction, 0 means unrelated.`, box);
+    const list = mk('div', 'enear', null, box);
+    nb.forEach(n => {
+      const r = mk('div', 'grow', null, list); mk('span', '', m.tok.piece(n.id), r);
+      const bar = mk('span', 'gbar', null, r), b = mk('b', '', null, bar); b.style.width = Math.max(0, n.sim * 100).toFixed(1) + '%';
+      mk('span', '', n.sim.toFixed(2), r);
+    });
+    const a = m.embedding(id, m.D), bRow = m.embedding(nb[0].id, m.D), c = cosine(a, bRow);
+    mk('h3', 'eh3', 'Worked out for the closest one', box);
+    mk('pre', 'enums', `multiply the 576 pairs and add them:   ${c.d.toFixed(4)}\nlength of “${m.tok.piece(id)}”'s row:${' '.repeat(Math.max(1, 14 - m.tok.piece(id).length))}${c.na.toFixed(4)}\nlength of “${m.tok.piece(nb[0].id)}”'s row:${' '.repeat(Math.max(1, 14 - m.tok.piece(nb[0].id).length))}${c.nb.toFixed(4)}\n${c.d.toFixed(4)} ÷ (${c.na.toFixed(4)} × ${c.nb.toFixed(4)}) = ${c.cos.toFixed(4)}`, box);
+    mk('p', 'note', 'This is cosine similarity: it compares directions and ignores length. Close neighbours are often the same word with a capital letter, a space, or a plural, plus words used in similar places.', box);
+  }
+
+  function tabCmp(box, real) {
+    mk('p', '', 'Type two words and compare their rows number by number.', box);
+    if (!real) return needReal(mk('div', '', null, box));
+    const m = S.llm, f = mk('form', 'ecmp', null, box);
+    const a = mk('input', '', null, f), b = mk('input', '', null, f), go = mk('button', '', 'Compare', f);
+    a.id = 'cmpA'; b.id = 'cmpB'; a.value = E.ca || 'cat'; b.value = E.cb || 'dog'; a.setAttribute('aria-label', 'First word'); b.setAttribute('aria-label', 'Second word'); go.type = 'submit';
+    const pre = mk('div', 'epresets', null, box);
+    [['cat', 'dog'], ['cat', 'car'], ['king', 'queen'], ['fire', 'water'], ['punch', 'kick'], ['happy', 'sad']].forEach(([x, y]) => { const bt = mk('button', '', `${x} · ${y}`, pre); bt.type = 'button'; bt.addEventListener('click', () => { a.value = x; b.value = y; show(); }); });
+    const out = mk('div', 'eout', null, box);
+    function show() {
+      E.ca = a.value; E.cb = b.value; out.innerHTML = '';
+      const ta = m.tok.encode(' ' + a.value.trim()), tb = m.tok.encode(' ' + b.value.trim());
+      if (!ta.length || !tb.length) { mk('p', 'note', 'Type a word in both boxes.', out); return; }
+      const ra = m.embedding(ta[0], m.D), rb = m.embedding(tb[0], m.D), prod = ra.map((v, i) => v * rb[i]), c = cosine(ra, rb), mx = p98(ra.concat(rb));
+      [[ta, ra], [tb, rb]].forEach(([t, r]) => {
+        mk('p', 'eyebrow', `“${m.tok.piece(t[0])}” (row ${t[0]})` + (t.length > 1 ? ` · the word splits into ${t.length} tokens (${t.map(x => m.tok.piece(x)).join(' + ')}); this is the first` : ''), out);
+        const cv = mk('canvas', 'estrip big', null, out); requestAnimationFrame(() => strip(cv, r, mx, 22));
+      });
+      mk('p', 'eyebrow', 'number by number, multiplied (teal: they agree, pink: they disagree)', out);
+      const cp = mk('canvas', 'estrip big', null, out); requestAnimationFrame(() => strip(cp, prod, p98(prod), 22));
+      const r = mk('div', 'grow', null, out); mk('span', '', 'similarity', r); const bar = mk('span', 'gbar', null, r), bb = mk('b', '', null, bar); bb.style.width = Math.max(0, c.cos * 100).toFixed(1) + '%'; mk('span', '', c.cos.toFixed(2), r);
+      mk('p', 'note', 'Similarity adds up all the multiplied pairs (more teal than pink means similar) and divides by the two rows\' lengths. In this small model, closely related words score about 0.5 to 0.6 (·cat and ·dog: 0.59), unrelated ones about 0.2 to 0.3 (·cat and ·car: 0.26), and very different kinds of word about 0 (·cat and ·the). Opposites such as ·happy and ·sad score high (0.49): they are used in the same places.', out);
+    }
+    f.addEventListener('submit', e => { e.preventDefault(); show(); });
+    show();
+  }
+  document.querySelectorAll('.etabs button').forEach(b => b.addEventListener('click', () => { E.tab = b.dataset.tab; openEmb(E.row); }));
+  $('#eClose').addEventListener('click', () => $('#emb').close());
+  $('#emb').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.close(); });
+  $('#embBtn').addEventListener('click', () => openEmb(S.data.nP - 1, 'map'));
+
   // ---- pointing and clicking: token chips and strips are cells; in the layers the pointer picks lane, layer, station ----
   function pick(e) {
     const c = e.target.closest && e.target.closest('.cell');
@@ -1078,6 +1282,7 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
     if (tl.isActive()) { tl.pause(); setPlayLabel(); }
     sync();
     if (h.si === 0 && h.which === 1) openZoom(h.l);
+    if (h.si === -2) openEmb(h.row);
   });
   $('#zoomBtn').addEventListener('click', () => openZoom(0));
   $('#zClose').addEventListener('click', () => $('#zoom').close());
