@@ -39,6 +39,7 @@ body { margin: 0; font: 15px/1.5 var(--body); }
 header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 18px; }
 h1 { font: 800 clamp(28px, 4vw, 40px)/1 var(--display); margin: 0; letter-spacing: -0.02em; }
 header p { margin: 0; color: var(--muted); max-width: 62ch; text-wrap: pretty; }
+header a { color: var(--accent); font-weight: 600; }
 form { display: flex; gap: 10px; flex-wrap: wrap; }
 #prompt { flex: 1 1 200px; min-width: 0; font: 500 17px var(--mono); padding: 13px 16px; border-radius: 10px;
   border: 1.5px solid var(--line); background: var(--panel); color: var(--ink); }
@@ -99,6 +100,20 @@ dt { color: var(--muted); } dd { margin: 0; text-align: right; font-family: var(
 .fly { font: 600 13px var(--mono); fill: var(--accent); }
 .out { font: 500 13px var(--mono); } .outp { fill: var(--muted); } .outg { fill: var(--accent); }
 .ffhit { fill: transparent; cursor: pointer; }
+.guess { font: 600 12px var(--mono); fill: var(--accent); paint-order: stroke; stroke: var(--band); stroke-width: 4px; stroke-linejoin: round; }
+/* Real-model mode */
+.prog { height: 8px; border-radius: 4px; background: var(--band); border: 1px solid var(--line); overflow: hidden; }
+.prog span { display: block; height: 100%; width: 0; background: var(--accent); }
+.strip { display: grid; grid-template-columns: repeat(30, minmax(0, 1fr)); gap: 2px; }
+.strip i { height: 14px; border-radius: 2px; background: var(--band); border: 1px solid var(--line); }
+.strip i.done { background: var(--wt); border-color: var(--wt); opacity: 0.45; }
+.strip i.match { background: var(--accent); border-color: var(--accent); opacity: 1; }
+.strip i.cur { outline: 2px solid var(--ink); outline-offset: 1px; }
+.grow { display: grid; grid-template-columns: minmax(0, 7em) 1fr 3.2em; gap: 8px; align-items: center; font: 13px var(--mono); }
+.grow span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: pre; }
+.grow span:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+.gbar { height: 10px; border-radius: 3px; background: var(--band); overflow: hidden; } .gbar b { display: block; height: 100%; background: var(--wt); }
+.grow:first-child .gbar b { background: var(--accent); }
 /* Peg zoom dialog */
 dialog#zoom { width: min(600px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); box-sizing: border-box; overflow: auto;
   border: 1px solid var(--line); border-radius: 14px; background: var(--panel); color: var(--ink); padding: 20px; }
@@ -139,7 +154,7 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
 <div id="stage" data-composition-id="plinko" data-start="0" data-duration="50.9" data-width="1920" data-height="1080">
   <header>
     <h1>LLM Plinko</h1>
-    <p>Type a prompt and press Enter. Watch it get cut into tokens, fall through the layers, and come out as the next word, one token at a time.</p>
+    <p>Type a prompt and press Enter. Watch it get cut into tokens, fall through the layers, and come out as the next word, one token at a time. <a href="3d.html">See it as a 3D tower</a>.</p>
   </header>
 
   <form id="promptForm" autocomplete="off">
@@ -177,13 +192,41 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
         <div class="seg" role="group" aria-label="Model">
           <button type="button" data-mode="dense" aria-pressed="true">Dense 27B</button>
           <button type="button" data-mode="moe" aria-pressed="false">MoE 35B-A3B</button>
+          <button type="button" data-mode="real" aria-pressed="false">Real: SmolLM2-135M</button>
+        </div>
+        <div id="realLoad" hidden style="display:flex;flex-direction:column;gap:8px">
+          <p class="note" id="realIntro">Runs a real small language model in your browser and shows its actual numbers. It downloads 269 MB from Hugging Face once (your browser keeps a copy) and uses about 800 MB of memory, so a laptop or desktop works best.</p>
+          <button id="realGo" type="button">Download and run</button>
+          <div class="prog" id="prog" aria-hidden="true"><span id="progBar"></span></div>
+          <p class="note" id="realStatus" aria-live="polite"></p>
         </div>
         <div class="row"><label for="temp">Temperature</label><span class="mono" id="tempVal">0.7</span></div>
         <input id="temp" type="range" min="0" max="1.5" step="0.1" value="0.7">
         <p class="note">At 0 the top score always wins. Higher makes the dice less loaded: more variety, more odd picks.</p>
       </div>
 
-      <div class="card">
+      <div class="card" id="guessCard" hidden>
+        <p class="eyebrow" id="gLayer">The model's guess so far</p>
+        <div id="gTop" style="display:flex;flex-direction:column;gap:6px"></div>
+        <div class="strip" id="gStrip" aria-hidden="true"></div>
+        <p class="note" id="gNeur"></p>
+        <p class="note">What the model would say if it stopped after this layer (researchers call this the logit lens). A pink cell means that layer's guess already matches the final answer.</p>
+      </div>
+
+      <div class="card" id="realCard" hidden>
+        <p class="eyebrow">Running in your browser</p>
+        <dl>
+          <dt>Model</dt><dd>SmolLM2-135M</dd>
+          <dt>Weights in memory (bf16)</dt><dd>269 MB</dd>
+          <dt>Layers · numbers per token</dt><dd>30 · 576</dd>
+          <dt>Tokens in KV cache</dt><dd id="rKv">0</dd>
+          <dt>KV cache size</dt><dd id="rKvSize">0 KB</dd>
+          <dt>Your speed</dt><dd id="rSpeed">–</dd>
+        </dl>
+        <p class="note" id="rNote"></p>
+      </div>
+
+      <div class="card" id="gpuCard">
         <p class="eyebrow">Example GPU: RTX 3090 · 24 GB VRAM</p>
         <div class="vram" aria-hidden="true"><span id="segW"></span><span id="segKV"></span></div>
         <div class="legend"><span><i style="background:var(--wt)"></i>Weights</span><span><i style="background:var(--kv)"></i>KV cache</span><span><i style="background:var(--band);border:1px solid var(--line)"></i>Free</span></div>
@@ -200,7 +243,7 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
         <p class="note" id="kv32"></p>
       </div>
 
-      <p class="note">Toy model. The board shows how a real LLM is wired, but the next-token scores come from a tiny word table built into this page, not a real model. The token splits and ID numbers are made up too. Memory and speed figures are rough.</p>
+      <p class="note" id="modeNote"></p>
     </aside>
   </div>
 </div>
@@ -216,10 +259,11 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
   <p id="zSoftLead"></p>
   <ol class="zsteps" id="zSteps"></ol>
   <table class="zt" id="zSoft"></table>
-  <p class="note">Small made-up numbers, real arithmetic. The ball's numbers are the bars drawn for it on the board and the peg's weights are invented. The scores come from this page's toy word table, so the chances match the bars in the scores row for the first new word. Change the temperature and zoom in again to watch them move.</p>
+  <p class="note" id="zNote"></p>
 </dialog>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="llm.js"></script>
 <script>
 (function () {
   const $ = s => document.querySelector(s);
@@ -279,9 +323,47 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
   const short = w => (w.length > 5 ? w.slice(0, 4) + '…' : w);
   const shortW = w => (w.length > 10 ? w.slice(0, 9) + '…' : w);
   const fmtPct = p => (p >= 0.995 ? '100%' : p < 0.005 ? '<1%' : Math.round(p * 100) + '%');
+  const getPrompt = () => ($('#prompt').value.trim() || 'the fighter blocked the fireball and').slice(0, 120);
+  const getT = () => parseFloat($('#temp').value);
+
+  // Toy data: what the board needs, from the word table.
+  function toyData(prompt, T) {
+    let toks = tokenize(prompt); if (!toks.length) toks = ['?'];
+    if (toks.length > 9) toks = toks.slice(-9);
+    const nP = toks.length, r = rng(hash(prompt + '|' + T));
+    let last = lastWord(prompt);
+    const steps = [];
+    for (let k = 0; k < 6; k++) { const c = candidates(last, T); const pick = sample(c, r, T); steps.push({ c, pick }); last = c[pick].w; }
+    const all = toks.concat(steps.map(s => s.c[s.pick].w));
+    return { real: false, nP, all, offset: 0, prompt, T, prev: lastWord(prompt), steps,
+      ids: all.map(w => hash(w.toLowerCase()) % 248320),
+      bars: all.map(w => Array.from({ length: 8 }, (_, b) => 4 + hash(w + '#' + b) % 24)),
+      gen: steps.map(s => ' ' + s.c[s.pick].w) };
+  }
+
+  // Real data: run SmolLM2-135M on the prompt, then write 6 tokens, recording what every layer did.
+  async function realData(prompt, T, onStatus) {
+    const m = S.llm, tok = m.tok;
+    let ids = tok.encode(prompt); if (!ids.length) ids = tok.encode('the');
+    const st = m.newState(), total = ids.length + 5, r = rng(hash(prompt + '|' + T + '|real'));
+    let res, done = 0;
+    for (let i = 0; i < ids.length; i++) { res = await m.step(st, ids[i], i === ids.length - 1); onStatus(++done, total); }
+    const recs = [res.rec], steps = [], ms = [res.ms];
+    for (let k = 0; k < 6; k++) {
+      const { cands, pick } = LLM.sampleTopK(res.logits, 5, T, r);
+      steps.push({ c: cands.map(c => ({ w: tok.piece(c.id), id: c.id, p: c.p, s: c.logit, full: c.full })), pick });
+      if (k < 5) { res = await m.step(st, cands[pick].id, true); recs.push(res.rec); ms.push(res.ms); onStatus(++done, total); }
+    }
+    const shown = ids.slice(-9), nP = shown.length, genIds = steps.map(s => s.c[s.pick].id), allIds = shown.concat(genIds);
+    return { real: true, nP, offset: ids.length - nP, prompt, T, prev: tok.piece(ids[ids.length - 1]), steps, recs,
+      all: allIds.map(id => tok.piece(id)), ids: allIds,
+      embeds: allIds.map(id => m.embedding(id, 8)),
+      gen: genIds.map(id => tok.decode([id]).replace(/\n/g, '⏎')),
+      ms: ms.reduce((a, b) => a + b, 0) / ms.length };
+  }
 
   // ---- board ----
-  // Both models are hybrids: 3 of every 4 layers use linear attention (one fixed-size memory),
+  // The Qwen3.6 models are hybrids: 3 of every 4 layers use linear attention (one fixed-size memory),
   // every 4th uses full attention (looks at every earlier token, keeps a KV cache).
   // Figures from the models' published config.json; weights = the 4-bit Q4_K_M GGUF file size.
   const MODELS = {
@@ -298,6 +380,15 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
       { n: 'Layer ' + L, kind: 'full', y: 594, h: 156 },
     ];
   }
+  // SmolLM2-135M is a classic transformer: full attention in all 30 layers. `layer` is the 0-based index into the model.
+  function makeRealBands() {
+    return [
+      { n: 'Layer 1', kind: 'full', layer: 0, y: 170, h: 156 },
+      { n: 'Layer 2', kind: 'full', layer: 1, y: 334, h: 156 },
+      { n: 'Layers 3–29 · same as above', gap: true, layers: Array.from({ length: 27 }, (_, i) => i + 2), y: 498, h: 88 },
+      { n: 'Layer 30', kind: 'full', layer: 29, y: 594, h: 156 },
+    ];
+  }
   const pegRows = b => [b.y + 96, b.y + 116, b.y + 136];
   const MEM = { x: 750, w: 42 };
   const STAGES = [
@@ -308,16 +399,26 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
     ['Roll', 'A weighted dice roll picks one. Temperature sets how loaded the dice are.'],
     ['Repeat', 'The new token drops alone. Full-attention layers read the cached keys and values of every earlier token, linear layers read their memory, so nothing is redone. But every active weight is read from VRAM again: one full pass per token.'],
   ];
+  const STAGES_REAL = [
+    ['Tokenize', 'The model\'s own tokenizer cuts your text into pieces it learned from data (49,152 of them). A dot (·) means the piece starts with a space. The number under each is its real ID.'],
+    ['Embed', 'Each token becomes a ball: a list of 576 numbers. The bars are its first 8 real values (up is positive, down is negative).'],
+    ['Read the prompt', 'All tokens drop through 30 layers. Every layer uses full attention here: the arcs are the model\'s real attention for the last token (averaged over its 9 heads), and every token leaves keys and values in that layer\'s KV cache. The word riding the ball is what the model would say if it stopped after that layer.'],
+    ['Score', 'The last ball becomes a real score for each of the 49,152 tokens. The top five are shown, and the dice only choose among them.'],
+    ['Roll', 'A weighted dice roll picks one. Temperature sets how loaded the dice are.'],
+    ['Repeat', 'The new token drops alone. Each layer reads the keys and values it cached for earlier tokens instead of redoing them, but all 269 MB of weights are read again for every new token.'],
+  ];
   const DONE = ['Done', 'Six new tokens, six passes. A real model keeps going until it writes an end-of-text token or hits a length limit. Press Replay, or type a new prompt.'];
-  const S = { mode: 'dense', speed: 1, flash: [], experts: [], mem: [], pegs: [], zoom: null };
-  let tl = null, CAPS = [], INFOS = [];
+  const S = { mode: 'dense', speed: 1, flash: [], experts: [], mem: [], pegs: [], zoom: null, data: null, llm: null, loading: null, wantReal: false };
+  let tl = null, CAPS = [], INFOS = [], LENS = [], PASSES = [];
+  const isReal = () => S.mode === 'real';
 
   STAGES.forEach(([t], i) => { const li = document.createElement('li'); li.textContent = (i + 1) + ' ' + t; $('#stages').appendChild(li); });
 
   function drawStatic() {
     const g = $('#static'); g.innerHTML = '';
     S.flash = []; S.experts = []; S.mem = []; S.pegs = [];
-    BANDS = makeBands(MODELS[S.mode].layers);
+    const moe = S.mode === 'moe';
+    BANDS = isReal() ? makeRealBands() : makeBands(MODELS[S.mode].layers);
     el('rect', { x: 50, y: 4, width: 760, height: 1022, rx: 18, class: 'board' }, g);
     el('text', { x: 66, y: 21, class: 'lbl' }, g, 'TOKENS');
     el('text', { x: 66, y: 98, class: 'lbl' }, g, 'EMBEDDINGS');
@@ -334,9 +435,9 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
         S.mem[bi] = el('rect', { x: MEM.x, y: b.y + 26, width: MEM.w, height: 20, rx: 4, class: 'mem', 'fill-opacity': 0.18 }, g);
         el('text', { x: MEM.x + MEM.w / 2, y: b.y + 39.5, 'text-anchor': 'middle', class: 'tiny' }, g, 'memory');
       }
-      el('text', { x: 788, y: b.y + 76, 'text-anchor': 'end', class: 'lbl' }, g, S.mode === 'moe' ? 'EXPERTS · 2 PICKED + SHARED ↓' : 'FEED-FORWARD ↓');
+      el('text', { x: 788, y: b.y + 76, 'text-anchor': 'end', class: 'lbl' }, g, moe ? 'EXPERTS · 2 PICKED + SHARED ↓' : isReal() ? 'FEED-FORWARD · 1,536 NEURONS ↓' : 'FEED-FORWARD ↓');
       el('line', { x1: 72, x2: 788, y1: b.y + 82, y2: b.y + 82, class: 'divider' }, g);
-      if (S.mode === 'moe') {
+      if (moe) {
         const ex = [];
         for (let e = 0; e < 8; e++) {
           const x = 66 + e * 91;
@@ -363,9 +464,7 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
   }
 
   function build() {
-    const M = MODELS[S.mode];
-    const prompt = ($('#prompt').value.trim() || 'the fighter blocked the fireball and').slice(0, 120);
-    const T = parseFloat($('#temp').value);
+    const D = S.data, real = D.real, M = MODELS[S.mode];
     if (tl) tl.kill();
     S.flash.forEach(f => f && gsap.set(f, { opacity: 0 }));
     S.experts.forEach(ex => ex && ex.forEach(r => r.setAttribute('fill-opacity', 0.07)));
@@ -373,16 +472,16 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
     const dyn = $('#dyn'); dyn.innerHTML = '';
     $('#sel').innerHTML = '';
 
-    let toks = tokenize(prompt); if (!toks.length) toks = ['?'];
-    if (toks.length > 9) toks = toks.slice(-9);
-    const nP = toks.length, NG = 6, N = nP + NG;
-    const r = rng(hash(prompt + '|' + T));
-    let last = lastWord(prompt);
-    const steps = [];
-    for (let k = 0; k < NG; k++) { const c = candidates(last, T); const pick = sample(c, r, T); steps.push({ c, pick }); last = c[pick].w; }
-    const all = toks.concat(steps.map(s => s.c[s.pick].w));
+    const { nP, all, steps } = D, NG = 6, N = nP + NG;
     const X = i => 430 + (i - (N - 1) / 2) * 44;
     const color = i => `hsl(${hash(all[i] + i) % 360} 68% 56%)`;
+    // Bars: toy heights grow up from y=134; real embedding values grow up or down from y=121, scaled to the largest shown.
+    const maxAbs = real ? Math.max(1e-9, ...D.embeds.flat().map(Math.abs)) : 1;
+    const barSpec = (i, b) => {
+      if (!real) { const h = D.bars[i][b]; return { y0: 134, y: 134 - h, h }; }
+      const v = D.embeds[i][b], h = Math.max(0.6, Math.abs(v) / maxAbs * 14);
+      return { y0: 121, y: v > 0 ? 121 - h : 121, h };
+    };
 
     const gChips = el('g', {}, dyn), gBars = el('g', {}, dyn), gKv = el('g', {}, dyn),
       gArcs = el('g', {}, dyn), gBins = el('g', {}, dyn), gBalls = el('g', {}, dyn);
@@ -391,59 +490,74 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
       const cg = el('g', { style: 'opacity:0' }, gChips);
       el('rect', { x: X(i) - 20, y: 28, width: 40, height: 26, rx: 5, class: i >= nP ? 'chip gen' : 'chip' }, cg);
       el('text', { x: X(i), y: 45, 'text-anchor': 'middle', class: 'chiptxt' }, cg, short(all[i]));
-      el('text', { x: X(i), y: 68, 'text-anchor': 'middle', class: 'tiny' }, cg, String(hash(all[i].toLowerCase()) % 248320));
+      el('text', { x: X(i), y: 68, 'text-anchor': 'middle', class: 'tiny' }, cg, String(D.ids[i]));
       chip.push(cg);
       const bs = [];
-      for (let b = 0; b < 8; b++) bs.push([el('rect', { x: X(i) - 15 + b * 4, y: 134, width: 3, height: 0, fill: color(i) }, gBars), 4 + hash(all[i] + '#' + b) % 24]);
+      for (let b = 0; b < 8; b++) { const sp = barSpec(i, b); bs.push([el('rect', { x: X(i) - 15 + b * 4, y: sp.y0, width: 3, height: 0, fill: color(i) }, gBars), sp]); }
       bars.push(bs);
       kv.push(BANDS.map(bd => (bd.kind !== 'full' ? null : el('rect', { x: X(i) - 6, y: bd.y + 28, width: 12, height: 5, rx: 1.5, class: 'kv', style: 'opacity:0' }, gKv))));
       ball.push(el('circle', { cx: X(i), cy: 150, r: 0, fill: color(i), class: 'ball' }, gBalls));
     }
     const out = el('text', { x: 66, y: 1008, class: 'out' }, dyn);
-    el('tspan', { class: 'outp' }, out, prompt.length > 44 ? '…' + prompt.slice(-43) : prompt);
-    const outW = steps.map(s => el('tspan', { class: 'outg', 'fill-opacity': 0 }, out, ' ' + s.c[s.pick].w));
+    el('tspan', { class: 'outp' }, out, D.prompt.length > 44 ? '…' + D.prompt.slice(-43) : D.prompt);
+    const outW = D.gen.map(g => el('tspan', { class: 'outg', 'fill-opacity': 0 }, out, g));
+    S.guessEl = real ? el('text', { x: 0, y: 0, class: 'guess', style: 'opacity:0' }, dyn) : null;
+    S.balls = ball;
 
     tl = gsap.timeline({ paused: true, onUpdate: sync, onComplete: setPlayLabel });
-    CAPS = []; INFOS = [];
+    CAPS = []; INFOS = []; LENS = []; PASSES = [];
     const mark = (st, t) => CAPS.push([t, st]);
     const info = (o, t) => INFOS.push([t, o]);
 
-    function attn(f) {
-      const s = [];
-      for (let j = 0; j < f; j++) s.push(-0.18 * (f - j) + (hash(all[f] + '>' + all[j]) % 100) / 100 * 1.6 + (all[j].toLowerCase() === all[f].toLowerCase() ? 1.5 : 0));
-      const e = s.map(Math.exp), mx = Math.max(1e-9, ...e);
-      return e.map(x => x / mx);
+    // attention weight (0..1, relative to the strongest) from the focus token to each earlier shown token
+    function attn(p, f, bi) {
+      if (!real) {
+        const s = [];
+        for (let j = 0; j < f; j++) s.push(-0.18 * (f - j) + (hash(all[f] + '>' + all[j]) % 100) / 100 * 1.6 + (all[j].toLowerCase() === all[f].toLowerCase() ? 1.5 : 0));
+        const e = s.map(Math.exp), mx = Math.max(1e-9, ...e);
+        return e.map(x => x / mx);
+      }
+      const ly = D.recs[p].layers[BANDS[bi].layer], T = D.recs[p].pos + 1, avg = new Float32Array(T);
+      for (let h = 0; h < ly.heads; h++) for (let j = 0; j < T; j++) avg[j] += ly.attn[h * T + j] / ly.heads;
+      const mx = Math.max(1e-9, ...avg);
+      return Array.from({ length: f }, (_, j) => avg[D.offset + j] / mx);
     }
     function arc(xf, xj, ya, by) {
       const cy = Math.max(by + 24, ya - 24 - Math.abs(xf - xj) * 0.12);
       return `M${xf} ${ya} Q${(xf + xj) / 2} ${cy} ${xj} ${ya}`;
     }
     function embed(i, t) {
-      bars[i].forEach(([rc, h], b) => tl.to(rc, { attr: { height: h, y: 134 - h }, duration: 0.35 }, t + b * 0.02));
+      bars[i].forEach(([rc, sp], b) => tl.to(rc, { attr: { height: sp.h, y: sp.y }, duration: 0.35 }, t + b * 0.02));
       tl.to(ball[i], { attr: { r: 9 }, duration: 0.3, ease: 'back.out(2)' }, t + 0.3);
     }
-    function pass(cols, focus, t, s) {
-      const w = attn(focus);
+    function pass(p, cols, focus, t, s) {
+      PASSES.push({ t0: t, focus });
       BANDS.forEach((b, bi) => {
-        if (b.gap) { cols.forEach(c => tl.to(ball[c], { attr: { cy: b.y + b.h - 8, cx: X(c) }, duration: 0.35 * s, ease: 'none' }, t)); t += 0.35 * s; return; }
-        const ya = b.y + 58;
+        if (b.gap) {
+          // real mode: slow down through the skipped layers so their guesses can be read
+          const dur = (real ? b.layers.length * 0.11 : 0.35) * s;
+          cols.forEach(c => tl.to(ball[c], { attr: { cy: b.y + b.h - 8, cx: X(c) }, duration: dur, ease: 'none' }, t));
+          if (real) b.layers.forEach((l, k) => LENS.push([t + (k + 1) / b.layers.length * dur, p, l]));
+          t += dur; return;
+        }
+        const ya = b.y + 58, w = b.kind === 'full' ? attn(p, focus, bi) : null;
         cols.forEach(c => tl.to(ball[c], { attr: { cy: ya, cx: X(c) }, duration: 0.3 * s, ease: 'power1.in' }, t));
         t += 0.3 * s;
         if (b.kind === 'full') {
           // full attention: the focus token looks back at every earlier token; everyone's keys and values stay in the KV cache
           for (let j = 0; j < focus; j++) {
-            const p = el('path', { d: arc(X(focus), X(j), ya, b.y), class: 'arc', style: 'opacity:0' }, gArcs);
-            tl.to(p, { opacity: 0.15 + 0.85 * w[j], duration: 0.2 * s }, t);
-            tl.to(p, { opacity: 0, duration: 0.3 * s }, t + 0.6 * s);
+            const pth = el('path', { d: arc(X(focus), X(j), ya, b.y), class: 'arc', style: 'opacity:0' }, gArcs);
+            tl.to(pth, { opacity: (real ? 0.06 : 0.15) + (real ? 0.94 : 0.85) * w[j], duration: 0.2 * s }, t);
+            tl.to(pth, { opacity: 0, duration: 0.3 * s }, t + 0.6 * s);
             if (!cols.includes(j)) { tl.to(kv[j][bi], { opacity: 1, duration: 0.12 * s }, t); tl.to(kv[j][bi], { opacity: 0.5, duration: 0.3 * s }, t + 0.5 * s); }
           }
           cols.forEach(c => tl.to(kv[c][bi], { opacity: 0.5, duration: 0.2 * s }, t + 0.3 * s));
         } else {
           // linear attention: every token writes into one fixed-size memory, the focus token reads it back; nothing grows
           cols.forEach(c => {
-            const p = el('path', { d: `M${X(c)} ${ya} Q${(X(c) + MEM.x) / 2} ${b.y + 12 + (X(c) - 100) * 0.03} ${MEM.x} ${b.y + 36}`, class: c === focus ? 'arc' : 'arc memw', style: 'opacity:0' }, gArcs);
-            tl.to(p, { opacity: c === focus ? 1 : 0.45, duration: 0.2 * s }, t + (c === focus ? 0.2 * s : 0));
-            tl.to(p, { opacity: 0, duration: 0.3 * s }, t + 0.6 * s);
+            const pth = el('path', { d: `M${X(c)} ${ya} Q${(X(c) + MEM.x) / 2} ${b.y + 12 + (X(c) - 100) * 0.03} ${MEM.x} ${b.y + 36}`, class: c === focus ? 'arc' : 'arc memw', style: 'opacity:0' }, gArcs);
+            tl.to(pth, { opacity: c === focus ? 1 : 0.45, duration: 0.2 * s }, t + (c === focus ? 0.2 * s : 0));
+            tl.to(pth, { opacity: 0, duration: 0.3 * s }, t + 0.6 * s);
           });
           tl.to(S.mem[bi], { attr: { 'fill-opacity': 0.6 }, duration: 0.15 * s }, t);
           tl.to(S.mem[bi], { attr: { 'fill-opacity': 0.18 }, duration: 0.35 * s }, t + 0.55 * s);
@@ -466,11 +580,13 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
           tl.to(ball[c], { attr: { cy: b.y + b.h - 8, cx: X(c) }, duration: 0.14 * s }, t + 0.48 * s);
         });
         t += 0.66 * s;
+        if (real) LENS.push([t, p, b.layer]);
       });
       return t;
     }
     function score(k, src, t) {
       mark(3, t);
+      PASSES[PASSES.length - 1].t1 = t + 0.45;
       const st = steps[k], g = el('g', {}, gBins);
       tl.to(ball[src], { attr: { cy: 778, cx: 430, r: 6 }, duration: 0.45, ease: 'power2.in' }, t);
       tl.to(ball[src], { opacity: 0, duration: 0.2 }, t + 0.45);
@@ -523,21 +639,21 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
     t += nP * 0.05 + 0.9;
     // The prompt pass reads each weight once for all prompt tokens together. In the MoE model only the experts
     // those tokens were routed to are read: roughly 1 - (1 - 8/256)^tokens of the expert weights (rough).
-    const prefill = S.mode === 'moe' ? M.active + (M.weights - M.active) * (1 - Math.pow(1 - 8 / 256, nP)) : M.weights;
-    mark(2, t); info({ kv: nP, read: prefill }, t);
-    t = pass([...Array(nP).keys()], nP - 1, t, 1);
+    const prefill = real ? 0 : S.mode === 'moe' ? M.active + (M.weights - M.active) * (1 - Math.pow(1 - 8 / 256, nP)) : M.weights;
+    mark(2, t); info({ kv: D.offset + nP, read: prefill }, t);
+    t = pass(0, [...Array(nP).keys()], nP - 1, t, 1);
     for (let i = 0; i < nP - 1; i++) tl.to(ball[i], { opacity: 0, duration: 0.3 }, t);
     t = score(0, nP - 1, t);
     for (let k = 1; k < NG; k++) {
       const c = nP + k - 1;
-      mark(5, t); info({ kv: c + 1, read: prefill + k * M.active }, t);
+      mark(5, t); info({ kv: D.offset + c + 1, read: real ? 0 : prefill + k * M.active }, t);
       embed(c, t); t += 0.55;
-      t = pass([c], c, t, 0.42);
+      t = pass(k, [c], c, t, 0.42);
       t = score(k, c, t);
     }
     mark(6, t);
     tl.to({}, { duration: 2.5 }, t); // hold the finished board (an empty tween: it only lengthens the timeline)
-    S.zoom = { word: all[nP - 1], vals: bars[nP - 1].map(([, h]) => h), prev: lastWord(prompt), T, c: steps[0].c, pick: steps[0].pick };
+    S.zoom = { word: all[nP - 1], vals: real ? null : D.bars[nP - 1], prev: D.prev, T: D.T, c: steps[0].c, pick: steps[0].pick };
     tl.timeScale(S.speed);
     window.__timelines = window.__timelines || {};
     window.__timelines.plinko = tl;
@@ -547,15 +663,27 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
 
   // ---- panel ----
   function setStage(st) {
-    const [title, text] = STAGES[st] || DONE;
-    $('#capStep').textContent = st < STAGES.length ? 'Step ' + (st + 1) + ' of 6' : 'Finished';
+    const list = isReal() ? STAGES_REAL : STAGES;
+    const [title, text] = list[st] || DONE;
+    $('#capStep').textContent = st < list.length ? 'Step ' + (st + 1) + ' of 6' : 'Finished';
     $('#capTitle').textContent = title;
     let txt = text;
     if (st === 2 && S.mode === 'moe') txt += ' In the feed-forward part, a router sends each token to 2 of the 7 experts drawn plus a shared expert every token uses (the real model: 8 of 256, plus 1 shared).';
     $('#capText').textContent = txt;
     document.querySelectorAll('#stages li').forEach((li, i) => li.classList.toggle('on', i === st));
   }
+  const NOTE_TOY = 'Toy model. The board shows how a real LLM is wired, but the next-token scores come from a tiny word table built into this page, not a real model. The token splits and ID numbers are made up too. Memory and speed figures are rough.';
+  const NOTE_REAL = 'Real model: SmolLM2-135M (Apache 2.0, by Hugging Face), running in your browser from its published weights with 32-bit maths. Every number on the board is its actual output. The dice only choose among the top five.';
   function renderModel() {
+    const real = isReal();
+    $('#gpuCard').hidden = real; $('#realCard').hidden = !real; $('#guessCard').hidden = !real;
+    $('#modeNote').textContent = real ? NOTE_REAL : NOTE_TOY;
+    if (real) {
+      const D = S.data, m = S.llm, gbps = m.weightBytes / 1e9 / (D.ms / 1000);
+      $('#rSpeed').textContent = Math.round(D.ms) + ' ms/token';
+      $('#rNote').textContent = `Each layer keeps its own keys and values: ${(m.kvBytesPerToken / 1024).toFixed(1)} KB per token across all 30 layers, all in the same memory. Every new token reads all 269 MB of weights again. Your browser did that in ${Math.round(D.ms)} ms, about ${gbps.toFixed(1)} GB/s; a 3090 GPU reads up to 936 GB/s.`;
+      return;
+    }
     const M = MODELS[S.mode];
     $('#mName').textContent = M.label;
     $('#mW').textContent = M.weights.toFixed(1) + ' GB';
@@ -563,19 +691,61 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
     $('#mMem').textContent = M.memMB + ' MB, fixed';
     $('#ceil').textContent = `Writing speed: each new token reads about ${M.active} GB of active weights. 936 GB/s ÷ ${M.active} GB ≈ ${Math.round(936 / M.active)} tokens/s at most. Guides report ${M.rep} on a 3090` +
       (S.mode === 'moe' ? ', well under the ceiling: jumping between many small experts costs time too.' : '. Speculative decoding can beat the ceiling by checking several guessed tokens in one read.');
-    $('#kv32').textContent = `Only the ${M.full} full-attention layers keep a KV cache, and it grows with every token: about ${(32000 * M.kvMB / 1024).toFixed(1)} GB at 32,000 tokens. The other ${M.layers - M.full} layers keep one fixed memory of about ${M.memMB} MB, however long the text gets.`;
+    $('#kv32').textContent = `Only the ${M.full} full-attention layers keep a KV cache, and it grows with every token: about ${(32000 * M.kvMB / 1024).toFixed(1)} GB at 32,000 tokens. The other ${M.layers - M.full} layers keep one fixed memory of about ${M.memMB} MB, however long the text gets. Each layer has its own cache or memory; they all live in the same GPU memory.`;
+  }
+
+  // the guess card: three rows and a 30-cell strip, built once
+  const gRows = [0, 1, 2].map(() => {
+    const row = document.createElement('div'); row.className = 'grow';
+    const w = document.createElement('span'), bar = document.createElement('span'), b = document.createElement('b'), p = document.createElement('span');
+    bar.className = 'gbar'; bar.appendChild(b); row.append(w, bar, p); $('#gTop').appendChild(row);
+    return { w, b, p };
+  });
+  const gCells = Array.from({ length: 30 }, () => { const i = document.createElement('i'); $('#gStrip').appendChild(i); return i; });
+  function syncGuess(time) {
+    const D = S.data;
+    let cur = null; for (const e of LENS) if (e[0] <= time) cur = e;
+    const pass = cur && PASSES[cur[1]], live = pass && time >= pass.t0 && time <= pass.t1;
+    if (S.guessEl) {
+      if (live) {
+        const b = S.balls[pass.focus], x = +b.getAttribute('cx'), y = +b.getAttribute('cy'), top = D.recs[cur[1]].layers[cur[2]].lens[0];
+        const right = x < 640;
+        S.guessEl.setAttribute('x', right ? x + 14 : x - 14); S.guessEl.setAttribute('y', y + 4);
+        S.guessEl.setAttribute('text-anchor', right ? 'start' : 'end');
+        S.guessEl.textContent = S.llm.tok.piece(top.id) + ' ' + fmtPct(top.p);
+        S.guessEl.style.opacity = 1;
+      } else S.guessEl.style.opacity = 0;
+    }
+    if (!cur) {
+      $('#gLayer').textContent = 'The model\'s guess so far';
+      gRows.forEach((r, i) => { r.w.textContent = i ? '' : 'waiting for layer 1'; r.b.style.width = '0%'; r.p.textContent = ''; });
+      gCells.forEach(c => { c.className = ''; }); $('#gNeur').textContent = '';
+      return;
+    }
+    const [, p, l] = cur, rec = D.recs[p], ly = rec.layers[l], finalTop = rec.layers[29].lens[0].id;
+    const who = S.data.all[PASSES[p].focus];
+    $('#gLayer').textContent = `Guess for the token after “${who}”, after layer ${l + 1} of 30`;
+    ly.lens.forEach((g, i) => { gRows[i].w.textContent = S.llm.tok.piece(g.id); gRows[i].b.style.width = (g.p * 100).toFixed(1) + '%'; gRows[i].p.textContent = fmtPct(g.p); });
+    gCells.forEach((c, i) => { const done = i <= l; c.className = (done ? 'done' : '') + (done && rec.layers[i].lens[0].id === finalTop ? ' match' : '') + (i === l ? ' cur' : ''); });
+    $('#gNeur').textContent = 'Busiest feed-forward neurons in this layer: ' + ly.neurons.slice(0, 3).map(n => '#' + n.i + ' (' + (n.v >= 0 ? '+' : '−') + Math.abs(n.v).toFixed(2) + ')').join(', ') + ' of 1,536.';
   }
   function sync() {
     const time = tl.time() + 1e-6;
     let st = 0; for (const [tt, s] of CAPS) if (tt <= time) st = s;
     setStage(st);
     const o = { kv: 0, read: 0, gen: 0 }; for (const [tt, v] of INFOS) if (tt <= time) Object.assign(o, v);
-    const M = MODELS[S.mode], mb = o.kv * M.kvMB;
-    $('#kvTok').textContent = o.kv;
-    $('#kvSize').textContent = mb.toFixed(2) + ' MB';
-    $('#read').textContent = o.read.toFixed(1) + ' GB';
+    if (isReal()) {
+      $('#rKv').textContent = o.kv;
+      $('#rKvSize').textContent = (o.kv * S.llm.kvBytesPerToken / 1024).toFixed(1) + ' KB';
+      syncGuess(time);
+    } else {
+      const M = MODELS[S.mode], mb = o.kv * M.kvMB;
+      $('#kvTok').textContent = o.kv;
+      $('#kvSize').textContent = mb.toFixed(2) + ' MB';
+      $('#read').textContent = o.read.toFixed(1) + ' GB';
+      $('#segKV').style.width = (mb / 1024 / 24 * 100) + '%';
+    }
     $('#gen').textContent = o.gen + ' of 6';
-    $('#segKV').style.width = (mb / 1024 / 24 * 100) + '%';
     $('#scrub').value = Math.round(tl.progress() * 1000);
     setPlayLabel();
   }
@@ -584,55 +754,122 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
   }
   function settle() { build(); tl.progress(1); sync(); }
 
-  // ---- zoom into one peg: a real dot product and a real softmax on small numbers ----
-  // Values are kept in integer tenths so the printed sums are exact.
+  // ---- real model: download, run, then build the board from its numbers ----
+  function setMode(mode) {
+    S.mode = mode;
+    document.querySelectorAll('.seg button').forEach(x => x.setAttribute('aria-pressed', x.dataset.mode === mode));
+  }
+  function status(text, frac) {
+    $('#realStatus').textContent = text;
+    if (frac != null) $('#progBar').style.width = (frac * 100).toFixed(1) + '%';
+  }
+  async function runReal(play) {
+    S.wantReal = true;
+    $('#realLoad').hidden = false; $('#realGo').hidden = true;
+    try {
+      if (!S.llm) {
+        S.loading = S.loading || LLM.load((got, total) => {
+          if (got < 0) status('Unpacking the weights…', 1);
+          else status(`Downloading SmolLM2-135M: ${Math.round(got / 1e6)} of ${Math.round(total / 1e6)} MB`, got / total);
+        });
+        S.llm = await S.loading;
+      }
+      const D = await realData(getPrompt(), getT(), (i, n) => status(`Running the model: token ${i} of ${n}`, i / n));
+      if (!S.wantReal) return;
+      status(`Real model loaded: ${Math.round(D.ms)} ms per token in your browser.`, 1);
+      $('#realIntro').hidden = true; $('#prog').hidden = true;
+      setMode('real'); S.data = D; drawStatic();
+      if (play) { build(); tl.play(0); setPlayLabel(); } else settle();
+    } catch (err) {
+      S.loading = null;
+      status('Could not run the model: ' + err.message + '. Check your connection and try again.', 0);
+      $('#realGo').hidden = false;
+    }
+  }
+  function runToy(play) {
+    S.data = toyData(getPrompt(), getT());
+    if (play) { build(); tl.play(0); setPlayLabel(); } else settle();
+  }
+
+  // ---- zoom into one peg: a real dot product and a real softmax ----
+  // Toy values are kept in integer tenths so the printed sums are exact.
   const minus = s => s.replace('-', '−');
   const f1 = v => minus((v / 10).toFixed(1)), f2 = v => minus((v / 100).toFixed(2));
+  const fx = (v, d) => minus(v.toFixed(d));
   function fillTable(tbl, head, rows, hi) {
     tbl.innerHTML = '';
     const tr = tbl.insertRow();
     head.forEach(h => { const th = document.createElement('th'); th.textContent = h; tr.appendChild(th); });
     rows.forEach((r, i) => { const row = tbl.insertRow(); if (i === hi) row.className = 'hi'; r.forEach(c => { row.insertCell().textContent = c; }); });
   }
-  function openZoom(peg) {
-    if (tl.isActive()) { tl.pause(); setPlayLabel(); }
-    const Z = S.zoom, sel = $('#sel');
-    sel.innerHTML = '';
-    el('circle', { cx: peg.x, cy: peg.y, r: 9, class: 'win' }, sel);
-    const moe = S.mode === 'moe';
-    const box = Math.floor((peg.x - 66) / 91);
-    $('#zWhere').textContent = BANDS[peg.band].n + (moe ? (box ? ' · expert ' + box : ' · shared expert') + ' · peg ' : ' · feed-forward peg ') + peg.n;
-
-    const r = rng(hash('peg|' + S.mode + '|' + peg.band + '|' + peg.n));
-    const ball = Z.vals.slice(0, 4).map(h => h - 15);
-    const wts = ball.map(() => Math.round(r() * 20) - 10);
-    const prods = ball.map((b, i) => b * wts[i]);
-    const sum = prods.reduce((a, b) => a + b, 0);
-    const M = MODELS[S.mode];
-    $('#zLead').textContent = `The ball for “${Z.word}” is a list of ${M.hidden.toLocaleString('en-US')} numbers in this model. Here are 4 of them, taken from the bars drawn for it` +
-      (peg.band ? ' (by this layer the real numbers would have changed)' : '') + `. The peg holds 4 numbers of its own, called weights, which were fixed when the model was trained. Multiply each pair:`;
-    fillTable($('#zDot'), ['', 'ball', '× weight', '= product'], ball.map((b, i) => ['#' + (i + 1), f1(b), f1(wts[i]), f2(prods[i])]));
-    $('#zSum').textContent = 'add them: ' + prods.map((p, i) => (i ? (p < 0 ? ' − ' : ' + ') + f2(Math.abs(p)) : f2(p))).join('') + ' = ' + f2(sum);
-    $('#zAfter').textContent = `That one number, ${f2(sum)}, is this peg's output. It is called a dot product: it is large when the ball's numbers line up with the peg's weights. Real models then bend it (negative results get squeezed toward 0) and the ball carries it into the next layer. ` + (moe
-      ? 'Each expert in this model has about 3,000 pegs. The router sends each token to 8 of the 256 experts plus 1 shared one, so about 28,000 pegs per layer do this work, and only their weights are read from memory.'
-      : 'A layer of this model has about 40,000 pegs like this, each holding thousands of weights (about 270 million per layer). The GPU works them all at once, and every weight is read from memory for every token.');
-
+  function zoomSoftmax(Z, real) {
     const T = Z.T;
-    $('#zSoftLead').textContent = `At the bottom of the board the last ball becomes a score for every token in the vocabulary (about 250,000). After “${Z.prev}”, the toy model's top five are below; like many apps, this page lets the dice choose only among the top few. Softmax turns their scores into chances that add up to 100%:`;
+    $('#zSoftLead').textContent = real
+      ? `At the bottom of the board the last ball becomes a real score (a logit) for each of the 49,152 tokens. After “${Z.prev}”, the model's top five are below; the dice choose only among them. Softmax turns their scores into chances that add up to 100%:`
+      : `At the bottom of the board the last ball becomes a score for every token in the vocabulary (about 250,000). After “${Z.prev}”, the toy model's top five are below; like many apps, this page lets the dice choose only among the top few. Softmax turns their scores into chances that add up to 100%:`;
     const steps = $('#zSteps'); steps.innerHTML = '';
     const li = t => { const e = document.createElement('li'); e.textContent = t; steps.appendChild(e); };
+    const fullCol = real ? ['of all 49,152'] : [];
     if (T < 0.05) {
       li('Temperature is 0, so there is no dice roll: the top score simply wins. (Dividing by 0 would push it to 100% anyway.)');
-      fillTable($('#zSoft'), ['word', 'score', 'chance'], Z.c.map((c, i) => [shortW(c.w), minus(c.s.toFixed(2)), i ? '0%' : '100%']), Z.pick);
+      fillTable($('#zSoft'), ['word', 'score', 'chance', ...fullCol], Z.c.map((c, i) => [shortW(c.w), minus(c.s.toFixed(2)), i ? '0%' : '100%', ...(real ? [fmtPct(c.full)] : [])]), Z.pick);
     } else {
       const xs = Z.c.map(c => c.s / T), es = xs.map(x => Math.exp(x - xs[0])), tot = es.reduce((a, b) => a + b, 0);
       li(`Divide each score by the temperature (${T.toFixed(1)}). Below 1 this spreads the scores apart; above 1 it squeezes them together.`);
       li('Raise e (about 2.718) to each one, after shifting them so the top one is 0. The top word gets exactly 1 and the rest get less. Nothing can go negative.');
-      li(`Divide each by the total (${tot.toFixed(3)}). Those are the chances the dice roll uses.`);
-      fillTable($('#zSoft'), ['word', 'score', '÷ ' + T.toFixed(1), 'e^(shifted)', 'chance'],
-        Z.c.map((c, i) => [shortW(c.w) + (i === Z.pick ? ' ✓' : ''), minus(c.s.toFixed(2)), minus(xs[i].toFixed(2)), es[i].toFixed(3), fmtPct(es[i] / tot)]), Z.pick);
+      li(`Divide each by the total (${tot.toFixed(3)}). Those are the chances the dice roll uses.` + (real ? ' The last column is each word\'s share before the cut to five, at temperature 1.' : ''));
+      fillTable($('#zSoft'), ['word', 'score', '÷ ' + T.toFixed(1), 'e^(shifted)', 'chance', ...fullCol],
+        Z.c.map((c, i) => [shortW(c.w) + (i === Z.pick ? ' ✓' : ''), minus(c.s.toFixed(2)), minus(xs[i].toFixed(2)), es[i].toFixed(3), fmtPct(es[i] / tot), ...(real ? [fmtPct(c.full)] : [])]), Z.pick);
     }
+  }
+  function openZoom(peg) {
+    if (tl.isActive()) { tl.pause(); setPlayLabel(); }
+    const Z = S.zoom, sel = $('#sel'), real = isReal();
+    sel.innerHTML = '';
+    el('circle', { cx: peg.x, cy: peg.y, r: 9, class: 'win' }, sel);
+    if (real) {
+      // This peg stands for one real neuron of this layer. Pegs are spread evenly over the layer's 1,536 neurons.
+      const m = S.llm, band = BANDS[peg.band], l = band.layer, count = S.pegs.filter(q => q.band === peg.band).length;
+      const n = Math.round((peg.n - 1) * (m.F - 1) / (count - 1)), h = S.data.recs[0].layers[l].ffnIn;
+      const silu = a => a / (1 + Math.exp(-a)), dot = (w) => { let s = 0; for (let i = 0; i < m.D; i++) s += h[i] * w[i]; return s; };
+      const acts = new Float32Array(m.F);
+      for (let k = 0; k < m.F; k++) { const w = m.neuron(l, k); acts[k] = silu(dot(w.gate)) * dot(w.up); }
+      const { gate, up } = m.neuron(l, n), g = dot(gate), u = dot(up), a = silu(g) * u;
+      const rank = 1 + Array.from(acts).filter(v => Math.abs(v) > Math.abs(a)).length;
+      $('#zWhere').textContent = `${band.n} · neuron #${n} of 1,536`;
+      $('#zTitle').textContent = 'One neuron: multiply, then add';
+      $('#zLead').textContent = `Each peg stands for one of this layer's 1,536 feed-forward neurons. A neuron does a dot product: the 576 numbers of the ball for “${Z.word}” (as they arrive at this layer, normalised) times the neuron's own 576 weights, added up. The first 4 of the 576 pairs, from the real model:`;
+      fillTable($('#zDot'), ['', 'ball', '× weight', '= product'], [0, 1, 2, 3].map(i => ['#' + (i + 1), fx(h[i], 4), fx(gate[i], 4), fx(h[i] * gate[i], 5)]));
+      const first4 = [0, 1, 2, 3].reduce((s, i) => s + h[i] * gate[i], 0);
+      $('#zSum').textContent = `first 4 add up to ${fx(first4, 5)}; all 576 add up to ${fx(g, 4)}`;
+      $('#zAfter').textContent = `This kind of neuron has a second set of 576 weights (“up”), giving ${fx(u, 4)}. Its output is SiLU(${fx(g, 3)}) × ${fx(u, 3)} = ${fx(a, 4)}, where SiLU squeezes negative values toward 0. For this token it is the #${rank} busiest of the layer's 1,536 neurons. The busiest are ` +
+        topList(acts) + `. Together their outputs go through one more set of weights back into the ball's 576 numbers.`;
+      $('#zNote').textContent = 'Real numbers from SmolLM2-135M, computed in your browser from its published weights. The scores below are the model\'s real output for the first new token, so the chances match the bars in the scores row.';
+    } else {
+      const moe = S.mode === 'moe', box = Math.floor((peg.x - 66) / 91);
+      $('#zWhere').textContent = BANDS[peg.band].n + (moe ? (box ? ' · expert ' + box : ' · shared expert') + ' · peg ' : ' · feed-forward peg ') + peg.n;
+      $('#zTitle').textContent = 'One peg: multiply, then add';
+      const r = rng(hash('peg|' + S.mode + '|' + peg.band + '|' + peg.n));
+      const ball = Z.vals.slice(0, 4).map(h => h - 15);
+      const wts = ball.map(() => Math.round(r() * 20) - 10);
+      const prods = ball.map((b, i) => b * wts[i]);
+      const sum = prods.reduce((a, b) => a + b, 0);
+      const M = MODELS[S.mode];
+      $('#zLead').textContent = `The ball for “${Z.word}” is a list of ${M.hidden.toLocaleString('en-US')} numbers in this model. Here are 4 of them, taken from the bars drawn for it` +
+        (peg.band ? ' (by this layer the real numbers would have changed)' : '') + `. The peg holds 4 numbers of its own, called weights, which were fixed when the model was trained. Multiply each pair:`;
+      fillTable($('#zDot'), ['', 'ball', '× weight', '= product'], ball.map((b, i) => ['#' + (i + 1), f1(b), f1(wts[i]), f2(prods[i])]));
+      $('#zSum').textContent = 'add them: ' + prods.map((p, i) => (i ? (p < 0 ? ' − ' : ' + ') + f2(Math.abs(p)) : f2(p))).join('') + ' = ' + f2(sum);
+      $('#zAfter').textContent = `That one number, ${f2(sum)}, is this peg's output. It is called a dot product: it is large when the ball's numbers line up with the peg's weights. Real models then bend it (negative results get squeezed toward 0) and the ball carries it into the next layer. ` + (moe
+        ? 'Each expert in this model has about 3,000 pegs. The router sends each token to 8 of the 256 experts plus 1 shared one, so about 28,000 pegs per layer do this work, and only their weights are read from memory.'
+        : 'A layer of this model has about 40,000 pegs like this, each holding thousands of weights (about 270 million per layer). The GPU works them all at once, and every weight is read from memory for every token.');
+      $('#zNote').textContent = 'Small made-up numbers, real arithmetic. The ball\'s numbers are the bars drawn for it on the board and the peg\'s weights are invented. The scores come from this page\'s toy word table, so the chances match the bars in the scores row for the first new word. Change the temperature and zoom in again to watch them move.';
+    }
+    zoomSoftmax(Z, real);
     $('#zoom').showModal();
+  }
+  function topList(acts) {
+    const idx = Array.from(acts.keys()).sort((a, b) => Math.abs(acts[b]) - Math.abs(acts[a])).slice(0, 3);
+    return idx.map(i => '#' + i + ' (' + fx(acts[i], 2) + ')').join(', ');
   }
   function pegAt(evt) {
     const svg = $('#board'), pt = svg.createSVGPoint();
@@ -651,7 +888,8 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
   $('#zoom').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.close(); });
 
   $('#promptForm').addEventListener('submit', e => {
-    e.preventDefault(); build(); tl.play(0); setPlayLabel();
+    e.preventDefault();
+    if (isReal()) runReal(true); else runToy(true);
     if (matchMedia('(max-width: 920px)').matches) $('.cap').scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
   $('#play').addEventListener('click', () => {
@@ -665,15 +903,24 @@ dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
     document.querySelectorAll('.speed button').forEach(x => x.setAttribute('aria-pressed', x === b));
   }));
   document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => {
-    S.mode = b.dataset.mode;
-    document.querySelectorAll('.seg button').forEach(x => x.setAttribute('aria-pressed', x === b));
-    drawStatic(); settle();
+    const mode = b.dataset.mode;
+    if (mode === 'real') {
+      if (S.llm) { runReal(true); return; }
+      S.wantReal = true; $('#realLoad').hidden = false; $('#realGo').hidden = !!S.loading;
+      document.querySelectorAll('.seg button').forEach(x => x.setAttribute('aria-pressed', x === b));
+      return;
+    }
+    S.wantReal = false; $('#realLoad').hidden = true;
+    setMode(mode); drawStatic(); runToy(false);
   }));
+  $('#realGo').addEventListener('click', () => runReal(true));
   $('#temp').addEventListener('input', e => { $('#tempVal').textContent = parseFloat(e.target.value).toFixed(1); });
-  $('#temp').addEventListener('change', settle);
+  $('#temp').addEventListener('change', () => { if (isReal()) runReal(false); else runToy(false); });
+
+  window.__plinko = { get data() { return S.data; }, get mode() { return S.mode; } }; // for testing and the curious
 
   drawStatic();
-  settle();
+  runToy(false);
 })();
 </script>
 </body>

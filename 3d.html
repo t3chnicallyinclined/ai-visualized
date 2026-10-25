@@ -1,0 +1,589 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LLM Plinko 3D</title>
+<meta name="description" content="LLM Plinko as a 3D tower: tokens fall through every layer of a language model. Orbit around it, or run a real small model in your browser.">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%2712%27 fill=%27%23ff5c8a%27/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: the 3D tower fills the screen; a prompt bar on top, the caption bottom-left, the model panel right, the transport along the bottom.
+   One deliberate dark look: glowing layers read best on a night background. */
+:root {
+  --bg: #080914; --glass: rgb(16 18 38 / 0.8); --line: #2c3263; --ink: #e9ebfa; --muted: #9399c6;
+  --accent: #ff5c8a; --kv: #3fd0e0; --wt: #8b84ff; --peg: #d9b45a;
+  --display: 'Bricolage Grotesque', 'Segoe UI', system-ui, sans-serif;
+  --body: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.5 var(--body); overflow: hidden; }
+[hidden] { display: none !important; }
+#scene { position: fixed; inset: 0; display: block; width: 100%; height: 100%; touch-action: none; }
+.hud { position: fixed; inset: 0; pointer-events: none; display: grid; gap: 12px;
+  grid-template-columns: minmax(0, 430px) 1fr minmax(0, 310px); grid-template-rows: auto 1fr auto auto;
+  padding-block: calc(16px + env(safe-area-inset-top, 0px)) calc(16px + env(safe-area-inset-bottom, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.hud > * { pointer-events: auto; }
+.panel { background: var(--glass); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px;
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); min-width: 0; }
+.top { grid-column: 1 / -1; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+h1 { font: 800 26px/1 var(--display); margin: 0; letter-spacing: -0.02em; }
+h1 span { color: var(--accent); }
+a { color: var(--ink); }
+.back { font: 600 13px var(--body); text-decoration: none; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--glass); }
+.back:hover { border-color: var(--accent); }
+form { display: flex; gap: 8px; flex: 1 1 320px; min-width: 0; }
+#prompt { flex: 1 1 auto; min-width: 0; font: 500 15px var(--mono); padding: 10px 14px; border-radius: 9px;
+  border: 1px solid var(--line); background: var(--glass); color: var(--ink); }
+button { font: 600 13px var(--body); border-radius: 8px; border: 1px solid var(--line); background: var(--glass); color: var(--ink);
+  padding: 8px 12px; cursor: pointer; }
+button:hover { border-color: var(--accent); }
+button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+#drop { background: var(--accent); border-color: var(--accent); color: #fff; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.cap { grid-column: 1; grid-row: 3; display: flex; flex-direction: column; gap: 6px; }
+.eyebrow { font: 600 11px var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin: 0; }
+#capTitle { font: 800 24px/1.1 var(--display); margin: 0; color: var(--accent); text-wrap: balance; }
+#capText { margin: 0; text-wrap: pretty; }
+#where { color: var(--kv); }
+.side { grid-column: 3; grid-row: 2 / 4; align-self: end; display: flex; flex-direction: column; gap: 10px; max-height: 100%; overflow: auto; }
+.seg { display: flex; gap: 6px; flex-wrap: wrap; } .seg button { flex: 1 1 auto; }
+dl { margin: 0; display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; font-size: 13px; }
+dt { color: var(--muted); } dd { margin: 0; font-family: var(--mono); font-variant-numeric: tabular-nums; text-align: right; }
+.legend { display: grid; gap: 4px; font-size: 12px; color: var(--muted); margin: 0; padding: 0; list-style: none; }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+.note { font-size: 12px; color: var(--muted); margin: 0; text-wrap: pretty; }
+.prog { height: 6px; border-radius: 3px; background: #1b1f40; overflow: hidden; } .prog span { display: block; height: 100%; width: 0; background: var(--accent); }
+.transport { grid-column: 1 / -1; grid-row: 4; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+#scrub { flex: 1 1 200px; min-width: 0; accent-color: var(--accent); }
+.speed button { font: 500 12px var(--mono); padding: 6px 9px; }
+@media (max-width: 760px) {
+  .hud { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  h1 { font-size: 21px; }
+  .cap { padding: 10px 12px; }
+  #capTitle { font-size: 19px; } #capText { font-size: 13px; }
+  .side { display: none; }
+}
+</style>
+</head>
+<body>
+
+<canvas id="scene" aria-label="3D tower of model layers with tokens falling through it"></canvas>
+<div class="hud">
+  <div class="top">
+    <h1>LLM Plinko <span>3D</span></h1>
+    <a class="back" href="./">2D board</a>
+    <form id="promptForm" autocomplete="off">
+      <input id="prompt" type="text" maxlength="120" value="the fighter blocked the fireball and" aria-label="Prompt">
+      <button id="drop" type="submit">Drop it</button>
+    </form>
+  </div>
+
+  <div class="panel cap" aria-live="polite">
+    <p class="eyebrow" id="capStep">Step 1 of 6</p>
+    <h2 id="capTitle">Tokenize</h2>
+    <p id="capText"></p>
+    <p class="eyebrow" id="where"></p>
+  </div>
+
+  <div class="side">
+    <div class="panel" style="display:flex;flex-direction:column;gap:10px">
+      <p class="eyebrow">Model</p>
+      <div class="seg" role="group" aria-label="Model">
+        <button type="button" data-mode="dense" aria-pressed="true">Dense 27B</button>
+        <button type="button" data-mode="moe" aria-pressed="false">MoE 35B-A3B</button>
+        <button type="button" data-mode="real" aria-pressed="false">Real: SmolLM2-135M</button>
+      </div>
+      <div id="realLoad" hidden style="display:flex;flex-direction:column;gap:6px">
+        <p class="note" id="realIntro">Runs a real small model in your browser: a 269 MB download from Hugging Face (kept by your browser) and about 800 MB of memory.</p>
+        <button id="realGo" type="button">Download and run</button>
+        <div class="prog" id="prog" aria-hidden="true"><span id="progBar"></span></div>
+        <p class="note" id="realStatus" aria-live="polite"></p>
+      </div>
+      <dl>
+        <dt>Layers</dt><dd id="sLayers"></dd>
+        <dt>Tokens in KV cache</dt><dd id="sKv">0</dd>
+        <dt>KV cache size</dt><dd id="sKvMb">0</dd>
+        <dt>Linear memory</dt><dd id="sMem"></dd>
+        <dt>Tokens written</dt><dd id="sGen">0 of 6</dd>
+      </dl>
+      <button id="silo" type="button" aria-pressed="false">Show memory as one pool</button>
+    </div>
+    <div class="panel">
+      <ul class="legend" id="legend"></ul>
+    </div>
+    <p class="note panel" id="modeNote"></p>
+  </div>
+
+  <div class="transport">
+    <button id="play" type="button">Play</button>
+    <input id="scrub" type="range" min="0" max="1000" value="0" aria-label="Scrub timeline">
+    <div class="speed" role="group" aria-label="Speed" style="display:flex;gap:4px">
+      <button type="button" data-speed="0.5" aria-pressed="false">0.5×</button>
+      <button type="button" data-speed="1" aria-pressed="true">1×</button>
+      <button type="button" data-speed="2" aria-pressed="false">2×</button>
+    </div>
+    <button id="follow" type="button" aria-pressed="true">Follow tokens</button>
+    <button id="autoRot" type="button" aria-pressed="true">Orbit</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="llm.js"></script>
+<script>
+(function () {
+  const $ = s => document.querySelector(s);
+  function hash(s) { let h = 2166136261 >>> 0; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; } return h >>> 0; }
+  function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+  const smooth = x => { x = clamp(x, 0, 1); return x * x * (3 - 2 * x); };
+  const fmtPct = p => (p >= 0.995 ? '100%' : p < 0.005 ? '<1%' : Math.round(p * 100) + '%');
+
+  // ---- toy next-word model (same as the 2D page): a bigram table over a short built-in text ----
+  const CORPUS = `the ball drops through the board and hits every peg on the way down. the model reads your prompt and guesses the next token.
+  the next token is picked by a roll of the dice. the fighter blocked the fireball and then he countered with a super.
+  the player pressed the button and the character jumped over the fireball. the gpu reads every weight from memory for every new token.
+  the weights are fixed numbers that decide where the ball goes. the board has sixty layers and billions of pegs.
+  the game is a fighting game with rollback netcode. the match starts when both players press start. a token is a small piece of a word.
+  the cache keeps the work for every earlier token. the dice decide which slot wins. the answer comes out one word at a time.
+  he blocked the super and then he jumped. the fighter countered with a fireball and the match was over.`;
+  const WORDS = CORPUS.toLowerCase().match(/[a-z']+|[.,]/g), BIG = {}, UNI = {};
+  WORDS.forEach((w, i) => { UNI[w] = (UNI[w] || 0) + 1; if (i + 1 < WORDS.length) { const f = BIG[w] || (BIG[w] = {}); f[WORDS[i + 1]] = (f[WORDS[i + 1]] || 0) + 1; } });
+  const UNI_TOP = Object.entries(UNI).sort((a, b) => b[1] - a[1]);
+  function candidates(last, T) {
+    const f = BIG[last] || {}; let list = Object.entries(f);
+    for (const [w, c] of UNI_TOP) { if (list.length >= 5) break; if (!f[w]) list.push([w, 0.06 * c]); }
+    list.sort((a, b) => b[1] - a[1]); list = list.slice(0, 5);
+    const lg = list.map(([, c]) => Math.log(c)), e = lg.map(l => Math.exp((l - lg[0]) / T)), s = e.reduce((a, b) => a + b, 0);
+    return list.map(([w], i) => ({ w, p: e[i] / s }));
+  }
+  function sample(c, r) { let u = r(), acc = 0; for (let i = 0; i < c.length; i++) { acc += c[i].p; if (u <= acc) return i; } return c.length - 1; }
+  function tokenize(text) {
+    const out = [];
+    for (const p of text.trim().match(/[A-Za-z']+|\d+|[^\sA-Za-z\d]/g) || []) {
+      if (p.length > 7 && /[A-Za-z]/.test(p)) { const cut = Math.ceil(p.length / 2); out.push(p.slice(0, cut), p.slice(cut)); } else out.push(p);
+    }
+    return out;
+  }
+  const lastWord = t => { const m = t.toLowerCase().match(/[a-z']+|[.,]/g); return m ? m[m.length - 1] : 'the'; };
+  const T0 = 0.7; // same default temperature as the 2D page
+  const getPrompt = () => ($('#prompt').value.trim() || 'the fighter blocked the fireball and').slice(0, 120);
+
+  // Model shapes. Qwen3.6 figures from its config.json: every 4th layer full attention, the rest linear attention.
+  // SmolLM2-135M: full attention in all 30 layers, KV cache 23,040 bytes per token (2 x 30 layers x 3 heads x 64 x 2 bytes).
+  const MODELS = {
+    dense: { layers: 64, full: l => (l + 1) % 4 === 0, kvKB: 64, memMB: 151, label: 'Qwen3.6-27B' },
+    moe: { layers: 40, full: l => (l + 1) % 4 === 0, kvKB: 20, memMB: 63, label: 'Qwen3.6-35B-A3B', experts: true },
+    real: { layers: 30, full: () => true, kvKB: 22.5, memMB: 0, label: 'SmolLM2-135M' },
+  };
+  const STAGES = [
+    ['Tokenize', 'Your text is cut into tokens. Each gets an ID from a vocabulary of about 250,000.'],
+    ['Embed', 'Each token becomes a ball: a list of a few thousand numbers, its meaning fingerprint.'],
+    ['Read the prompt', 'All tokens fall through every layer at once. Pink layers (every 4th) use full attention: the last token arcs back to every earlier one, and each token drops a teal KV tile. Blue layers squeeze everything into one fixed memory cube. Violet glow: feed-forward weights being read.'],
+    ['Score', 'The last ball lands as a score for every token in the vocabulary. The top five rise as bars.'],
+    ['Roll', 'A weighted die picks one. The new token flies back to the top.'],
+    ['Repeat', 'The new token falls alone. It reads the KV tiles and memory cubes left behind instead of redoing that work, but every weight is read again: one full trip down the tower per token.'],
+  ];
+  const STAGES_REAL = [
+    ['Tokenize', 'The model\'s own tokenizer cuts your text into pieces it learned (49,152 of them). A dot (·) means the piece starts with a space.'],
+    ['Embed', 'Each token becomes a ball: a list of 576 real numbers.'],
+    ['Read the prompt', 'All tokens fall through 30 layers, all full attention. The arcs are the model\'s real attention for the last token, and each layer stores every token\'s keys and values (the tiles). The word above the ball is what the model would say if it stopped at that layer.'],
+    ['Score', 'The last ball lands as a real score for each of the 49,152 tokens. The top five rise as bars.'],
+    ['Roll', 'A weighted die picks one. The new token flies back to the top.'],
+    ['Repeat', 'The new token falls alone, reading every layer\'s cached keys and values, while all 269 MB of weights are read again.'],
+  ];
+  const DONE = ['Done', 'Six new tokens, six trips down the tower. Watch the KV tile rows: they grew with every token, while the memory cubes stayed the same size.'];
+  const DONE_REAL = ['Done', 'Six new tokens, six trips down the tower. Every layer\'s KV tile row grew by one tile per token. Try "Show memory as one pool" to see where they all live.'];
+
+  // ---- three.js scene ----
+  const SP = 0.46, TOP = 2.2, W = 10.4, D = 3.4, GAP = 0.7, SILO_X = W / 2 + 3.6;
+  const canvas = $('#scene');
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x080914);
+  scene.fog = new THREE.Fog(0x080914, 22, 60);
+  const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 200);
+  camera.position.set(7.5, TOP + 3.6, 11.5);
+  const controls = new THREE.OrbitControls(camera, canvas); controls.target.set(0, TOP, 0);
+  controls.enableDamping = true; controls.dampingFactor = 0.08; controls.minDistance = 4; controls.maxDistance = 70;
+  scene.add(new THREE.AmbientLight(0x8890c0, 0.55));
+  const key = new THREE.DirectionalLight(0xffffff, 0.9); key.position.set(6, 12, 8); scene.add(key);
+  const rim = new THREE.PointLight(0xff5c8a, 0.6, 40); rim.position.set(-8, 2, -6); scene.add(rim);
+
+  const C = { accent: 0xff5c8a, kv: 0x3fd0e0, wt: 0x8b84ff, linear: 0x3b4fa8, peg: 0xd9b45a };
+  const plateY = l => -l * SP;
+
+  function label(text, { size = 64, color = '#e9ebfa', bg = null, border = null, weight = 500, scale = 1 } = {}) {
+    const pad = size * 0.4, cv = document.createElement('canvas'), cx = cv.getContext('2d');
+    cx.font = `${weight} ${size}px 'IBM Plex Mono', monospace`;
+    const w = Math.ceil(cx.measureText(text).width + pad * 2), h = Math.ceil(size * 1.6);
+    cv.width = w; cv.height = h;
+    cx.font = `${weight} ${size}px 'IBM Plex Mono', monospace`;
+    if (bg) { cx.fillStyle = bg; cx.strokeStyle = border || bg; cx.lineWidth = size * 0.08;
+      cx.beginPath(); cx.roundRect ? cx.roundRect(2, 2, w - 4, h - 4, size * 0.3) : cx.rect(2, 2, w - 4, h - 4); cx.fill(); cx.stroke(); }
+    cx.fillStyle = color; cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillText(text, w / 2, h / 2 + size * 0.04);
+    const tex = new THREE.CanvasTexture(cv); tex.minFilter = THREE.LinearFilter;
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false }));
+    sp.scale.set(w / h * 0.42 * scale, 0.42 * scale, 1);
+    return sp;
+  }
+  function curve(a, b, lift) {
+    const mid = a.clone().add(b).multiplyScalar(0.5); mid.y += lift; mid.z -= lift * 0.6;
+    const g = new THREE.TubeGeometry(new THREE.QuadraticBezierCurve3(a, mid, b), 28, 0.028, 6, false);
+    return new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color: C.accent, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
+  }
+
+  const S = { mode: 'dense', time: 0, playing: false, speed: 1, follow: true, orbit: !matchMedia('(prefers-reduced-motion: reduce)').matches,
+    silo: false, siloK: 0, llm: null, loading: null, wantReal: false, data: null };
+  let world = null, P = null;
+
+  function dispose(o) { o.traverse(n => { if (n.geometry) n.geometry.dispose(); if (n.material) { if (n.material.map) n.material.map.dispose(); n.material.dispose(); } }); }
+
+  // ---- data: toy word table, or the real model ----
+  function toyData(prompt) {
+    let toks = tokenize(prompt); if (!toks.length) toks = ['?']; if (toks.length > 9) toks = toks.slice(-9);
+    const nP = toks.length, r = rng(hash(prompt));
+    let last = lastWord(prompt); const steps = [];
+    for (let k = 0; k < 6; k++) { const c = candidates(last, T0), pick = sample(c, r); steps.push({ c, pick }); last = c[pick].w; }
+    return { real: false, nP, offset: 0, steps, all: toks.concat(steps.map(s => s.c[s.pick].w)) };
+  }
+  async function realData(prompt, onStatus) {
+    const m = S.llm, tok = m.tok;
+    let ids = tok.encode(prompt); if (!ids.length) ids = tok.encode('the');
+    const st = m.newState(), total = ids.length + 5, r = rng(hash(prompt + '|' + T0 + '|real')); // same seed as the 2D page
+    let res, done = 0;
+    for (let i = 0; i < ids.length; i++) { res = await m.step(st, ids[i], i === ids.length - 1); onStatus(++done, total); }
+    const recs = [res.rec], steps = [], ms = [res.ms];
+    for (let k = 0; k < 6; k++) {
+      const { cands, pick } = LLM.sampleTopK(res.logits, 5, T0, r);
+      steps.push({ c: cands.map(c => ({ w: tok.piece(c.id), id: c.id, p: c.p })), pick });
+      if (k < 5) { res = await m.step(st, cands[pick].id, true); recs.push(res.rec); ms.push(res.ms); onStatus(++done, total); }
+    }
+    const shown = ids.slice(-9);
+    return { real: true, nP: shown.length, offset: ids.length - shown.length, steps, recs, ms: ms.reduce((a, b) => a + b, 0) / ms.length,
+      all: shown.map(id => tok.piece(id)).concat(steps.map(s => s.c[s.pick].w)) };
+  }
+
+  function build() {
+    if (world) { scene.remove(world); dispose(world); }
+    world = new THREE.Group(); scene.add(world);
+    const M = MODELS[S.mode], L = M.layers, Dd = S.data, real = Dd.real;
+    const { nP, steps, all } = Dd, NG = 6, N = nP + NG;
+    const X = i => (i - (N - 1) / 2) * GAP;
+    const yEnd = plateY(L - 1) - 0.8, FLOOR = yEnd - 2.2;
+    const short = w => (w.length > 5 ? w.slice(0, 4) + '…' : w);
+
+    // layers
+    const plates = [], mem = [], experts = [], kvTiles = [];
+    const pegPos = [];
+    for (let l = 0; l < L; l++) {
+      const full = M.full(l), y = plateY(l);
+      const mat = new THREE.MeshStandardMaterial({ color: full ? C.accent : C.linear, emissive: C.wt, emissiveIntensity: 0, transparent: true, opacity: full ? 0.1 : 0.08, depthWrite: false, side: THREE.DoubleSide });
+      const plate = new THREE.Mesh(new THREE.BoxGeometry(W, 0.04, D), mat); plate.position.y = y; world.add(plate);
+      const edge = new THREE.LineSegments(new THREE.EdgesGeometry(plate.geometry), new THREE.LineBasicMaterial({ color: full ? C.accent : C.linear, transparent: true, opacity: full ? (real ? 0.3 : 0.45) : 0.25 }));
+      edge.position.y = y; world.add(edge);
+      plates.push({ mat, full, y });
+      const named = real ? (l === 0 || (l + 1) % 5 === 0) : (full || l === 0);
+      if (named) { const lb = label('Layer ' + (l + 1) + (full ? ' · full' : ' · linear'), { size: 40, color: full ? '#ff8fae' : '#8fa0ff', scale: 1 }); lb.position.set(-W / 2 - 1.2, y, 0); world.add(lb); }
+      if (full) {
+        kvTiles[l] = all.map((_, i) => {
+          const m = new THREE.Mesh(new THREE.BoxGeometry(GAP * 0.7, 0.05, 0.32), new THREE.MeshStandardMaterial({ color: C.kv, emissive: C.kv, emissiveIntensity: 0.3, transparent: true, opacity: 0 }));
+          m.userData.home = new THREE.Vector3(X(i), y + 0.05, -D / 2 + 0.35);
+          m.userData.silo = new THREE.Vector3(SILO_X - 1.9 + i * 0.27, y, 0.15);
+          m.position.copy(m.userData.home); world.add(m); return m;
+        });
+      } else {
+        const cube = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.3, 0.42), new THREE.MeshStandardMaterial({ color: C.kv, emissive: C.kv, emissiveIntensity: 0.15, transparent: true, opacity: 0.85 }));
+        cube.userData.home = new THREE.Vector3(W / 2 + 0.55, y, 0); cube.userData.silo = new THREE.Vector3(SILO_X, y, 0.15);
+        cube.position.copy(cube.userData.home); world.add(cube); mem[l] = cube;
+      }
+      if (M.experts) {
+        experts[l] = [];
+        for (let e = 0; e < 8; e++) {
+          const em = new THREE.Mesh(new THREE.BoxGeometry(W / 8 - 0.12, 0.06, 0.5), new THREE.MeshStandardMaterial({ color: e ? C.wt : 0xb6b0ff, emissive: C.wt, emissiveIntensity: 0, transparent: true, opacity: 0.22 }));
+          em.position.set(-W / 2 + (e + 0.5) * W / 8, y, D / 2 - 0.4); world.add(em); experts[l].push(em);
+        }
+      }
+      for (let m = -9; m <= 9; m++) for (const z of [-0.35, 0.35]) pegPos.push([m * GAP + (z > 0 ? GAP / 2 : 0), y + 0.07, z]);
+    }
+    const pegs = new THREE.InstancedMesh(new THREE.SphereGeometry(0.026, 6, 4), new THREE.MeshStandardMaterial({ color: C.peg, emissive: C.peg, emissiveIntensity: 0.1 }), pegPos.length);
+    const dummy = new THREE.Object3D();
+    pegPos.forEach((p, i) => { dummy.position.set(p[0], p[1], p[2]); dummy.updateMatrix(); pegs.setMatrixAt(i, dummy.matrix); });
+    world.add(pegs);
+    if (M.experts) { const lb = label('7 experts + shared: 2 picked + shared', { size: 34, color: '#b6b0ff', scale: 0.8 }); lb.position.set(0, plateY(0) + 0.25, D / 2 + 0.2); world.add(lb); }
+    if (!real) { const memLb = label('memory', { size: 34, color: '#7fe6f0', scale: 0.8 }); memLb.position.set(W / 2 + 0.55, plateY(0) + 0.4, 0); world.add(memLb); }
+    const firstFull = plates.findIndex(p => p.full);
+    const kvLb = label('KV cache', { size: 34, color: '#7fe6f0', scale: 0.8 }); kvLb.position.set(X(0) - 1.1, plateY(firstFull) + 0.25, -D / 2 + 0.35); world.add(kvLb);
+    // the memory pool: every layer's store pulled out into one column, still one slot per layer
+    const siloBox = new THREE.Mesh(new THREE.BoxGeometry(4.6, plateY(0) - plateY(L - 1) + 0.8, 1.1), new THREE.MeshStandardMaterial({ color: 0x1b2a4a, emissive: C.kv, emissiveIntensity: 0.05, transparent: true, opacity: 0, depthWrite: false }));
+    siloBox.position.set(SILO_X - 0.1, (plateY(0) + plateY(L - 1)) / 2, 0.15); world.add(siloBox);
+    const siloLb = label('GPU memory: one pool, a slot for every layer', { size: 36, color: '#7fe6f0', scale: 0.9 }); siloLb.position.set(SILO_X, plateY(0) + 0.9, 0.15); siloLb.material.opacity = 0; world.add(siloLb);
+
+    // tokens: chips on top, balls
+    const chips = [], balls = [];
+    for (let i = 0; i < N; i++) {
+      const chip = label(short(all[i]), { size: 44, bg: 'rgba(20,22,46,0.92)', border: i >= nP ? '#ff5c8a' : '#3a4170', scale: 0.52 });
+      chip.position.set(X(i), TOP + 1.25, 0); chip.material.opacity = 0; world.add(chip); chips.push(chip);
+      const col = new THREE.Color().setHSL((hash(all[i] + i) % 360) / 360, 0.7, 0.6);
+      const ball = new THREE.Mesh(new THREE.SphereGeometry(0.17, 24, 16), new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 0.55, roughness: 0.3 }));
+      ball.position.set(X(i), TOP, 0); ball.scale.setScalar(0.001); world.add(ball); balls.push(ball);
+    }
+
+    // timeline schedule (seconds); every visible state below is a pure function of the time
+    const sched = []; let t = 0;
+    const mark = (st, at) => sched.push([at, st]);
+    mark(0, 0); t = nP * 0.12 + 0.6; mark(1, t); const tEmbed = t; t += 1.2;
+    const passes = [], scores = [], gens = [];
+    const addPass = (cols, focus, dur, st) => { mark(st, t); passes.push({ cols, focus, t0: t, dur }); t += dur; };
+    const addScore = (k, src) => { mark(3, t); scores.push({ k, src, t0: t }); t += 1.3; mark(4, t); t += 2.4; };
+    addPass([...Array(nP).keys()], nP - 1, real ? 10 : 9, 2); addScore(0, nP - 1);
+    for (let k = 1; k < NG; k++) { const c = nP + k - 1; mark(5, t); gens.push({ c, t0: t }); t += 0.5; addPass([c], c, real ? 4.2 : 3.4, 5); addScore(k, c); }
+    mark(6, t); const tEnd = t + 2.5;
+
+    // per pass: attention arcs (moved to the active full layer) and memory beams (moved to the active linear layer)
+    passes.forEach((p, pi) => {
+      const f = p.focus;
+      p.arcs = new THREE.Group(); world.add(p.arcs);
+      let toyW = null;
+      if (!real) { const wts = []; for (let j = 0; j < f; j++) wts.push(Math.exp(-0.18 * (f - j) + (hash(all[f] + '>' + all[j]) % 100) / 100 * 1.6 + (all[j] === all[f] ? 1.5 : 0))); const mx = Math.max(1e-9, ...wts); toyW = wts.map(w => w / mx); }
+      p.arcLines = Array.from({ length: f }, (_, j) => { const ln = curve(new THREE.Vector3(X(f), 0, 0), new THREE.Vector3(X(j), 0, 0), 0.35 + Math.abs(X(f) - X(j)) * 0.12); ln.userData.w = toyW ? 0.2 + 0.8 * toyW[j] : 0; p.arcs.add(ln); return ln; });
+      if (real) {
+        // real attention: per layer, average over the 9 heads, relative to the strongest position
+        const rec = Dd.recs[pi], T = rec.pos + 1;
+        p.realW = rec.layers.map(ly => { const avg = new Float32Array(T); for (let h = 0; h < ly.heads; h++) for (let j = 0; j < T; j++) avg[j] += ly.attn[h * T + j] / ly.heads; const mx = Math.max(1e-9, ...avg); return Array.from({ length: f }, (_, j) => avg[Dd.offset + j] / mx); });
+        // the logit lens: one label per layer, shown above the focus ball as it passes
+        p.lens = rec.layers.map(ly => { const g = ly.lens[0]; const sp = label(S.llm.tok.piece(g.id) + '  ' + fmtPct(g.p), { size: 44, color: '#ffd0dc', bg: 'rgba(40,12,30,0.85)', border: '#ff5c8a', weight: 600, scale: 0.6 }); sp.visible = false; world.add(sp); return sp; });
+      }
+      p.beams = new THREE.Group(); world.add(p.beams);
+      p.beamLines = p.cols.map(c => { const ln = curve(new THREE.Vector3(X(c), 0, 0), new THREE.Vector3(W / 2 + 0.35, 0, 0), 0.5); ln.material.color.set(c === f ? C.accent : C.kv); p.beams.add(ln); return ln; });
+      const h = hash(all[f] + '@moe');
+      p.exp = [0, 1 + h % 7, 1 + (h % 7 + 1 + (h >>> 4) % 6) % 7]; // shared + 2 routed
+    });
+    // score floor objects per step
+    scores.forEach(sc => {
+      const st = steps[sc.k]; sc.g = new THREE.Group(); sc.g.position.y = FLOOR; world.add(sc.g);
+      sc.bars = st.c.map((cd, i) => {
+        const x = (i - 2) * 1.9;
+        const bar = new THREE.Mesh(new THREE.BoxGeometry(1.1, 1, 0.8), new THREE.MeshStandardMaterial({ color: i === st.pick ? C.accent : C.wt, emissive: i === st.pick ? C.accent : C.wt, emissiveIntensity: 0.35, transparent: true, opacity: 0.9 }));
+        bar.position.set(x, 0, 0); sc.g.add(bar);
+        const wd = label(cd.w.length > 9 ? cd.w.slice(0, 8) + '…' : cd.w, { size: 44, color: '#e9ebfa', scale: 0.9 }); wd.position.set(x, -0.45, 0.6); sc.g.add(wd);
+        const pc = label(fmtPct(cd.p), { size: 40, color: '#b6b0ff', scale: 0.8 }); sc.g.add(pc);
+        return { bar, wd, pc, x, h: Math.max(0.06, cd.p * 3.2) };
+      });
+      sc.die = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.34, 0.34), new THREE.MeshStandardMaterial({ color: C.accent, emissive: C.accent, emissiveIntensity: 0.6, transparent: true }));
+      sc.g.add(sc.die);
+      const rr = rng(hash(all.join(' ') + sc.k));
+      sc.hops = [Math.floor(rr() * 5), Math.floor(rr() * 5), Math.floor(rr() * 5), st.pick];
+      sc.fly = label(st.c[st.pick].w, { size: 46, color: '#ff8fae', weight: 600, scale: 0.9 }); world.add(sc.fly);
+      sc.col = nP + sc.k;
+    });
+    const floorGrid = new THREE.GridHelper(12, 12, 0x2c3263, 0x1b1f40); floorGrid.position.y = FLOOR - 0.01; world.add(floorGrid);
+    const scoreLb = label('next-token scores', { size: 36, color: '#9399c6', scale: 0.8 }); scoreLb.position.set(-5.2, FLOOR + 0.05, 1.6); world.add(scoreLb);
+
+    const passOf = i => (i < nP ? passes[0] : passes[i - nP + 1] || null); // the last new token is never fed back in
+    const uAt = y => (TOP - 0.3 - y) / (TOP - 0.3 - yEnd);
+    P = { M, L, N, nP, NG, all, steps, X, yEnd, FLOOR, plates, mem, experts, kvTiles, chips, balls, passes, scores, gens, sched, tEmbed, tEnd, passOf, uAt, siloBox, siloLb, real };
+    $('#sLayers').textContent = real ? '30 (all full)' : L + ' (' + L / 4 + ' full)';
+    $('#sMem').textContent = real ? 'none' : M.memMB + ' MB, fixed';
+    $('#legend').replaceChildren(...legendItems(real));
+    $('#modeNote').textContent = real
+      ? 'Real model: SmolLM2-135M (Apache 2.0), running in your browser from its published weights. Attention, guesses and scores are its actual numbers. ' + Math.round(Dd.ms) + ' ms per token here.'
+      : 'Real wiring of Qwen3.6, toy next-word scores from a tiny word table. Drag to orbit, scroll or pinch to zoom.';
+    apply(S.time = clamp(S.time, 0, tEnd));
+  }
+  function legendItems(real) {
+    const rows = real
+      ? [['var(--accent)', 'Full-attention layer (all 30 here): real attention arcs'], ['var(--kv)', 'KV cache tiles: each layer stores one per token'], ['var(--wt)', 'Feed-forward weights being read'], ['#ffd0dc', 'Label on the ball: the model\'s guess at that layer']]
+      : [['var(--accent)', 'Full-attention layer (every 4th): arcs to every earlier token'], ['#3b4fa8', 'Linear-attention layer: one fixed memory cube'], ['var(--kv)', 'KV cache tiles: grow one per token'], ['var(--wt)', 'Feed-forward weights being read']];
+    return rows.map(([c, t]) => { const li = document.createElement('li'), i = document.createElement('i'); i.style.background = c; li.append(i, t); return li; });
+  }
+
+  // ---- state at time t ----
+  const near = (a, b, w) => Math.exp(-(((a - b) / w) ** 2));
+  function apply(t) {
+    const p = P; if (!p) return;
+    let st = 0; for (const [tt, s] of p.sched) if (tt <= t) st = s;
+    p.chips.forEach((c, i) => { c.material.opacity = i < p.nP ? smooth((t - i * 0.12) / 0.3) : smooth((t - p.scores[i - p.nP].t0 - 3.3) / 0.25); });
+    p.balls.forEach((b, i) => {
+      const pass = p.passOf(i);
+      if (!pass) { b.scale.setScalar(0.001); return; }
+      const born = i < p.nP ? p.tEmbed + i * 0.06 : p.gens[i - p.nP].t0;
+      let s = smooth((t - born) / 0.4), y = TOP, x = p.X(i);
+      if (t >= pass.t0) {
+        const u = clamp((t - pass.t0) / pass.dur, 0, 1); y = TOP - 0.3 - u * (TOP - 0.3 - p.yEnd);
+        x += 0.07 * Math.sin(y * 9 + i);
+        const isFocus = i === pass.focus, sc = p.scores.find(q => q.src === i);
+        if (!isFocus && t > pass.t0 + pass.dur) s *= 1 - smooth((t - pass.t0 - pass.dur) / 0.4);
+        if (isFocus && sc && t >= sc.t0) { const k = smooth((t - sc.t0) / 0.6); y = y + (p.FLOOR + 0.3 - y) * k; x = x * (1 - k); s *= 1 - smooth((t - sc.t0 - 0.6) / 0.25); }
+      }
+      b.position.set(x, y, 0); b.scale.setScalar(Math.max(0.001, s));
+    });
+    let active = null; for (const q of p.passes) if (t >= q.t0 && t <= q.t0 + q.dur) active = q;
+    const cy = active ? TOP - 0.3 - clamp((t - active.t0) / active.dur, 0, 1) * (TOP - 0.3 - p.yEnd) : null;
+    let nearFull = -1, nearLin = -1, dFull = 1e9, dLin = 1e9;
+    p.plates.forEach((pl, l) => {
+      const n = active ? near(cy, pl.y, SP * 0.9) : 0;
+      pl.mat.emissiveIntensity = 0.75 * n; pl.mat.opacity = (pl.full ? 0.1 : 0.08) + 0.14 * n;
+      if (active) { const d = Math.abs(cy - pl.y); if (pl.full && d < dFull) { dFull = d; nearFull = l; } if (!pl.full && d < dLin) { dLin = d; nearLin = l; } }
+      if (p.mem[l]) { p.mem[l].material.emissiveIntensity = 0.15 + 1.4 * n; p.mem[l].scale.setScalar(1 + 0.25 * n); }
+      if (p.experts[l]) p.experts[l].forEach((em, e) => { const on = active && active.exp.includes(e); em.material.emissiveIntensity = on ? 1.8 * n : 0; em.material.opacity = 0.22 + (on ? 0.5 * n : 0); });
+    });
+    p.passes.forEach(q => {
+      const on = q === active;
+      const fa = on && nearFull >= 0 ? near(cy, p.plates[nearFull].y, SP * 0.8) : 0;
+      if (on && nearFull >= 0) q.arcs.position.y = p.plates[nearFull].y;
+      q.arcLines.forEach((ln, j) => { const w = q.realW ? (nearFull >= 0 ? 0.08 + 0.92 * q.realW[nearFull][j] : 0) : ln.userData.w; ln.material.opacity = fa * w; });
+      const fb = on && nearLin >= 0 ? near(cy, p.plates[nearLin].y, SP * 0.8) : 0;
+      if (on && nearLin >= 0) q.beams.position.y = p.plates[nearLin].y;
+      q.beamLines.forEach((ln, i) => { ln.material.opacity = fb * (q.cols[i] === q.focus ? 0.95 : 0.4); });
+      if (q.lens) {
+        // the guess after the last layer the ball has fully passed
+        let last = -1; if (on) p.plates.forEach((pl, l) => { if (pl.y >= cy) last = l; });
+        const sc = p.scores.find(s => s.src === q.focus), showUntil = sc ? sc.t0 + 0.5 : q.t0 + q.dur;
+        if (!on && t > q.t0 + q.dur && t < showUntil) last = p.L - 1;
+        q.lens.forEach((sp, l) => { sp.visible = l === last; });
+        if (last >= 0) { const b = p.balls[q.focus]; q.lens[last].position.set(b.position.x, b.position.y + 0.55, 0.2); }
+      }
+    });
+    // KV tiles: token i writes its tile when it passes a full layer; brighten while a later token reads them
+    p.kvTiles.forEach((row, l) => {
+      if (!row) return;
+      const y = p.plates[l].y, rd = active ? near(cy, y, SP * 0.9) : 0;
+      row.forEach((m, i) => {
+        const pass = p.passOf(i);
+        if (!pass) { m.material.opacity = 0; return; }
+        const tw = pass.t0 + pass.dur * p.uAt(y);
+        m.material.opacity = 0.85 * smooth((t - tw) / 0.15);
+        m.material.emissiveIntensity = 0.3 + (active && i < active.focus ? 1.6 * rd : 0);
+        m.scale.y = 1 + (active && i < active.focus ? 2 * rd : 0);
+      });
+    });
+    placeStores();
+    // scores, die, the winner flying home
+    p.scores.forEach(sc => {
+      const lt = t - sc.t0, vis = lt >= 0.5 && lt < 4.1;
+      sc.g.visible = vis; sc.fly.visible = lt >= 3.1 && lt < 3.6;
+      if (!vis) return;
+      const fade = 1 - smooth((lt - 3.7) / 0.4);
+      sc.bars.forEach((b, i) => {
+        const h = Math.max(0.001, b.h * smooth((lt - 0.5 - i * 0.05) / 0.5));
+        b.bar.scale.y = h; b.bar.position.y = h / 2; b.bar.material.opacity = 0.9 * fade;
+        b.pc.position.set(b.x, h + 0.3, 0); b.pc.material.opacity = b.wd.material.opacity = smooth((lt - 0.8) / 0.3) * fade;
+      });
+      const dt = lt - 1.3; let dx = 0, dy = 1.6;
+      if (dt >= 0) {
+        const hop = Math.min(3, Math.floor(dt / 0.35)), f = clamp((dt - hop * 0.35) / 0.35, 0, 1);
+        const from = hop === 0 ? 0 : sc.bars[sc.hops[hop - 1]].x, to = sc.bars[sc.hops[hop]].x;
+        dx = from + (to - from) * f; dy = 3.4 + Math.sin(f * Math.PI) * 0.8;
+        if (dt > 1.4) { const k = smooth((dt - 1.4) / 0.3), win = sc.bars[sc.hops[3]]; dx = win.x; dy = 3.4 - 3.4 * k + win.h * k; }
+        sc.die.rotation.set(dt * 7, dt * 5, 0);
+      }
+      sc.die.position.set(dx, dy, 0); sc.die.material.opacity = fade; sc.die.visible = dt >= 0 && fade > 0.05;
+      if (sc.fly.visible) { const k = smooth((lt - 3.1) / 0.5), b = sc.bars[p.steps[sc.k].pick];
+        sc.fly.position.set(b.x + (p.X(sc.col) - b.x) * k, p.FLOOR + 0.9 + (TOP + 1.25 - p.FLOOR - 0.9) * k, 0); }
+    });
+    // panel
+    const [title, text] = (p.real ? STAGES_REAL : STAGES)[st] || (p.real ? DONE_REAL : DONE);
+    $('#capStep').textContent = st < 6 ? 'Step ' + (st + 1) + ' of 6' : 'Finished';
+    $('#capTitle').textContent = title; $('#capText').textContent = text;
+    let where = '';
+    if (active) { const l = nearFull >= 0 && (dFull < dLin || nearLin < 0) ? nearFull : nearLin; where = 'Layer ' + (l + 1) + ' of ' + p.L + ' · ' + (p.plates[l].full ? 'full attention' : 'linear attention'); }
+    $('#where').textContent = where;
+    let kv = 0; p.balls.forEach((_, i) => { const pass = p.passOf(i); if (pass && t >= pass.t0 + pass.dur) kv = i + 1; });
+    kv += kv ? S.data.offset : 0;
+    let gen = 0; p.scores.forEach(sc => { if (t >= sc.t0 + 3.3) gen = sc.k + 1; });
+    $('#sKv').textContent = kv;
+    $('#sKvMb').textContent = p.real ? (kv * p.M.kvKB).toFixed(1) + ' KB' : (kv * p.M.kvKB / 1024).toFixed(2) + ' MB';
+    $('#sGen').textContent = gen + ' of 6';
+    $('#scrub').value = Math.round(t / p.tEnd * 1000);
+    S.cy = active ? cy : p.scores.some(sc => t >= sc.t0 && t < sc.t0 + 4.1) ? p.FLOOR + 1 : t > p.tEnd - 2.5 ? null : TOP;
+  }
+  // memory stores: in their layers, or pulled out into one pool (S.siloK animates 0 -> 1)
+  function placeStores() {
+    const p = P, k = smooth(S.siloK);
+    const put = m => { m.position.lerpVectors(m.userData.home, m.userData.silo, k); };
+    p.mem.forEach(m => m && put(m));
+    p.kvTiles.forEach(row => row && row.forEach(m => { put(m); m.scale.x = m.scale.z = 1 - 0.55 * k; }));
+    p.siloBox.material.opacity = 0.22 * k; p.siloLb.material.opacity = k;
+  }
+
+  // ---- loop ----
+  function resize() {
+    const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h;
+    camera.fov = w / h < 0.8 ? 62 : 45; // portrait phones: widen the view so the whole layer fits across
+    camera.updateProjectionMatrix();
+  }
+  addEventListener('resize', resize); resize();
+  let prev = performance.now();
+  function frame(now) {
+    const dt = Math.min(0.05, (now - prev) / 1000); prev = now;
+    if (S.playing && P) { S.time += dt * S.speed; if (S.time >= P.tEnd) { S.time = P.tEnd; S.playing = false; setPlay(); } apply(S.time); }
+    const target = S.silo ? 1 : 0;
+    if (P && S.siloK !== target) { S.siloK = target > S.siloK ? Math.min(1, S.siloK + dt * 1.2) : Math.max(0, S.siloK - dt * 1.2); if (!S.playing) placeStores(); }
+    if (S.follow && S.cy != null) { const dy = (S.cy - controls.target.y) * Math.min(1, dt * 3); controls.target.y += dy; camera.position.y += dy; }
+    { // slide the view sideways and back so the memory pool is in frame when it is shown
+      const tx = S.silo ? SILO_X * 0.55 : 0, dx = (tx - controls.target.x) * Math.min(1, dt * 2);
+      if (Math.abs(dx) > 1e-4) { controls.target.x += dx; camera.position.x += dx; }
+      const o = camera.position.clone().sub(controls.target), want = S.silo ? 20 : null;
+      if (want && o.length() < want) camera.position.copy(controls.target).add(o.setLength(o.length() + (want - o.length()) * Math.min(1, dt * 2)));
+    }
+    if (S.orbit) { const o = camera.position.clone().sub(controls.target); o.applyAxisAngle(new THREE.Vector3(0, 1, 0), dt * 0.12); camera.position.copy(controls.target).add(o); }
+    controls.update(); renderer.render(scene, camera);
+    requestAnimationFrame(frame);
+  }
+  const setPlay = () => { $('#play').textContent = S.playing ? 'Pause' : P && S.time >= P.tEnd ? 'Replay' : 'Play'; };
+
+  function setMode(mode) { S.mode = mode; document.querySelectorAll('.seg button').forEach(x => x.setAttribute('aria-pressed', x.dataset.mode === mode)); }
+  function startToy() { S.data = toyData(getPrompt()); S.time = 0; build(); S.playing = true; setPlay(); }
+  function status(text, frac) { $('#realStatus').textContent = text; if (frac != null) $('#progBar').style.width = (frac * 100).toFixed(1) + '%'; }
+  async function startReal() {
+    S.wantReal = true; $('#realLoad').hidden = false; $('#realGo').hidden = true;
+    try {
+      if (!S.llm) {
+        S.loading = S.loading || LLM.load((got, total) => got < 0 ? status('Unpacking the weights…', 1) : status(`Downloading: ${Math.round(got / 1e6)} of ${Math.round(total / 1e6)} MB`, got / total));
+        S.llm = await S.loading;
+      }
+      const Dd = await realData(getPrompt(), (i, n) => status(`Running the model: token ${i} of ${n}`, i / n));
+      if (!S.wantReal) return;
+      status(`Real model loaded: ${Math.round(Dd.ms)} ms per token.`, 1); $('#realIntro').hidden = true; $('#prog').hidden = true;
+      setMode('real'); S.data = Dd; S.time = 0; build(); S.playing = true; setPlay();
+    } catch (err) {
+      S.loading = null; $('#realGo').hidden = false;
+      status('Could not run the model: ' + err.message + '. Check your connection and try again.', 0);
+    }
+  }
+
+  $('#promptForm').addEventListener('submit', e => { e.preventDefault(); if (S.mode === 'real') startReal(); else startToy(); });
+  $('#play').addEventListener('click', () => { if (S.time >= P.tEnd) S.time = 0; S.playing = !S.playing; setPlay(); });
+  $('#scrub').addEventListener('input', e => { S.playing = false; S.time = e.target.value / 1000 * P.tEnd; apply(S.time); setPlay(); });
+  document.querySelectorAll('.speed button').forEach(b => b.addEventListener('click', () => { S.speed = +b.dataset.speed; document.querySelectorAll('.speed button').forEach(x => x.setAttribute('aria-pressed', x === b)); }));
+  document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => {
+    const mode = b.dataset.mode;
+    if (mode === 'real') {
+      if (S.llm) { startReal(); return; }
+      S.wantReal = true; $('#realLoad').hidden = false; $('#realGo').hidden = !!S.loading;
+      document.querySelectorAll('.seg button').forEach(x => x.setAttribute('aria-pressed', x === b));
+      return;
+    }
+    S.wantReal = false; $('#realLoad').hidden = true; setMode(mode); startToy();
+  }));
+  $('#realGo').addEventListener('click', startReal);
+  $('#silo').addEventListener('click', e => { S.silo = !S.silo; e.target.setAttribute('aria-pressed', S.silo); e.target.textContent = S.silo ? 'Put memory back in the layers' : 'Show memory as one pool'; });
+  $('#follow').addEventListener('click', e => { S.follow = !S.follow; e.target.setAttribute('aria-pressed', S.follow); });
+  $('#autoRot').addEventListener('click', e => { S.orbit = !S.orbit; e.target.setAttribute('aria-pressed', S.orbit); });
+  $('#autoRot').setAttribute('aria-pressed', S.orbit);
+  window.__plinko3d = { seek: t => { S.playing = false; S.time = t; apply(t); }, get duration() { return P.tEnd; }, get mode() { return S.mode; } };
+
+  const start = () => { startToy(); requestAnimationFrame(frame); };
+  (document.fonts && document.fonts.ready ? Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 1500))]) : Promise.resolve()).then(start);
+})();
+</script>
+</body>
+</html>
