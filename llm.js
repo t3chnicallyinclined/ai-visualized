@@ -140,16 +140,26 @@
     const kvBytesPerToken = 2 * L * KVH * HD * 2; // keys + values, every layer, stored as bf16 in a real runtime
     const weightBytes = Object.values(W).reduce((a, t) => a + t.data.length * 2, 0);
 
-    // optional: a list of token IDs whose scores are kept after every layer (the page's token cloud)
+    // optional: what the token cloud keeps after every layer. A list of token IDs keeps their raw scores;
+    // 'all' keeps every token's probability (full softmax over the whole vocabulary) as a log-scale byte:
+    // 0 = 1e-6 or less, 255 = probability 1 (about 5% steps). 30 layers x 49,152 bytes = 1.5 MB per token.
     let watch = null;
-    const setWatch = ids => { watch = ids ? Int32Array.from(ids) : null; };
+    const WATCH_FLOOR = Math.log(1e-6);
+    const setWatch = ids => { watch = ids === 'all' ? 'all' : ids ? Int32Array.from(ids) : null; };
+    function watchOf(logits, lse) {
+      if (watch !== 'all') return Float32Array.from(watch, i => logits[i]);
+      const out = new Uint8Array(V), k = 255 / -WATCH_FLOOR;
+      for (let i = 0; i < V; i++) { const lp = logits[i] - lse; out[i] = lp <= WATCH_FLOOR ? 0 : Math.round((lp - WATCH_FLOOR) * k); }
+      return out;
+    }
+    let lastLse = 0;
     function newState() { return { pos: 0, K: layers.map(() => []), Vc: layers.map(() => []) }; }
     const buf = { x: new Float32Array(D), h: new Float32Array(D), q: new Float32Array(D), k: new Float32Array(KVH * HD), v: new Float32Array(KVH * HD),
       att: new Float32Array(D), o: new Float32Array(D), g: new Float32Array(F), u: new Float32Array(F), d: new Float32Array(D), logits: new Float32Array(V), hn: new Float32Array(D) };
 
     function lens(x, n) { // the logit lens: final norm + output matrix applied to an intermediate state
       rmsnorm(x, normW, eps, buf.hn); matvec(E, V, D, buf.hn, buf.logits);
-      const { lse } = softmaxStats(buf.logits);
+      const { lse } = softmaxStats(buf.logits); lastLse = lse;
       return topk(buf.logits, n).map(id => ({ id, p: Math.exp(buf.logits[id] - lse) }));
     }
 
@@ -194,7 +204,7 @@
             const tl = performance.now();
             Object.assign(ly, { ffnIn: buf.h.slice(), neurons: topk(buf.g.map(Math.abs), 5).map(i => ({ i, v: buf.g[i] })), down: f6(buf.d), downNorm: nrm(buf.d),
               first: Array.from(x.subarray(0, 16)), norm: nrm(x), lens: l < L - 1 ? lens(x, lensTop) : null });
-            if (watch && l < L - 1) ly.watch = Float32Array.from(watch, i => buf.logits[i]); // buf.logits holds this layer's lens scores
+            if (watch && l < L - 1) ly.watch = watchOf(buf.logits, lastLse); // buf.logits holds this layer's lens scores
             lensMs += performance.now() - tl;
           }
           rec.layers.push(ly);
@@ -204,7 +214,7 @@
       rmsnorm(x, normW, eps, buf.hn); matvec(E, V, D, buf.hn, buf.logits);
       state.pos++;
       const logits = buf.logits.slice();
-      if (full) { const { lse } = softmaxStats(logits); rec.layers[L - 1].lens = topk(logits, lensTop).map(i => ({ id: i, p: Math.exp(logits[i] - lse) })); if (watch) rec.layers[L - 1].watch = Float32Array.from(watch, i => logits[i]); }
+      if (full) { const { lse } = softmaxStats(logits); rec.layers[L - 1].lens = topk(logits, lensTop).map(i => ({ id: i, p: Math.exp(logits[i] - lse) })); if (watch) rec.layers[L - 1].watch = watchOf(logits, lse); }
       return { logits, rec, ms: performance.now() - t0 - lensMs };
     }
     const embedding = (id, n = 8) => Array.from(E.subarray(id * D, id * D + n));
@@ -218,7 +228,7 @@
       return topk(sims, k).map(i => ({ id: i, sim: sims[i] }));
     }
     const neuron = (l, n) => ({ gate: layers[l].gate.subarray(n * D, n * D + D), up: layers[l].up.subarray(n * D, n * D + D) }); // one feed-forward neuron's two weight rows
-    return { cfg, tok, step, newState, setWatch, lens, embedding, neighbors, neuron, D, L, H, KVH, HD, F, V, kvBytesPerToken, weightBytes, name: 'SmolLM2-135M' };
+    return { cfg, tok, step, newState, setWatch, WATCH_FLOOR, lens, embedding, neighbors, neuron, D, L, H, KVH, HD, F, V, kvBytesPerToken, weightBytes, name: 'SmolLM2-135M' };
   }
 
   // Top-k sampling as the page teaches it: keep the top k scores, divide by the temperature, softmax, roll.
