@@ -4,7 +4,7 @@
 
 Type a prompt and press Enter. Your text gets cut into tokens, each token becomes a ball, the balls fall through the model's layers, and the last one lands as a score for every possible next word. A dice roll picks one, it joins the text, and the whole thing runs again. That loop is all an LLM does, whether it is a small model on a laptop or the largest one in a datacenter.
 
-**Try it: [the board](https://t3chnicallyinclined.github.io/llm-plinko/) · [the 3D tower](https://t3chnicallyinclined.github.io/llm-plinko/3d.html)**
+**Try it: [the board](https://t3chnicallyinclined.github.io/llm-plinko/)**
 
 No install, no build step, no account. Plain HTML and JavaScript you can read.
 
@@ -81,11 +81,15 @@ With either one, everything on the board is the model's actual output: tokens an
 
 ### Knobs
 
+### Training: how the knobs get set
+
+**How training sets the knobs** runs a real training run in your browser, just tiny: a model with one grid of 26 × 26 = 676 knobs (a bigram model: it only looks at the current letter) learns from the short text built into the page by plain gradient descent. You watch the needles turn, the loss fall towards the best this model can do, and its writing turn into almost-words. Below it, the page says how the real models were trained (SmolLM2: 2 trillion tokens of pre-training, then fine-tuning and DPO, which is where it learned to follow a system prompt) and that after training the knobs are frozen.
+
+### The guided tour
+
+On the first visit (and with **Take the tour**) the page plays one token and stops at the start of every step, with Back, Next and End tour in the narrator bar. On phones the board scrolls itself to keep the action in view, and the narrator bar (with a play button) stays on screen.
+
 Every parameter is a knob, set once in training and never moved while the model runs; no prompt can turn one. On the board each layer shows two dials (its talk and think weights), whose needles are real weights; they light up while the layer is read. In **What are the parameters?** every weight is a square, and zoomed in each one becomes a knob with its exact value.
-
-### The 3D tower
-
-[3d.html](https://t3chnicallyinclined.github.io/llm-plinko/3d.html) draws every layer as a glass plate in a tower you can orbit: attention arcs, a growing row of KV tiles on each full-attention layer, memory cubes on linear layers, and the scores as 3D bars. It has the same real model mode. **Show memory as one pool** pulls every layer's cache and memory out into one column: each layer keeps its own store, and they all live in the same GPU memory.
 
 ### Zoom into a peg
 
@@ -113,11 +117,12 @@ Ideas for making this a better teaching tool. Contributions welcome.
 
 - [x] Zoom into one peg: a real dot product and a softmax worked out step by step
 - [ ] Attention up close: queries, keys and values for one token
-- [ ] Training mode: watch the pegs move as the model learns from its mistakes
+- [x] Training: a real (tiny) training run where you watch the knobs turn and the loss fall
 - [ ] Quantization: what squeezing weights to 4 bits does
 - [x] Run a real small model in the browser, with the logit lens
-- [x] A 3D version
-- [ ] Guided lesson mode with narration
+- [ ] A 3D version (removed for now, to be rethought)
+- [x] A guided tour on the first visit (Back / Next / End tour)
+- [x] Phones: the board follows the action and the narrator bar stays on screen
 
 ## Contributing
 

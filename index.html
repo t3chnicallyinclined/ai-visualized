@@ -63,7 +63,7 @@ button:hover { border-color: var(--ink); }
 .realload .note { flex: 1 1 320px; }
 .prog { flex: 1 1 200px; height: 8px; border-radius: 4px; background: var(--band); border: 1px solid var(--line); overflow: hidden; }
 .prog span { display: block; height: 100%; width: 0; background: var(--ink); }
-.pipe { grid-column: 1 / -1; margin: 0; padding: 0 0 2px; list-style: none; display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 4px 6px; align-items: center; scrollbar-width: thin; }
+.pipe { order: 0; grid-column: 1 / -1; margin: 0; padding: 0 0 2px; list-style: none; display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 4px 6px; align-items: center; scrollbar-width: thin; }
 .pipe li { display: flex; align-items: center; gap: 6px; }
 .pipe li:not(:last-child)::after { content: '→'; color: var(--muted); font-size: 13px; }
 .pipe button { font: 500 12px var(--mono); padding: 4px 9px; border-radius: 99px; color: var(--muted); white-space: nowrap; }
@@ -108,20 +108,33 @@ svg#board { width: 100%; height: auto; display: block; min-width: 860px; }
 .speed { display: flex; gap: 4px; }
 .speed button { padding: 6px 9px; font: 500 12px var(--mono); }
 /* the narrator bar: fixed height inside the stage, so nothing jumps; the full text opens in a dialog */
-.nbar { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto auto auto; column-gap: 14px; row-gap: 2px;
-  height: 92px; box-sizing: border-box; overflow: hidden; text-align: left; padding: 10px 14px; border-radius: 10px; background: var(--st-2); border: 1px solid var(--st-rail); color: var(--st-ink); font: inherit; cursor: pointer; }
-.nbar:hover { border-color: var(--st-ink2); }
-.nb-step { grid-column: 1; font: 600 11px var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--st-ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.nb-title { grid-column: 1; font: 700 16px/1.2 var(--display); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.nb-text { grid-column: 1; font-size: 13.5px; line-height: 1.4; color: var(--st-ink2); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.nb-more { grid-column: 2; grid-row: 1 / 4; align-self: center; font: 600 13px var(--body); border: 1.5px solid var(--st-rail); border-radius: 8px; padding: 6px 12px; }
-@media (max-width: 600px) { .nbar { height: 112px; } .nb-text { -webkit-line-clamp: 3; } .nb-more { grid-row: 1; align-self: start; } }
+.nbar { grid-column: 1 / -1; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; column-gap: 14px; align-items: center;
+  height: 92px; box-sizing: border-box; overflow: hidden; padding: 10px 14px; border-radius: 10px; background: var(--st-2); border: 1px solid var(--st-rail); color: var(--st-ink); }
+.nb-main { display: grid; grid-template-rows: auto auto auto; row-gap: 2px; min-width: 0; cursor: pointer; }
+.nb-main:hover .nb-title { text-decoration: underline; text-underline-offset: 3px; }
+.nb-play { width: 44px; height: 44px; border-radius: 50%; padding: 0; font-size: 15px; background: var(--st-ink); color: var(--st-bg); border-color: var(--st-ink); }
+.nb-btns { display: flex; gap: 6px; align-items: center; } .nb-btns button { padding: 6px 12px; font-size: 13px; } .nb-tour { display: flex; gap: 6px; }
+.nb-next { background: var(--score) !important; color: var(--st-bg) !important; border-color: var(--score) !important; }
+.nb-step { font: 600 11px var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--st-ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nb-title { font: 700 16px/1.2 var(--display); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nb-text { font-size: 13.5px; line-height: 1.4; color: var(--st-ink2); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+/* phones: the board follows the action, and the narrator bar sits right under it and stays on screen */
+@media (max-width: 700px) {
+  .stage { padding: 8px; } .boardscroll { order: 1; } .nbar { order: 2; } .cloudp { order: 3; }
+  .nbar { position: sticky; bottom: 8px; z-index: 5; height: auto; min-height: 96px; grid-template-columns: auto minmax(0, 1fr); row-gap: 8px; box-shadow: 0 6px 24px rgb(0 0 0 / 0.5); }
+  .nb-btns { grid-column: 1 / -1; justify-content: flex-end; flex-wrap: wrap; } .nb-text { -webkit-line-clamp: 3; }
+  .seg { flex-wrap: nowrap; overflow-x: auto; } .seg button { white-space: nowrap; }
+}
 dialog.dlg { width: min(640px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); box-sizing: border-box; overflow: auto;
   border: 1px solid var(--line); border-radius: 14px; background: var(--panel); color: var(--ink); padding: 20px; }
 dialog.dlg.wide { width: min(940px, calc(100vw - 32px)); }
 dialog.dlg::backdrop { background: rgb(10 12 30 / 0.55); }
 dialog.dlg h2 { font: 800 22px/1.15 var(--display); margin: 6px 0 10px; }
 dialog.dlg p { margin: 0 0 10px; text-wrap: pretty; }
+.trbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; } .trbar .mono { font-size: 13px; color: var(--muted); }
+.trgrid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 14px; align-items: start; }
+.trside .eyebrow { margin-bottom: 4px; } .trsample { font: 14px/1.5 var(--mono); background: var(--st-bg); color: var(--score); border-radius: 10px; padding: 10px 12px; min-height: 4.5em; white-space: pre-wrap; overflow-wrap: anywhere; }
+@media (max-width: 760px) { .trgrid { grid-template-columns: minmax(0, 1fr); } }
 .pcv { width: 100%; display: block; border-radius: 10px; background: var(--st-bg); margin-bottom: 8px; }
 #pCv { cursor: pointer; }
 .plegend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--muted); margin-bottom: 8px; }
@@ -236,7 +249,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
 <div id="page">
   <header>
     <h1>LLM Plinko</h1>
-    <p>Watch a language model pick its next word. Your prompt leaves your device, becomes numbers, falls through every layer, and lands in the token cloud, where the model's options light up and a dice roll picks one. <a href="3d.html">See it as a 3D tower</a>.</p>
+    <p>Watch a language model pick its next word. Your prompt leaves your device, becomes numbers, falls through every layer, and lands in the token cloud, where the model's options light up and a dice roll picks one.</p>
   </header>
 
   <div class="sysrow" id="sysRow" hidden>
@@ -282,12 +295,18 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
       <p class="note" id="cInfo"></p>
       <details class="cnote"><summary>What am I looking at?</summary><p class="note" id="cNote"></p></details>
     </section>
-    <button class="nbar" id="nbar" type="button" aria-live="polite" aria-label="What is happening now: open for the full explanation">
-      <span class="nb-step" id="bStep">Step 1 of 10</span>
-      <span class="nb-title" id="bTitle">Type</span>
-      <span class="nb-text" id="bText"></span>
-      <span class="nb-more">More</span>
-    </button>
+    <div class="nbar" id="nbar">
+      <button class="nb-play" id="nbPlay" type="button" aria-label="Play">▶</button>
+      <div class="nb-main" id="nbMain" role="button" tabindex="0" aria-live="polite" aria-label="What is happening now: open for the full explanation">
+        <span class="nb-step" id="bStep">Step 1 of 10</span>
+        <span class="nb-title" id="bTitle">Type</span>
+        <span class="nb-text" id="bText"></span>
+      </div>
+      <div class="nb-btns">
+        <span class="nb-tour" id="nbTour" hidden><button id="tBack" type="button">Back</button><button id="tNext" type="button" class="nb-next">Next</button><button id="tSkip" type="button">End tour</button></span>
+        <button id="nbMore" type="button">More</button>
+      </div>
+    </div>
   </div>
 
   <div class="transport">
@@ -301,6 +320,8 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
     <button id="zoomBtn" type="button" title="Or click any think station">Zoom into a neuron</button>
     <button id="embBtn" type="button" title="Or click any token's strip">Explore embeddings</button>
     <button id="parBtn" type="button">What are the parameters?</button>
+    <button id="trainBtn" type="button">How training sets the knobs</button>
+    <button id="tourBtn" type="button">Take the tour</button>
   </div>
 
   <details class="hwd">
@@ -356,6 +377,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
   <div class="zhead"><p class="eyebrow">Parameters</p><button id="pClose" type="button">Close</button></div>
   <h2 id="pTitle">What the parameters are</h2>
   <p id="pLead"></p>
+  <p><button id="pTrain" type="button">Watch knobs being trained</button></p>
   <div class="plegend" id="pLegend"></div>
   <div class="pglwrap" id="pGLWrap" hidden>
     <canvas id="pGL" class="pgl"></canvas><canvas id="pOv" class="pov" aria-label="Every parameter of the model, one square each: scroll or pinch to zoom, drag to move"></canvas>
@@ -371,6 +393,25 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
     <pre class="enums" id="pDNums"></pre>
   </div>
   <p class="note" id="pNote"></p>
+</dialog>
+
+<dialog id="train" class="dlg wide" aria-labelledby="trTitle">
+  <div class="zhead"><p class="eyebrow">Training</p><button id="trClose" type="button">Close</button></div>
+  <h2 id="trTitle">How the knobs get set: training</h2>
+  <p id="trLead"></p>
+  <div class="trbar"><button id="trGo" type="button" class="nb-next">Train</button><button id="trStep" type="button">One step</button><button id="trReset" type="button">Start over</button><span class="mono" id="trStat"></span></div>
+  <div class="trgrid">
+    <canvas id="trCv" class="pcv" aria-label="The toy model's knobs: one dial for each pair of letters"></canvas>
+    <div class="trside">
+      <p class="eyebrow">How wrong its guesses are (loss)</p>
+      <canvas id="trLoss" class="pcv" aria-label="Loss falling as it trains"></canvas>
+      <p class="eyebrow">What it writes with these knobs</p>
+      <p class="trsample" id="trSample"></p>
+    </div>
+  </div>
+  <p class="note" id="trInfo">Point at a knob to see what it means.</p>
+  <h3 class="eh3">The same loop, at full size</h3>
+  <p id="trBig"></p>
 </dialog>
 
 <dialog id="zoom" aria-labelledby="zTitle">
@@ -1166,6 +1207,8 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
     syncInspector(time, st);
     syncLayers(time);
     syncBar();
+    syncTour(time);
+    follow(time, st);
     $('#scrub').value = Math.round(tl.progress() * 1000);
     setPlayLabel();
   }
@@ -1189,7 +1232,8 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
     G.knobs.forEach((k, i) => k.setAttribute('class', 'knob' + (l < 0 ? '' : i === l ? ' now' : i < l ? ' read' : '')));
   }
   function setPlayLabel() {
-    $('#play').textContent = tl.isActive() ? 'Pause' : tl.progress() >= 1 ? 'Replay' : 'Play';
+    const lab = tl.isActive() ? 'Pause' : tl.progress() >= 1 ? 'Replay' : 'Play';
+    $('#play').textContent = lab; $('#nbPlay').textContent = tl.isActive() ? '❚❚' : tl.progress() >= 1 ? '↺' : '▶'; $('#nbPlay').setAttribute('aria-label', lab);
   }
   function settle() { build(); tl.progress(1); sync(); }
 
@@ -2148,6 +2192,132 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
     return true;
   }
 
+  // ---- the guided tour: one token, step by step (pauses at the start of each step; Next plays on to the next) ----
+  function tourMarks() { const seen = new Set(), m = []; for (const [t, st] of CAPS) { if (st > 8) break; if (!seen.has(st)) { seen.add(st); m.push(t); } } return m; }
+  function startTour() {
+    S.tour = { marks: tourMarks(), i: 0 }; S.hover = null; S.pinned = false;
+    tl.pause(); tl.time(0); $('#nbTour').hidden = false; sync(); tl.play(); setPlayLabel(); // plays the first step, then stops at each next one
+    $('#nbar').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+  function endTour(play) {
+    if (!S.tour) return; S.tour = null; $('#nbTour').hidden = true;
+    try { localStorage.setItem('plinko-toured', '1'); } catch (e) { /* storage blocked */ }
+    if (play && tl.progress() < 1) tl.play(); setPlayLabel();
+  }
+  function tourNext() { if (!S.tour) return; tl.play(); setPlayLabel(); } // plays on; syncTour stops at the next step
+  function tourBack() { if (!S.tour) return; S.tour.i = Math.max(0, S.tour.i - 1); tl.pause(); tl.time(S.tour.marks[S.tour.i] + 0.35); setPlayLabel(); }
+  function syncTour(time) { // stop at the next step's start; after the last step (stream back) the tour hands over
+    const T = S.tour; if (!T || !tl.isActive()) return;
+    const stop = T.i + 1 < T.marks.length ? T.marks[T.i + 1] : (CAPS.find(c => c[1] === 9) || [tl.duration()])[0];
+    if (time >= stop + 0.35) { // stop just inside the next step, so its first action is already showing
+      tl.pause(); tl.time(stop + 0.35);
+      if (T.i + 1 >= T.marks.length) { endTour(false); $('#nowLine').textContent = ''; $('#bText').textContent = 'That was one whole token: device, tokens, numbers, every layer, the cloud, the dice, and back. Press play to watch the next five (only the new lane moves now), or type your own prompt.'; }
+      else T.i++;
+      setPlayLabel();
+    }
+  }
+  // ---- phones: the board scrolls itself to keep the action in view (until you scroll it yourself) ----
+  const narrow = matchMedia('(max-width: 900px)');
+  S.followOff = 0;
+  ['pointerdown', 'wheel', 'touchstart'].forEach(ev => $('.boardscroll').addEventListener(ev, () => { S.followOff = Date.now() + 6000; }, { passive: true }));
+  function follow(time, st) {
+    if (!narrow.matches || Date.now() < S.followOff || !G) return;
+    let x = DEVW / 2;
+    if (st >= 2 && st <= 3) x = TOKX + TOKW;
+    else if (st === 4 || st === 9) { let cur = null; for (const e of STEPLOG) if (e[0] <= time) cur = e; x = cur && cur[1] >= 0 ? G.lx(cur[1]) : G.x0; }
+    else if (st >= 5 && st <= 7) x = G.scx;
+    else if (st === 8 || st === 10) x = DEVW;
+    const sc = $('.boardscroll'), k = $('#board').clientWidth / VBW;
+    sc.scrollLeft = Math.max(0, x * k - sc.clientWidth / 2);
+  }
+
+  // ---- training, for real but tiny: a model with one grid of knobs learns which letter follows which ----
+  // A bigram model: p(next letter | this letter) = softmax(the row of knobs for this letter). It starts from random
+  // knobs and does plain gradient descent on the whole built-in text, one step at a time. Every number is real.
+  const TR_TEXT = CORPUS.toLowerCase().replace(/\s+/g, ' ').trim();
+  const TR_CH = [...new Set(TR_TEXT)].sort(), TV = TR_CH.length, TR_IX = Object.fromEntries(TR_CH.map((c, i) => [c, i]));
+  const TR_C = new Float64Array(TV * TV), TR_ROW = new Float64Array(TV); let TR_N = 0;
+  for (let i = 0; i + 1 < TR_TEXT.length; i++) { TR_C[TR_IX[TR_TEXT[i]] * TV + TR_IX[TR_TEXT[i + 1]]]++; TR_ROW[TR_IX[TR_TEXT[i]]]++; TR_N++; }
+  const TR_BEST = (() => { let h = 0; for (let a = 0; a < TV; a++) for (let b = 0; b < TV; b++) { const c = TR_C[a * TV + b]; if (c) h -= c * Math.log(c / TR_ROW[a]); } return h / TR_N; })();
+  const TR = { W: new Float64Array(TV * TV), P: new Float64Array(TV * TV), step: 0, loss: [], run: false, hover: -1, LR: 10 };
+  const chName = c => (c === ' ' ? '␣' : c);
+  function trReset() {
+    const r = rng(hash('training')); // small random starting knobs (normal, spread 0.5), the same every time
+    for (let i = 0; i < TV * TV; i++) TR.W[i] = 0.5 * Math.sqrt(-2 * Math.log(r() + 1e-12)) * Math.cos(2 * Math.PI * r());
+    TR.step = 0; TR.loss = []; trForward(); TR.loss.push(TR.cur);
+  }
+  function trForward() { // chances from knobs, and the loss: the average surprise at the real next letter
+    let L = 0;
+    for (let a = 0; a < TV; a++) {
+      let mx = -Infinity; for (let b = 0; b < TV; b++) mx = Math.max(mx, TR.W[a * TV + b]);
+      let z = 0; for (let b = 0; b < TV; b++) z += (TR.P[a * TV + b] = Math.exp(TR.W[a * TV + b] - mx));
+      for (let b = 0; b < TV; b++) { TR.P[a * TV + b] /= z; const c = TR_C[a * TV + b]; if (c) L -= c * Math.log(TR.P[a * TV + b]); }
+    }
+    TR.cur = L / TR_N;
+  }
+  function trStep() { // the gradient of the loss for each knob is (times seen × chance − times it really came next) / letters; step against it
+    for (let i = 0; i < TV * TV; i++) { const a = Math.floor(i / TV); TR.W[i] -= TR.LR * (TR_ROW[a] * TR.P[i] - TR_C[i]) / TR_N; }
+    TR.step++; trForward(); TR.loss.push(TR.cur);
+  }
+  function trSample() { // 90 letters written with the current knobs, always with the same dice, so only the knobs change it
+    const r = rng(hash('sample')); let c = TR_IX.t, out = 't';
+    for (let k = 0; k < 89; k++) { let u = r(), b = 0; for (; b < TV - 1; b++) { u -= TR.P[c * TV + b]; if (u <= 0) break; } out += TR_CH[b]; c = b; }
+    return out;
+  }
+  function trDraw() {
+    const cv = $('#trCv'), W = cv.clientWidth || 400, dpr = Math.min(2, devicePixelRatio || 1), pad = 18, cell = (W - pad) / TV, H = Math.round(pad + cell * TV);
+    if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); cv.style.height = H + 'px'; }
+    const c = cv.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const bg = css('--st-bg'), ink = css('--st-ink'), ink2 = css('--st-ink2'), wt = css('--wt'), sc = hexRgb(css('--score'));
+    c.fillStyle = bg; c.fillRect(0, 0, W, H);
+    c.font = `500 ${Math.min(11, cell * 0.7)}px "IBM Plex Mono", monospace`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = ink2;
+    TR_CH.forEach((ch, i) => { c.fillText(chName(ch), pad + (i + 0.5) * cell, pad / 2); c.fillText(chName(ch), pad / 2, pad + (i + 0.5) * cell); });
+    const r = cell * 0.36;
+    for (let a = 0; a < TV; a++) for (let b = 0; b < TV; b++) {
+      const i = a * TV + b, x = pad + (b + 0.5) * cell, y = pad + (a + 0.5) * cell, pr = TR.P[i];
+      c.fillStyle = `rgba(${sc.join(',')},${Math.min(0.85, Math.sqrt(pr))})`; c.fillRect(x - cell / 2 + 0.5, y - cell / 2 + 0.5, cell - 1, cell - 1); // the chance this knob gives
+      const ang = Math.tanh(TR.W[i] / 4) * 0.75 * Math.PI - Math.PI / 2;
+      c.strokeStyle = wt; c.globalAlpha = 0.6; c.lineWidth = 1; c.beginPath(); c.arc(x, y, r, 0.75 * Math.PI, 2.25 * Math.PI); c.stroke(); c.globalAlpha = 1;
+      c.strokeStyle = pr > 0.4 ? bg : ink; c.lineWidth = Math.max(1, cell / 12); c.lineCap = 'round'; c.beginPath(); c.moveTo(x, y); c.lineTo(x + Math.cos(ang) * r, y + Math.sin(ang) * r); c.stroke();
+    }
+    if (TR.hover >= 0) { const a = Math.floor(TR.hover / TV), b = TR.hover % TV; c.strokeStyle = ink; c.lineWidth = 1.5; c.strokeRect(pad + b * cell, pad + a * cell, cell, cell); }
+    TR.geo = { pad, cell };
+    // the loss curve, with random guessing and the best this model can do
+    const lc = $('#trLoss'), LW = lc.clientWidth || 300, LH = 150;
+    if (lc.width !== Math.round(LW * dpr)) { lc.width = Math.round(LW * dpr); lc.height = Math.round(LH * dpr); lc.style.height = LH + 'px'; }
+    const g = lc.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.fillStyle = bg; g.fillRect(0, 0, LW, LH);
+    const top = Math.log(TV) * 1.05, Y = v => 10 + (top - v) / (top - TR_BEST * 0.9) * (LH - 26), n = Math.max(400, TR.loss.length), X = k => 8 + k / n * (LW - 16);
+    g.setLineDash([4, 4]); g.strokeStyle = ink2; g.lineWidth = 1;
+    [[Math.log(TV), 'guessing at random'], [TR_BEST, 'best this model can do']].forEach(([v, t]) => { g.beginPath(); g.moveTo(8, Y(v)); g.lineTo(LW - 8, Y(v)); g.stroke(); g.fillStyle = ink2; g.font = '10px "IBM Plex Mono", monospace'; g.fillText(t, 10, Y(v) - 4); });
+    g.setLineDash([]); g.strokeStyle = css('--score'); g.lineWidth = 2; g.beginPath(); TR.loss.forEach((v, k) => (k ? g.lineTo(X(k), Y(v)) : g.moveTo(X(k), Y(v)))); g.stroke();
+    $('#trStat').textContent = `step ${TR.step} · loss ${TR.cur.toFixed(3)} (random ${Math.log(TV).toFixed(2)}, best ${TR_BEST.toFixed(2)})`;
+    $('#trSample').textContent = trSample();
+  }
+  function trLoop() {
+    if (!TR.run || !$('#train').open) { TR.run = false; $('#trGo').textContent = 'Train'; return; }
+    trStep(); trDraw();
+    if (TR.step >= 600) { TR.run = false; $('#trGo').textContent = 'Train'; return; }
+    requestAnimationFrame(trLoop);
+  }
+  $('#trGo').addEventListener('click', () => { TR.run = !TR.run; $('#trGo').textContent = TR.run ? 'Pause' : 'Train'; if (TR.run) { if (TR.step >= 600) trReset(); requestAnimationFrame(trLoop); } });
+  $('#trStep').addEventListener('click', () => { TR.run = false; $('#trGo').textContent = 'Train'; trStep(); trDraw(); });
+  $('#trReset').addEventListener('click', () => { TR.run = false; $('#trGo').textContent = 'Train'; trReset(); trDraw(); });
+  $('#trCv').addEventListener('pointermove', e => {
+    if (!TR.geo) return; const { pad, cell } = TR.geo, b = Math.floor((e.offsetX - pad) / cell), a = Math.floor((e.offsetY - pad) / cell);
+    TR.hover = a >= 0 && b >= 0 && a < TV && b < TV ? a * TV + b : -1; trDraw();
+    if (TR.hover < 0) { $('#trInfo').textContent = 'Point at a knob to see what it means.'; return; }
+    const i = TR.hover;
+    $('#trInfo').textContent = `After “${chName(TR_CH[a])}”, the knob for “${chName(TR_CH[b])}” is set to ${TR.W[i].toFixed(2)}, so the model gives “${chName(TR_CH[b])}” ${fmtP(TR.P[i])}. In the text, “${chName(TR_CH[b])}” really follows “${chName(TR_CH[a])}” ${TR_C[i]} of ${TR_ROW[a]} times (${fmtP(TR_ROW[a] ? TR_C[i] / TR_ROW[a] : 0)}). Training pulls the first number towards the second.`;
+  });
+  function openTrain() {
+    if (tl.isActive()) { tl.pause(); setPlayLabel(); }
+    const R = RM('real'), Tn = RM('tiny');
+    $('#trLead').textContent = `This is a real training run, only tiny: a model with one grid of ${TV} × ${TV} = ${nf(TV * TV)} knobs learns from the short text built into this page (${nf(TR_N + 1)} letters). Each knob says how strongly to expect one letter after another (rows: this letter; columns: the next one; the warm squares are the chances the knobs give). The knobs start as random numbers. Each step the model reads the whole text, measures how surprised it was by every real next letter (the loss), and nudges every knob a little in the direction that would have made the real letter more likely: gradient descent. Press Train and watch the needles turn, the loss fall and the writing turn into almost-words. It only ever looks at one letter, so it can't do better than the dashed "best" line.`;
+    $('#trBig').textContent = `The models on this page were made by the same loop, with far more knobs and far more text. ${R.name}: ${nf(134515008)} knobs, first trained to predict the next token on 2 trillion tokens of web pages, educational text and code, then fine-tuned on example conversations and finally nudged towards answers people preferred (DPO); that is where it learned to follow a chat template and a system prompt. ${Tn.name}: 15 million knobs, trained for a few hours on four large GPUs on children's stories. Real models start from small random knobs too (spread 0.02 to 0.04 in their configs), and work out each nudge for every layer at once (backpropagation) from a batch of text at a time. Once training ends the knobs are frozen. Nothing you type changes them: a prompt, and a system prompt, only change the ball that flows past them.`;
+    if (!TR.loss.length) trReset();
+    $('#train').showModal(); requestAnimationFrame(trDraw);
+  }
+
   // ---- pointing and clicking: token chips and strips are cells; in the layers the pointer picks lane, layer, station ----
   function pick(e) {
     const c = e.target.closest && e.target.closest('.cell');
@@ -2172,11 +2342,18 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
     if (h.si === -2) openEmb(h.row);
   });
   $('#zoomBtn').addEventListener('click', () => openZoom(0));
-  $('#nbar').addEventListener('click', () => $('#narrDlg').showModal());
+  const openNarr = () => { $('#math').open = true; $('#narrDlg').showModal(); };
+  $('#nbMain').addEventListener('click', openNarr); $('#nbMore').addEventListener('click', openNarr);
+  $('#nbMain').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openNarr(); } });
+  $('#nbPlay').addEventListener('click', () => $('#play').click());
+  $('#tNext').addEventListener('click', tourNext); $('#tBack').addEventListener('click', tourBack); $('#tSkip').addEventListener('click', () => endTour(true));
+  $('#tourBtn').addEventListener('click', startTour);
+  $('#trainBtn').addEventListener('click', openTrain); $('#pTrain').addEventListener('click', () => { $('#params').close(); openTrain(); });
+  $('#trClose').addEventListener('click', () => $('#train').close());
   $('#nClose').addEventListener('click', () => $('#narrDlg').close());
   $('#parBtn').addEventListener('click', openParams);
   $('#pClose').addEventListener('click', () => $('#params').close());
-  ['#narrDlg', '#params'].forEach(d => $(d).addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.close(); }));
+  ['#narrDlg', '#params', '#train'].forEach(d => $(d).addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.close(); }));
   $('#zClose').addEventListener('click', () => $('#zoom').close());
   $('#zoom').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.close(); });
 
@@ -2186,7 +2363,7 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
     if (matchMedia('(max-width: 1180px)').matches) $('.stage').scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
   $('#play').addEventListener('click', () => {
-    S.pinned = false; S.hover = null;
+    S.pinned = false; S.hover = null; if (S.tour && tl.progress() >= 1) endTour(false);
     if (tl.progress() >= 1) tl.play(0); else if (tl.isActive()) tl.pause(); else tl.play();
     setPlayLabel();
   });
@@ -2229,6 +2406,9 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
 
   drawStatic();
   runToy(false);
+  // first visit: the guided tour plays one token, step by step
+  let toured = true; try { toured = !!localStorage.getItem('plinko-toured'); } catch (e) { /* storage blocked: no tour by default */ }
+  if (!toured) startTour();
 })();
 </script>
 </body>
