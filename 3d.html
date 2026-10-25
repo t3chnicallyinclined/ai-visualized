@@ -97,7 +97,7 @@ dt { color: var(--muted); } dd { margin: 0; font-family: var(--mono); font-varia
       <div class="seg" role="group" aria-label="Model">
         <button type="button" data-mode="dense" aria-pressed="true">Dense 27B</button>
         <button type="button" data-mode="moe" aria-pressed="false">MoE 35B-A3B</button>
-        <button type="button" data-mode="real" aria-pressed="false">Real: SmolLM2-135M</button>
+        <button type="button" data-mode="real" aria-pressed="false">Real: SmolLM2-135M-Instruct</button>
       </div>
       <div id="realLoad" hidden style="display:flex;flex-direction:column;gap:6px">
         <p class="note" id="realIntro">Runs a real small model in your browser: a 269 MB download from Hugging Face (kept by your browser) and about 800 MB of memory.</p>
@@ -180,7 +180,7 @@ dt { color: var(--muted); } dd { margin: 0; font-family: var(--mono); font-varia
   const MODELS = {
     dense: { layers: 64, full: l => (l + 1) % 4 === 0, kvKB: 64, memMB: 151, label: 'Qwen3.6-27B' },
     moe: { layers: 40, full: l => (l + 1) % 4 === 0, kvKB: 20, memMB: 63, label: 'Qwen3.6-35B-A3B', experts: true },
-    real: { layers: 30, full: () => true, kvKB: 22.5, memMB: 0, label: 'SmolLM2-135M' },
+    real: { layers: 30, full: () => true, kvKB: 22.5, memMB: 0, label: 'SmolLM2-135M-Instruct' },
   };
   const STAGES = [
     ['Tokenize', 'Your text is cut into tokens. Each gets an ID from a vocabulary of about 250,000.'],
@@ -394,7 +394,7 @@ dt { color: var(--muted); } dd { margin: 0; font-family: var(--mono); font-varia
     $('#sMem').textContent = real ? 'none' : M.memMB + ' MB, fixed';
     $('#legend').replaceChildren(...legendItems(real));
     $('#modeNote').textContent = real
-      ? 'Real model: SmolLM2-135M (Apache 2.0), running in your browser from its published weights. Attention, guesses and scores are its actual numbers. ' + Math.round(Dd.ms) + ' ms per token here.'
+      ? 'Real model: SmolLM2-135M-Instruct (Apache 2.0), running in your browser from its published weights. Here it reads your text without a chat template, so it simply continues it. Attention, guesses and scores are its actual numbers. ' + Math.round(Dd.ms) + ' ms per token here.'
       : 'Real wiring of Qwen3.6, toy next-word scores from a tiny word table. Drag to orbit, scroll or pinch to zoom.';
     apply(S.time = clamp(S.time, 0, tEnd));
   }
@@ -547,7 +547,7 @@ dt { color: var(--muted); } dd { margin: 0; font-family: var(--mono); font-varia
     S.wantReal = true; $('#realLoad').hidden = false; $('#realGo').hidden = true;
     try {
       if (!S.llm) {
-        S.loading = S.loading || LLM.load((got, total) => got < 0 ? status('Unpacking the weights…', 1) : status(`Downloading: ${Math.round(got / 1e6)} of ${Math.round(total / 1e6)} MB`, got / total));
+        S.loading = S.loading || LLM.load('smollm2-instruct', (got, total) => got < 0 ? status('Unpacking the weights…', 1) : status(`Downloading: ${Math.round(got / 1e6)} of ${Math.round(total / 1e6)} MB`, got / total));
         S.llm = await S.loading;
       }
       const Dd = await realData(getPrompt(), (i, n) => status(`Running the model: token ${i} of ${n}`, i / n));

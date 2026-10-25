@@ -1,15 +1,20 @@
-/* llm.js: a real small language model (SmolLM2-135M) running in plain JavaScript, no libraries.
-   It is a Llama-style transformer: 30 layers, each with attention (9 heads sharing 3 key/value heads)
-   and a feed-forward block. The weights are the published bf16 numbers, widened to 32-bit floats, so the
-   maths matches the reference implementation. Alongside the normal output it records what the page shows:
+/* llm.js: real small language models running in plain JavaScript, no libraries.
+   Both are Llama-style transformers: SmolLM2-135M-Instruct (30 layers, attention with 9 heads sharing 3
+   key/value heads, a chat model that reads a system prompt) and TinyStories 15M (6 layers, story-only).
+   Each layer has attention and a feed-forward block. The weights are the published bf16/f16 numbers, widened
+   to 32-bit floats, so the maths matches the reference implementation. Alongside the normal output it records what the page shows:
    each layer's attention weights, its most active feed-forward neurons, the token's numbers after the
    layer, and the "logit lens" (the word the model would pick if it stopped after that layer).
    Works in the browser (window.LLM) and in Node (module.exports) for testing. */
 (function (root) {
   'use strict';
-  const REPO = 'HuggingFaceTB/SmolLM2-135M';
-  const REV = '93efa2f097d58c2a74874c7e644dbc9b0cee75a2'; // pinned, so the numbers never change under the page
-  const BASE = root.LLM_BASE || `https://huggingface.co/${REPO}/resolve/${REV}/`; // LLM_BASE: optional local mirror (used by tests)
+  // revisions are pinned, so the numbers never change under the page
+  const MODELS = {
+    'smollm2-instruct': { name: 'SmolLM2-135M-Instruct', repo: 'HuggingFaceTB/SmolLM2-135M-Instruct', rev: '12fd25f77366fa6b3b4b768ec3050bf629380bac', mb: 269, chat: true, bos: null, license: 'Apache 2.0, by Hugging Face', layers: 30, hidden: 576, ff: 1536, heads: 9, kvHeads: 3, vocab: 49152 },
+    'tiny-stories': { name: 'TinyStories 15M', repo: 'nickypro/tinyllama-15M', rev: 'a97e01fa7d54c088df9dc1b53d581a863ce08cd6', mb: 30, chat: false, bos: 1, license: 'MIT, by Andrej Karpathy (llama2.c), converted by nickypro', layers: 6, hidden: 288, ff: 768, heads: 6, kvHeads: 6, vocab: 32000 },
+  };
+  // LLM_BASE: optional local mirrors, { modelKey: url } (used by tests)
+  const baseOf = key => (root.LLM_BASE && root.LLM_BASE[key]) || `https://huggingface.co/${MODELS[key].repo}/resolve/${MODELS[key].rev}/`;
 
   // ---------- tokenizer: byte-level BPE (GPT-2 style), digits split one by one ----------
   function bytesToUnicode() {
@@ -25,8 +30,10 @@
   }
   const SPLIT = /'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+/gu;
 
+  // SentencePiece-style BPE (Llama): spaces become "▁", one goes in front, unknown characters fall back to bytes
+  const isSentencePiece = tj => !!tj.model.byte_fallback;
   function makeTokenizer(tj) {
-    const vocab = tj.model.vocab, inv = [];
+    const vocab = tj.model.vocab, inv = [], sp = isSentencePiece(tj);
     for (const k in vocab) inv[vocab[k]] = k;
     for (const a of tj.added_tokens) inv[a.id] = a.content;
     const ranks = new Map();
@@ -57,6 +64,13 @@
       for (const chunk of specialRe ? text.split(specialRe) : [text]) {
         if (!chunk) continue;
         if (special.has(chunk)) { ids.push(special.get(chunk)); continue; }
+        if (sp) {
+          for (const p of bpe('\u2581' + chunk.replace(/ /g, '\u2581'))) {
+            if (vocab[p] != null) ids.push(vocab[p]);
+            else for (const b of utf8.encode(p)) ids.push(vocab['<0x' + b.toString(16).toUpperCase().padStart(2, '0') + '>']);
+          }
+          continue;
+        }
         // pre-tokenizer 1: every digit is its own piece; pre-tokenizer 2: the GPT-2 split, applied inside each piece
         const pieces = chunk.split(/(\p{N})/u).filter(s => s.length);
         for (const piece of pieces) for (const m of piece.match(SPLIT) || []) {
@@ -66,9 +80,14 @@
       }
       return ids;
     }
-    function decode(ids) { return utf8d.decode(new Uint8Array(ids.flatMap(id => Array.from(inv[id] || '', c => dec[c])))); }
+    const spBytes = id => { const t = inv[id] || '', m = /^<0x([0-9A-F]{2})>$/.exec(t); return m ? [parseInt(m[1], 16)] : Array.from(utf8.encode(t.replace(/\u2581/g, ' '))); };
+    function decode(ids, keepLead) {
+      if (!sp) return utf8d.decode(new Uint8Array(ids.flatMap(id => Array.from(inv[id] || '', c => dec[c]))));
+      const s = utf8d.decode(new Uint8Array(ids.flatMap(id => (special.has(inv[id]) ? [] : spBytes(id)))));
+      return keepLead ? s : s.replace(/^ /, ''); // the decoder drops the space it put in front
+    }
     // what a learner sees for one token: its text, with spaces shown as "·" (newlines ⏎, tabs ⇥)
-    function piece(id) { const s = decode([id]); return s.replace(/ /g, '·').replace(/\n/g, '⏎').replace(/\t/g, '⇥') || '∅'; }
+    function piece(id) { const s = sp ? (special.has(inv[id]) ? inv[id] : decode([id], true)) : decode([id]); return s.replace(/ /g, '·').replace(/\n/g, '⏎').replace(/\t/g, '⇥') || '∅'; }
     return { encode, decode, piece, raw: id => inv[id], size: inv.length };
   }
 
@@ -80,10 +99,14 @@
     for (const name in header) {
       if (name === '__metadata__') continue;
       const { dtype, shape, data_offsets: [a, b] } = header[name];
-      if (dtype !== 'BF16') throw new Error('expected BF16 weights, got ' + dtype);
+      if (dtype !== 'BF16' && dtype !== 'F16') throw new Error('expected BF16 or F16 weights, got ' + dtype);
       const count = (b - a) / 2, src = (base + a) % 2 === 0 ? new Uint16Array(buf, base + a, count) : new Uint16Array(buf.slice(base + a, base + b));
       const out = new Float32Array(count), o32 = new Uint32Array(out.buffer);
-      for (let i = 0; i < count; i++) o32[i] = src[i] << 16; // bf16 is the top half of an f32: exact
+      if (dtype === 'BF16') for (let i = 0; i < count; i++) o32[i] = src[i] << 16; // bf16 is the top half of an f32: exact
+      else for (let i = 0; i < count; i++) { // f16 -> f32, exact (sign, 5-bit exponent, 10-bit fraction)
+        const h = src[i], sgn = (h & 0x8000) << 16, e = (h >> 10) & 31, f = h & 1023;
+        if (e === 0) out[i] = (sgn ? -1 : 1) * f * 2 ** -24; else if (e === 31) o32[i] = sgn | 0x7f800000 | (f << 13); else o32[i] = sgn | ((e + 112) << 23) | (f << 13);
+      }
       W[name] = { data: out, shape };
     }
     return W;
@@ -235,7 +258,7 @@
       return topk(sims, k).map(i => ({ id: i, sim: sims[i] }));
     }
     const neuron = (l, n) => ({ gate: layers[l].gate.subarray(n * D, n * D + D), up: layers[l].up.subarray(n * D, n * D + D) }); // one feed-forward neuron's two weight rows
-    return { cfg, tok, step, newState, setWatch, WATCH_FLOOR, lens, embedding, neighbors, neuron, mats: { E, layers, normW }, D, L, H, KVH, HD, F, V, kvBytesPerToken, weightBytes, name: 'SmolLM2-135M' };
+    return { cfg, tok, step, newState, setWatch, WATCH_FLOOR, lens, embedding, neighbors, neuron, mats: { E, layers, normW }, D, L, H, KVH, HD, F, V, kvBytesPerToken, weightBytes };
   }
 
   // Top-k sampling as the page teaches it: keep the top k scores, divide by the temperature, softmax, roll.
@@ -260,15 +283,17 @@
     return out.buffer;
   }
 
-  async function load(onProgress) {
+  async function load(key, onProgress) {
+    const BASE = baseOf(key);
     const [cfg, tj] = await Promise.all([fetch(BASE + 'config.json').then(r => r.json()), fetch(BASE + 'tokenizer.json').then(r => r.json())]);
     const buf = await fetchWithProgress(BASE + 'model.safetensors', onProgress);
     onProgress && onProgress(-1, 0); // unpacking
     await tick();
-    return makeModel(cfg, parseSafetensors(buf), makeTokenizer(tj));
+    return withMeta(makeModel(cfg, parseSafetensors(buf), makeTokenizer(tj)), key);
   }
-  function fromBuffers(cfg, tj, buf) { return makeModel(cfg, parseSafetensors(buf), makeTokenizer(tj)); }
+  function withMeta(m, key) { m.meta = Object.assign({ key }, MODELS[key]); m.name = m.meta.name; return m; }
+  function fromBuffers(cfg, tj, buf, key) { return withMeta(makeModel(cfg, parseSafetensors(buf), makeTokenizer(tj)), key || 'smollm2-instruct'); }
 
-  const api = { load, fromBuffers, makeTokenizer, sampleTopK, REPO, REV, DOWNLOAD_MB: 269 };
+  const api = { load, fromBuffers, makeTokenizer, sampleTopK, MODELS };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.LLM = api;
 })(typeof window !== 'undefined' ? window : globalThis);
