@@ -76,6 +76,15 @@ svg#board { width: 100%; height: auto; display: block; min-width: 860px; }
 #cTitle { font: 700 15px/1.3 var(--display); margin: 0; color: var(--st-ink); text-wrap: pretty; height: 2.6em; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 #cInfo { min-height: 4.5em; }
 .badge { font: 600 11px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--st-bg); background: var(--score); border-radius: 4px; padding: 2px 6px; white-space: nowrap; }
+.cwrap { position: relative; }
+.cloudgl { position: absolute; left: 1px; top: 1px; width: calc(100% - 2px); height: calc(100% - 2px); border-radius: 10px; pointer-events: none; }
+.cloudcv.overgl { position: relative; background: transparent !important; }
+.pglwrap { position: relative; height: min(66vh, 620px); margin-bottom: 8px; }
+.pgl, .pov { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 10px; }
+.pgl { background: var(--st-bg); } .pov { touch-action: none; cursor: grab; }
+.pzbar { position: absolute; top: 8px; right: 8px; display: flex; gap: 6px; }
+.pzbar button { padding: 4px 10px; font-size: 13px; background: var(--st-panel); color: var(--st-ink); border-color: var(--st-rail); }
+.pstatus { position: absolute; left: 12px; bottom: 4px; color: var(--st-ink) !important; font: 13px var(--mono); }
 .cloudcv { width: 100%; display: block; border-radius: 10px; touch-action: none; cursor: grab; background: var(--st-bg); border: 1px solid var(--st-rail); }
 .cbar { display: flex; gap: 6px; flex-wrap: wrap; } .cbar input { flex: 1 1 120px; min-width: 0; font: 500 13px var(--mono); padding: 6px 9px; border-radius: 8px; border: 1.5px solid var(--line); background: var(--panel); color: var(--ink); }
 .cbar button { padding: 5px 10px; font-size: 13px; } .cbar button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
@@ -330,6 +339,11 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
   <h2 id="pTitle">What the parameters are</h2>
   <p id="pLead"></p>
   <div class="plegend" id="pLegend"></div>
+  <div class="pglwrap" id="pGLWrap" hidden>
+    <canvas id="pGL" class="pgl"></canvas><canvas id="pOv" class="pov" aria-label="Every parameter of the model, one square each: scroll or pinch to zoom, drag to move"></canvas>
+    <div class="pzbar"><button id="pzIn" type="button" aria-label="Zoom in">+</button><button id="pzOut" type="button" aria-label="Zoom out">−</button><button id="pzFit" type="button">Fit</button></div>
+    <p class="pstatus" id="pGLStatus"></p>
+  </div>
   <canvas id="pCv" class="pcv" aria-label="Every weight matrix of SmolLM2-135M drawn to scale: area is the number of parameters"></canvas>
   <p class="note" id="pInfo">Point at a block to see what it is; click it to look closer.</p>
   <div id="pDetail" hidden>
@@ -518,6 +532,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
   const S = { mode: 'dense', speed: 1, data: null, llm: null, loading: null, wantReal: false, hover: null, pinned: false, mem: [], nb: {} };
   let tl = null, CAPS = [], INFOS = [], LENS = [], PASSES = [], STEPLOG = [], CHOOSE = [], G = null;
   const isReal = () => S.mode === 'real';
+  const tick = () => new Promise(r => setTimeout(r, 0));
 
   // the pipeline strip: one button per step; clicking jumps to the first time that step happens
   const pipeBtns = PIPE.map((name, i) => {
@@ -1415,6 +1430,67 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
       cv.addEventListener('pointerleave', () => { if (this.hover >= 0) { this.hover = -1; this.render(); } });
       cv.addEventListener('wheel', e => { e.preventDefault(); this.zoom(e.deltaY < 0 ? 1.25 : 0.8, e.offsetX, e.offsetY); }, { passive: false });
       cv.addEventListener('dblclick', () => this.reset());
+      try { this.initGL(); } catch (err) { this.gl = null; } // no WebGL2: the 2D canvas draws everything
+    }
+    // WebGL2: the dots and their light are drawn on the graphics card, one draw call each; labels, rings and the path
+    // stay on the 2D canvas on top. Without WebGL2 everything falls back to the 2D canvas.
+    initGL() {
+      const g = document.createElement('canvas'), gl = g.getContext('webgl2', { antialias: false, premultipliedAlpha: true });
+      if (!gl) return;
+      const wrap = document.createElement('div'); wrap.className = 'cwrap'; this.cv.parentNode.insertBefore(wrap, this.cv); g.className = 'cloudgl'; wrap.append(g, this.cv);
+      this.cv.classList.add('overgl');
+      const prog = glProgram(gl, `#version 300 es
+        in vec2 a_uv; in vec3 a_col; in float a_q;
+        uniform vec2 u_view, u_pan; uniform float u_sd, u_s, u_tilt, u_dpr, u_pass, u_r;
+        out vec4 v_col;
+        void main() {
+          vec2 g = (a_uv - 0.5) * u_sd * u_s + u_pan;
+          vec2 sp = vec2(u_view.x * 0.5 + g.x, u_view.y * 0.5 + g.y * cos(u_tilt) + u_sd * 0.2 * sin(u_tilt));
+          gl_Position = vec4(sp.x / u_view.x * 2.0 - 1.0, 1.0 - sp.y / u_view.y * 2.0, 0.0, 1.0);
+          if (u_pass < 0.5) { gl_PointSize = u_r * u_dpr; v_col = vec4(a_col, 1.0); }
+          else if (a_q < 50.0) { gl_Position = vec4(2.0, 2.0, 0.0, 1.0); gl_PointSize = 0.0; v_col = vec4(0.0); }
+          else { float b = (a_q - 43.0) / 212.0; gl_PointSize = (2.5 + 22.0 * b * b * b) * u_dpr; v_col = vec4(1.0, 0.92, 0.76, min(1.0, 0.1 + 0.9 * b)); }
+        }`, `#version 300 es
+        precision highp float;
+        uniform float u_pass, u_alpha; in vec4 v_col; out vec4 o;
+        void main() {
+          float r = length(gl_PointCoord - 0.5) * 2.0;
+          if (u_pass < 0.5) { if (r > 1.0) discard; float a = u_alpha * smoothstep(1.0, 0.6, r); o = vec4(v_col.rgb * a, a); }
+          else { float a = v_col.a * pow(max(0.0, 1.0 - r), 1.8); o = vec4(v_col.rgb * a, a); }
+        }`);
+      const buf = name => { const b = gl.createBuffer(), loc = gl.getAttribLocation(prog, name); return { b, loc }; };
+      this.gl = { gl, g, prog, uv: buf('a_uv'), col: buf('a_col'), q: buf('a_q'), vao: gl.createVertexArray(), P: null, colour: '', qkey: '', hasQ: false,
+        u: Object.fromEntries(['u_view', 'u_pan', 'u_sd', 'u_s', 'u_tilt', 'u_dpr', 'u_pass', 'u_r', 'u_alpha'].map(n => [n, gl.getUniformLocation(prog, n)])) };
+    }
+    glDraw(P, q) {
+      const G = this.gl, gl = G.gl, { W, H, dpr } = this.d, cw = this.cv.width, ch = this.cv.height;
+      if (G.g.width !== cw || G.g.height !== ch) { G.g.width = cw; G.g.height = ch; }
+      gl.bindVertexArray(G.vao);
+      const attr = (o, data, size, type, norm) => { gl.bindBuffer(gl.ARRAY_BUFFER, o.b); gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW); gl.enableVertexAttribArray(o.loc); gl.vertexAttribPointer(o.loc, size, type, norm, 0, 0); };
+      if (G.P !== P) {
+        const uv = new Float32Array(P.length * 2); for (let k = 0; k < P.length; k++) { uv[2 * k] = mapU(P[k]); uv[2 * k + 1] = mapV(P[k]); }
+        attr(G.uv, uv, 2, gl.FLOAT, false); attr(G.q, new Uint8Array(P.length), 1, gl.UNSIGNED_BYTE, false);
+        G.P = P; G.colour = ''; G.qkey = '';
+      }
+      if (G.colour !== this.colour) {
+        const col = new Uint8Array(P.length * 3);
+        for (let k = 0; k < P.length; k++) { const rgb = this.colour === 'kind' ? hexRgb(KIND_COL[CCAT[P[k]]]) : idColour(P[k]); col[3 * k] = rgb[0]; col[3 * k + 1] = rgb[1]; col[3 * k + 2] = rgb[2]; }
+        attr(G.col, col, 3, gl.UNSIGNED_BYTE, true); G.colour = this.colour;
+      }
+      const qkey = q ? this.st.rec.id + ':' + this.st.rec.pos + ':' + this.st.upto : '';
+      if (G.qkey !== qkey) {
+        const qa = new Uint8Array(P.length); if (q) for (let k = 0; k < P.length; k++) qa[k] = q[P[k]];
+        gl.bindBuffer(gl.ARRAY_BUFFER, G.q.b); gl.bufferSubData(gl.ARRAY_BUFFER, 0, qa); G.qkey = qkey; G.hasQ = !!q;
+      }
+      const bg = hexRgb(css('--st-bg'));
+      gl.viewport(0, 0, cw, ch); gl.clearColor(bg[0] / 255, bg[1] / 255, bg[2] / 255, 1); gl.clear(gl.COLOR_BUFFER_BIT);
+      gl.useProgram(G.prog); const u = G.u, many = P.length > 5000;
+      gl.uniform2f(u.u_view, W, H); gl.uniform2f(u.u_pan, this.px, this.py); gl.uniform1f(u.u_sd, this.sd); gl.uniform1f(u.u_s, this.s);
+      gl.uniform1f(u.u_tilt, this.tilt); gl.uniform1f(u.u_dpr, dpr);
+      gl.uniform1f(u.u_r, Math.min(3.2, (many ? 1.5 : 2.4) + (this.s - 1) * (many ? 0.07 : 0.12))); gl.uniform1f(u.u_alpha, many ? 0.55 : 0.8);
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA); gl.uniform1f(u.u_pass, 0); gl.drawArrays(gl.POINTS, 0, P.length);
+      if (G.hasQ) { gl.blendFunc(gl.ONE, gl.ONE); gl.uniform1f(u.u_pass, 1); gl.drawArrays(gl.POINTS, 0, P.length); }
     }
     pts() { return realCloud() ? ALL_PTS : TOY_PTS; }
     dims() {
@@ -1521,10 +1597,10 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
     }
     render() {
       const P = this.layout(), { W, H, dpr } = this.d, c = this.cv.getContext('2d');
-      this.drawBase();
       c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
       const bg = css('--st-bg'), ink = css('--st-ink'), ink2 = css('--st-ink2'), score = css('--score');
-      c.fillStyle = bg; c.fillRect(0, 0, this.cv.width, this.cv.height); c.drawImage(this.base, 0, 0);
+      if (this.gl) { this.glDraw(P, this.st && watchAt(this.st.rec, this.st.upto)); c.clearRect(0, 0, this.cv.width, this.cv.height); }
+      else { this.drawBase(); c.fillStyle = bg; c.fillRect(0, 0, this.cv.width, this.cv.height); c.drawImage(this.base, 0, 0); }
       c.setTransform(dpr, 0, 0, dpr, 0, 0);
       const placed = [];
       c.font = '600 11px "IBM Plex Mono", monospace'; c.textBaseline = 'middle';
@@ -1540,7 +1616,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
       const st = this.st, q = st && watchAt(st.rec, st.upto);
       const hOf = id => (q ? pOfQ(q[id]) : st && st.cands ? ((st.cands.find(cd => cd.id === id) || {}).p || 0) : 0);
       // 1. the light: every token's chance after this layer, brightness on a log scale (one in a million .. 100%)
-      if (q) {
+      if (q && !this.gl) {
         c.globalCompositeOperation = 'lighter';
         for (let k = 0; k < P.length; k++) {
           const v = q[P[k]]; if (v < 50) continue;
@@ -1811,12 +1887,196 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
     });
     $('#pDetail').hidden = true; PV.hover = null;
     $('#params').showModal();
+    if (real) {
+      $('#pLead').textContent = `A model's parameters are the numbers it learned in training, and nothing else is stored: no sentences, no list of facts. SmolLM2-135M has ${fmtN(P_TOTAL)} of them, kept in grids (matrices), and below is every one of them, read from the model in your browser and drawn on your graphics card as one square each. Zoom in until you can read single weights. Up close they look like static, and that is real: no single number means anything you could read; what the model knows is in the patterns across millions of them. ` +
+        'The token cloud is not the parameters: it is a picture of one grid, the embedding table (the tall strips), with each row squashed to a dot. The rest are the 30 layers: attention on top (q, o, k, v), feed-forward below, where row k of gate, up and down (turned on its side) all belong to neuron k. Every one of them is read for every new token.';
+      $('#pNote').textContent = 'How to read it: every one of the 134,479,872 numbers in the grids is here (only the norm weights, 35,136 numbers in short lists, are left out). Zoomed out, each pixel blends 16 evenly spread numbers; zoomed in, each square is one number, coloured by its value (warm positive, blue negative, stored on the graphics card at one byte each) and printed with its exact value from the model. Bigger models are the same kinds of grids: Qwen3.6-27B has about 200 times as many numbers.';
+      openParamsGL().then(ok => { if (!ok) { $('#pGLWrap').hidden = true; $('#pCv').hidden = false; drawParams(); } });
+      return;
+    }
+    $('#pGLWrap').hidden = true; $('#pCv').hidden = false;
     requestAnimationFrame(() => {
       drawParams();
       const shown = Math.round(($('#pCv').width * $('#pCv').height) * 0.85);
       $('#pNote').textContent = `How to read it: the grids hold ${fmtM(P_TOTAL)} numbers and this picture has about ${(shown / 1e6).toFixed(1)} million pixels, so each pixel shows one number out of roughly ${Math.round(P_TOTAL / shown)}, picked evenly. The norm weights (${fmtN(P_NORMS)} numbers, one short list per norm) are too thin to see. ` +
         `Bigger models are the same kinds of grids, only more and larger: Qwen3.6-27B has about 27 billion parameters, about ${Math.round(27e9 / P_TOTAL)} times this picture.`;
     });
+  }
+
+  // ---- every parameter, one square each: the real weights packed onto the graphics card (WebGL2) ----
+  // 134,479,872 numbers (all but the norm weights) are quantised to one byte each, with each grid's own scale, and
+  // stored in three 8192-wide textures. The shader draws each grid as a rectangle of its true shape; zoomed out, a pixel
+  // averages 16 evenly spread numbers; zoomed in, one number fills many pixels and its exact value is printed on it.
+  function glProgram(gl, vs, fs) {
+    const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; };
+    const p = gl.createProgram(); gl.attachShader(p, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(p, sh(gl.FRAGMENT_SHADER, fs)); gl.linkProgram(p);
+    if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+    return p;
+  }
+  const PX = { gl: null, ready: false, packing: null, s: 1, x: 0, y: 0, fit: 1, hover: null, ptrs: new Map(), dragged: false, queued: false };
+  const PX_ORDER = ['q', 'k', 'v', 'o', 'gate', 'up', 'down'];
+  const PX_NAME = { q: 'attention: query', k: 'attention: key', v: 'attention: value', o: 'attention: output', gate: 'feed-forward: gate', up: 'feed-forward: up', down: 'feed-forward: down (turned)' };
+  function pxLayout() { // world units are numbers (texels); storage order: embedding table, then each layer's 7 grids
+    const D = 576, V = 49152, g2 = 24, BW = 3 * D + 2 * g2, BH = D + g2 + 1536, SR = 12288, items = [], offs = {};
+    let off = V * D;
+    for (let l = 0; l < 30; l++) PX_ORDER.forEach(k => { offs[l + k] = off; off += PSH[k][0] * PSH[k][1]; });
+    for (let k = 0; k < 4; k++) items.push({ key: 'E', l: -1, x: k * (D + 48), y: 0, w: D, h: SR, off: k * SR * D, cols: D, tr: 0, row0: k * SR });
+    const LX = 4 * D + 3 * 48 + 420;
+    for (let l = 0; l < 30; l++) {
+      const bx = LX + (l % 6) * (BW + 180), by = Math.floor(l / 6) * (BH + 300) + 200, it = (key, x, y, w, h, tr) => items.push({ key, l, x: bx + x, y: by + y, w, h, off: offs[l + key], cols: PSH[key][1], tr: tr || 0, row0: 0 });
+      it('q', 0, 0, D, D); it('o', D + g2, 0, D, D); it('k', 2 * (D + g2), 0, D, 192); it('v', 2 * (D + g2), 192 + g2, D, 192);
+      it('gate', 0, D + g2, D, 1536); it('up', D + g2, D + g2, D, 1536); it('down', 2 * (D + g2), D + g2, D, 1536, 1); // down turned: row k = neuron k, like gate and up
+    }
+    return { items, total: off, W: LX + 6 * BW + 5 * 180, H: Math.max(SR, 5 * (BH + 300)), BW, LX };
+  }
+  const PXL = pxLayout();
+  function pxInit() {
+    const cv = $('#pGL'), gl = cv.getContext('webgl2', { antialias: false });
+    if (!gl || gl.getParameter(gl.MAX_TEXTURE_SIZE) < 8192) return false;
+    const prog = glProgram(gl, `#version 300 es
+      in vec2 a_p; uniform vec4 u_rect; uniform vec3 u_cam; uniform vec2 u_view; out vec2 v_loc;
+      void main() { v_loc = a_p * u_rect.zw; vec2 sp = (u_rect.xy + v_loc) * u_cam.z + u_cam.xy; gl_Position = vec4(sp.x / u_view.x * 2.0 - 1.0, 1.0 - sp.y / u_view.y * 2.0, 0.0, 1.0); }`,
+    `#version 300 es
+      precision highp float; precision highp int;
+      uniform highp sampler2D u_t0, u_t1, u_t2;
+      uniform int u_off, u_cols, u_tr, u_w, u_h; uniform float u_ppt; uniform vec3 u_bg, u_pos, u_neg;
+      in vec2 v_loc; out vec4 o;
+      float val(vec2 p) {
+        int c = clamp(int(p.x), 0, u_w - 1), r = clamp(int(p.y), 0, u_h - 1);
+        int idx = u_tr == 1 ? u_off + c * u_cols + r : u_off + r * u_cols + c;
+        int t = idx >> 26, i = idx & 67108863; ivec2 q = ivec2(i & 8191, i >> 13);
+        float b = t == 0 ? texelFetch(u_t0, q, 0).r : t == 1 ? texelFetch(u_t1, q, 0).r : texelFetch(u_t2, q, 0).r;
+        return (b * 255.0 - 128.0) / 127.0;
+      }
+      vec3 colOf(float v) { return mix(u_bg, v >= 0.0 ? u_pos : u_neg, pow(min(1.0, abs(v)), 0.7)); }
+      void main() {
+        float fp = 1.0 / u_ppt; vec3 acc;
+        if (fp <= 1.0) acc = colOf(val(v_loc));
+        else { acc = vec3(0.0); for (int i = 0; i < 4; i++) for (int j = 0; j < 4; j++) acc += colOf(val(v_loc + (vec2(i, j) + 0.5) / 4.0 * fp - 0.5 * fp)); acc /= 16.0; }
+        if (u_ppt >= 10.0) { vec2 f = fract(v_loc); float e = min(min(f.x, 1.0 - f.x), min(f.y, 1.0 - f.y)) * u_ppt; if (e < 0.7) acc = mix(acc, u_bg, 0.7); }
+        o = vec4(acc, 1.0);
+      }`);
+    const vao = gl.createVertexArray(); gl.bindVertexArray(vao);
+    const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0, 0, 1, 0, 0, 1, 1, 1]), gl.STATIC_DRAW);
+    const loc = gl.getAttribLocation(prog, 'a_p'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+    PX.gl = { gl, prog, vao, tex: [], u: Object.fromEntries(['u_rect', 'u_cam', 'u_view', 'u_t0', 'u_t1', 'u_t2', 'u_off', 'u_cols', 'u_tr', 'u_w', 'u_h', 'u_ppt', 'u_bg', 'u_pos', 'u_neg'].map(n => [n, gl.getUniformLocation(prog, n)])) };
+    return true;
+  }
+  async function pxPack() { // quantise every weight to a byte (grid by grid) and upload, 8192 x 8192 numbers per texture
+    const G = PX.gl, gl = G.gl, T = 8192, PER = T * T, m = S.llm.mats, total = PXL.total, buf = new Uint8Array(PER);
+    const grids = [m.E]; for (let l = 0; l < 30; l++) PX_ORDER.forEach(k => grids.push(m.layers[l][k]));
+    PX.scales = [];
+    let pos = 0, done = 0;
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+    const flush = () => {
+      const t = gl.createTexture(), h = Math.ceil(pos / T); gl.bindTexture(gl.TEXTURE_2D, t);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, T, h, 0, gl.RED, gl.UNSIGNED_BYTE, buf.subarray(0, T * h)); G.tex.push(t); pos = 0;
+    };
+    for (const g of grids) {
+      const n = 8192, st = Math.floor(g.length / n), a = new Float32Array(n); for (let i = 0; i < n; i++) a[i] = Math.abs(g[i * st]); a.sort();
+      const sc = a[Math.floor(n * 0.999)] || 1, k = 127 / sc; PX.scales.push(sc);
+      for (let i = 0; i < g.length; i++) { const v = Math.round(g[i] * k); buf[pos++] = v > 127 ? 255 : v < -127 ? 1 : v + 128; if (pos === PER) flush(); }
+      done += g.length; $('#pGLStatus').textContent = `Packing the weights onto your graphics card: ${Math.round(done / total * 100)}%`; await tick();
+    }
+    if (pos) flush();
+    $('#pGLStatus').textContent = '';
+    PX.ready = true;
+  }
+  function pxFit() { const cv = $('#pGL'), W = cv.clientWidth, H = cv.clientHeight; PX.fit = PX.s = Math.min(W / PXL.W, H / PXL.H) * 0.96; PX.x = (W - PXL.W * PX.s) / 2; PX.y = (H - PXL.H * PX.s) / 2; pxDraw(); }
+  function pxDraw() {
+    if (PX.queued) return; PX.queued = true;
+    requestAnimationFrame(() => { PX.queued = false; pxRender(); });
+  }
+  function pxRender() {
+    const G = PX.gl; if (!G || !PX.ready) return;
+    const gl = G.gl, cv = $('#pGL'), ov = $('#pOv'), W = cv.clientWidth, H = cv.clientHeight, dpr = Math.min(2, devicePixelRatio || 1);
+    for (const c of [cv, ov]) if (c.width !== Math.round(W * dpr) || c.height !== Math.round(H * dpr)) { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); }
+    const bg = hexRgb(css('--st-bg')).map(v => v / 255), u = G.u;
+    gl.viewport(0, 0, cv.width, cv.height); gl.clearColor(bg[0], bg[1], bg[2], 1); gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.useProgram(G.prog); gl.bindVertexArray(G.vao);
+    G.tex.forEach((t, i) => { gl.activeTexture(gl.TEXTURE0 + i); gl.bindTexture(gl.TEXTURE_2D, t); gl.uniform1i(u['u_t' + i], i); });
+    for (let i = G.tex.length; i < 3; i++) gl.uniform1i(u['u_t' + i], 0);
+    gl.uniform2f(u.u_view, W, H); gl.uniform3f(u.u_cam, PX.x, PX.y, PX.s); gl.uniform1f(u.u_ppt, PX.s * dpr);
+    gl.uniform3f(u.u_bg, ...bg); gl.uniform3f(u.u_pos, 239 / 255, 228 / 255, 204 / 255); gl.uniform3f(u.u_neg, 111 / 255, 134 / 255, 201 / 255);
+    const vis = [];
+    PXL.items.forEach(it => {
+      const x0 = it.x * PX.s + PX.x, y0 = it.y * PX.s + PX.y, x1 = x0 + it.w * PX.s, y1 = y0 + it.h * PX.s;
+      if (x1 < 0 || y1 < 0 || x0 > W || y0 > H) return;
+      vis.push(it);
+      gl.uniform4f(u.u_rect, it.x, it.y, it.w, it.h); gl.uniform1i(u.u_off, it.off); gl.uniform1i(u.u_cols, it.cols); gl.uniform1i(u.u_tr, it.tr); gl.uniform1i(u.u_w, it.w); gl.uniform1i(u.u_h, it.h);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    });
+    // labels and, close up, the exact numbers
+    const c = ov.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, W, H);
+    const ink = css('--st-ink'), ink2 = css('--st-ink2'), bgs = css('--st-bg');
+    const tag = (t, x, y, col, size) => { c.font = `600 ${size || 11}px "IBM Plex Mono", monospace`; const w = c.measureText(t).width; c.fillStyle = bgs; c.globalAlpha = 0.8; c.fillRect(x - 2, y - 10, w + 4, 13); c.globalAlpha = 1; c.fillStyle = col; c.fillText(t, x, y); };
+    c.textBaseline = 'alphabetic';
+    if (PX.x < W && (4 * 576 + 3 * 48) * PX.s + PX.x > 0 && PX.y + 12288 * PX.s > 0) tag(PX.s * 2448 > 150 ? 'EMBEDDING TABLE · 49,152 rows, in 4 strips' : 'EMBEDDING', Math.max(4, PX.x), Math.max(14, PX.y - 8), ink);
+    const seenL = new Set();
+    vis.forEach(it => {
+      const x0 = it.x * PX.s + PX.x, y0 = it.y * PX.s + PX.y, sw = it.w * PX.s;
+      if (it.l >= 0 && !seenL.has(it.l) && it.key === 'q' && PXL.BW * PX.s > 40) { seenL.add(it.l); tag(`LAYER ${it.l + 1}`, x0, y0 - Math.max(6, 70 * PX.s), ink, PX.s > 0.15 ? 13 : 11); }
+      if (sw > 46) tag(it.key === 'E' ? `rows ${fmtN(it.row0)}–${fmtN(it.row0 + it.h - 1)}` : PX_NAME[it.key], x0 + 2, y0 + 13, ink2, 10);
+    });
+    if (PX.s * dpr >= 34) { // print the real value on every visible number
+      const fs = Math.min(13, PX.s / 3.4); c.font = `500 ${fs}px "IBM Plex Mono", monospace`; c.textAlign = 'center'; c.textBaseline = 'middle'; let n = 0;
+      for (const it of vis) {
+        const c0 = Math.max(0, Math.floor(-PX.x / PX.s - it.x)), c1 = Math.min(it.w - 1, Math.floor((W - PX.x) / PX.s - it.x)), r0 = Math.max(0, Math.floor(-PX.y / PX.s - it.y)), r1 = Math.min(it.h - 1, Math.floor((H - PX.y) / PX.s - it.y));
+        for (let r = r0; r <= r1 && n < 1500; r++) for (let k = c0; k <= c1 && n < 1500; k++, n++) {
+          const v = pxValue(it, r, k), x = (it.x + k + 0.5) * PX.s + PX.x, y = (it.y + r + 0.5) * PX.s + PX.y;
+          c.fillStyle = Math.abs(v / PX.scales[it.l < 0 ? 0 : 1 + it.l * 7 + PX_ORDER.indexOf(it.key)]) > 0.6 ? bgs : ink;
+          c.fillText((v < 0 ? '−' : '') + Math.abs(v).toFixed(3).replace(/^0/, ''), x, y);
+        }
+      }
+      c.textAlign = 'left';
+    }
+    if (PX.hover) { const it = PX.hover.it; c.strokeStyle = ink; c.lineWidth = 1.5; c.strokeRect((it.x + PX.hover.c) * PX.s + PX.x, (it.y + PX.hover.r) * PX.s + PX.y, Math.max(2, PX.s), Math.max(2, PX.s)); }
+  }
+  function pxValue(it, r, k) { // the exact number, from the model's own Float32 weights
+    if (it.key === 'E') return S.llm.mats.E[(it.row0 + r) * 576 + k];
+    const m = S.llm.mats.layers[it.l][it.key];
+    return it.tr ? m[k * it.cols + r] : m[r * it.cols + k];
+  }
+  function pxAt(e) {
+    const rc = $('#pGL').getBoundingClientRect(), wx = (e.clientX - rc.left - PX.x) / PX.s, wy = (e.clientY - rc.top - PX.y) / PX.s;
+    const it = PXL.items.find(i => wx >= i.x && wx < i.x + i.w && wy >= i.y && wy < i.y + i.h);
+    return it ? { it, r: Math.floor(wy - it.y), c: Math.floor(wx - it.x) } : null;
+  }
+  function pxDescribe(h) {
+    if (!h) return 'Scroll or pinch to zoom in until you can read single numbers; drag to move; double-click to fit.';
+    const { it, r, c } = h, v = pxValue(it, r, c), vs = (v < 0 ? '−' : '') + Math.abs(v).toFixed(5);
+    if (it.key === 'E') { const row = it.row0 + r; return `Embedding table · token ${fmtN(row)} (${S.llm.tok.piece(row)}) · number ${c + 1} of 576: ${vs}`; }
+    const L = `Layer ${it.l + 1} · ${PX_NAME[it.key]}`;
+    if (it.key === 'gate' || it.key === 'up') return `${L} · neuron ${r} of 1,536, weight ${c + 1} of 576: ${vs}`;
+    if (it.key === 'down') return `${L} · what neuron ${r} adds to number ${c + 1} of the ball: ${vs}`;
+    return `${L} · row ${r + 1} (makes number ${r + 1} of the ${it.key === 'o' ? 'ball update' : PX_NAME[it.key].split(': ')[1]}), weight ${c + 1} of 576: ${vs}`;
+  }
+  function pxZoom(f, mx, my) { const s2 = Math.min(80, Math.max(PX.fit * 0.8, PX.s * f)), k = s2 / PX.s; PX.x = mx - (mx - PX.x) * k; PX.y = my - (my - PX.y) * k; PX.s = s2; pxDraw(); }
+  {
+    const cv = $('#pOv');
+    cv.addEventListener('wheel', e => { e.preventDefault(); pxZoom(e.deltaY < 0 ? 1.3 : 1 / 1.3, e.offsetX, e.offsetY); }, { passive: false });
+    cv.addEventListener('pointerdown', e => { cv.setPointerCapture(e.pointerId); PX.ptrs.set(e.pointerId, [e.offsetX, e.offsetY]); });
+    const up = e => PX.ptrs.delete(e.pointerId); cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+    cv.addEventListener('dblclick', pxFit);
+    cv.addEventListener('pointermove', e => {
+      if (PX.ptrs.has(e.pointerId)) {
+        const prev = PX.ptrs.get(e.pointerId), cur = [e.offsetX, e.offsetY];
+        if (PX.ptrs.size === 2) { const [a, b] = [...PX.ptrs.values()], o = a === prev ? b : a, d0 = Math.hypot(prev[0] - o[0], prev[1] - o[1]), d1 = Math.hypot(cur[0] - o[0], cur[1] - o[1]); if (d0 > 0) pxZoom(d1 / d0, (cur[0] + o[0]) / 2, (cur[1] + o[1]) / 2); }
+        else { PX.x += cur[0] - prev[0]; PX.y += cur[1] - prev[1]; pxDraw(); }
+        PX.ptrs.set(e.pointerId, cur); return;
+      }
+      if (!PX.ready) return;
+      PX.hover = pxAt(e); $('#pInfo').textContent = pxDescribe(PX.hover); pxDraw();
+    });
+    [['#pzIn', () => pxZoom(2, cv.clientWidth / 2, cv.clientHeight / 2)], ['#pzOut', () => pxZoom(0.5, cv.clientWidth / 2, cv.clientHeight / 2)], ['#pzFit', pxFit]].forEach(([s, f]) => $(s).addEventListener('click', f));
+  }
+  async function openParamsGL() { // real mode: returns false when WebGL2 is not available, so the to-scale overview is used
+    try { if (!PX.gl && !pxInit()) return false; } catch (err) { PX.gl = null; return false; }
+    $('#pGLWrap').hidden = false; $('#pCv').hidden = true; $('#pDetail').hidden = true;
+    if (!PX.ready) { PX.packing = PX.packing || pxPack(); await PX.packing; }
+    pxFit(); $('#pInfo').textContent = pxDescribe(null);
+    return true;
   }
 
   // ---- pointing and clicking: token chips and strips are cells; in the layers the pointer picks lane, layer, station ----
@@ -1880,7 +2140,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
   $('#realGo').addEventListener('click', () => runReal(true));
   $('#temp').addEventListener('input', e => { $('#tempVal').textContent = parseFloat(e.target.value).toFixed(1); });
   $('#temp').addEventListener('change', () => { if (isReal()) runReal(false); else runToy(false); });
-  window.__plinko = { get data() { return S.data; }, get mode() { return S.mode; }, get caps() { return CAPS; }, get choose() { return CHOOSE; }, cloud: cardView }; // for testing and the curious
+  window.__plinko = { px: PX, get data() { return S.data; }, get mode() { return S.mode; }, get caps() { return CAPS; }, get choose() { return CHOOSE; }, cloud: cardView }; // for testing and the curious
 
   drawStatic();
   runToy(false);
