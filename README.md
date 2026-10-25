@@ -29,6 +29,10 @@ The page walks through six steps. Scrub the timeline or slow it to 0.5× to watc
 
 Switch the model to **MoE** and the feed-forward block splits into experts. A small router sends each token to only a few of them, so a big model runs at the speed of a small one.
 
+### Zoom into a peg
+
+Click any peg (or press **Zoom into a peg**) to see the maths behind it with small numbers: the ball's numbers times the peg's weights, added up (a dot product), and then how softmax turns the five scores into the chances the dice roll uses. The numbers are made up but the arithmetic is real, and the chances match the bars on the board.
+
 ### The memory panel
 
 The right-hand panel shows a 24 GB graphics card filling up: the weights sit in memory the whole time, and the KV cache grows with every token. It also shows why writing speed is set by memory speed: every new token has to read every active weight out of memory again.
@@ -50,7 +54,7 @@ The page follows the [HyperFrames](https://github.com/heygen-com/hyperframes) co
 
 Ideas for making this a better teaching tool. Contributions welcome.
 
-- [ ] Zoom into one peg: a real dot product and a softmax worked out step by step
+- [x] Zoom into one peg: a real dot product and a softmax worked out step by step
 - [ ] Attention up close: queries, keys and values for one token
 - [ ] Training mode: watch the pegs move as the model learns from its mistakes
 - [ ] Quantization: what squeezing weights to 4 bits does

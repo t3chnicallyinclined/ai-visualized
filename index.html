@@ -93,6 +93,22 @@ dt { color: var(--muted); } dd { margin: 0; text-align: right; font-family: var(
 .word { font: 500 13px var(--mono); fill: var(--ink); }
 .fly { font: 600 13px var(--mono); fill: var(--accent); }
 .out { font: 500 13px var(--mono); } .outp { fill: var(--muted); } .outg { fill: var(--accent); }
+.ffhit { fill: transparent; cursor: pointer; }
+/* Peg zoom dialog */
+dialog#zoom { width: min(600px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); box-sizing: border-box; overflow: auto;
+  border: 1px solid var(--line); border-radius: 14px; background: var(--panel); color: var(--ink); padding: 20px; }
+dialog#zoom::backdrop { background: rgb(10 12 30 / 0.5); }
+dialog#zoom h2 { font: 800 22px/1.15 var(--display); margin: 18px 0 8px; }
+dialog#zoom h2:first-of-type { margin-top: 6px; color: var(--accent); }
+dialog#zoom p { margin: 0 0 10px; text-wrap: pretty; }
+.zhead { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.zsteps { margin: 0 0 10px; padding-left: 22px; }
+.zt { width: 100%; border-collapse: collapse; font: 13px var(--mono); font-variant-numeric: tabular-nums; margin-bottom: 10px; }
+.zt th { font: 600 11px var(--mono); color: var(--muted); text-align: right; padding: 4px 6px; border-bottom: 1px solid var(--line); }
+.zt td { text-align: right; padding: 4px 6px; }
+.zt th:first-child, .zt td:first-child { text-align: left; }
+.zt tr.hi td { color: var(--accent); font-weight: 600; }
+.zsum { font-size: 14px; background: var(--band); border-radius: 8px; padding: 8px 10px; overflow-wrap: anywhere; }
 /* On phones the board scales to about half size, so the labels that fit get bigger. Chips and token IDs stay small: there is no room. */
 @media (max-width: 560px) {
   .lbl { font-size: 16px; letter-spacing: 0.06em; } .bandname { font-size: 20px; }
@@ -116,7 +132,7 @@ dt { color: var(--muted); } dd { margin: 0; text-align: right; font-family: var(
   <div class="layout">
     <div class="boardwrap">
       <svg id="board" viewBox="50 0 760 1030" role="img" aria-label="Plinko board showing tokens falling through model layers">
-        <g id="static"></g><g id="dyn"></g>
+        <g id="static"></g><g id="dyn"></g><g id="sel"></g>
       </svg>
       <div class="transport">
         <button id="play" type="button">Play</button>
@@ -126,6 +142,7 @@ dt { color: var(--muted); } dd { margin: 0; text-align: right; font-family: var(
           <button type="button" data-speed="1" aria-pressed="true">1×</button>
           <button type="button" data-speed="2" aria-pressed="false">2×</button>
         </div>
+        <button id="zoomBtn" type="button" title="Or click any peg on the board">Zoom into a peg</button>
       </div>
     </div>
 
@@ -169,6 +186,20 @@ dt { color: var(--muted); } dd { margin: 0; text-align: right; font-family: var(
   </div>
 </div>
 
+<dialog id="zoom" aria-labelledby="zTitle">
+  <div class="zhead"><p class="eyebrow" id="zWhere"></p><button id="zClose" type="button">Close</button></div>
+  <h2 id="zTitle">One peg: multiply, then add</h2>
+  <p id="zLead"></p>
+  <table class="zt" id="zDot"></table>
+  <p class="zsum mono" id="zSum"></p>
+  <p id="zAfter"></p>
+  <h2>Scores into chances: softmax</h2>
+  <p id="zSoftLead"></p>
+  <ol class="zsteps" id="zSteps"></ol>
+  <table class="zt" id="zSoft"></table>
+  <p class="note">Small made-up numbers, real arithmetic. The ball's numbers are the bars drawn for it on the board and the peg's weights are invented. The scores come from this page's toy word table, so the chances match the bars in the scores row for the first new word. Change the temperature and zoom in again to watch them move.</p>
+</dialog>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script>
 (function () {
@@ -208,7 +239,7 @@ dt { color: var(--muted); } dd { margin: 0; text-align: right; font-family: var(
     let p;
     if (T < 0.05) p = logit.map((_, i) => (i === 0 ? 1 : 0));
     else { const e = logit.map(l => Math.exp((l - logit[0]) / T)); const s = e.reduce((a, b) => a + b, 0); p = e.map(x => x / s); }
-    return list.map(([w], i) => ({ w, p: p[i] }));
+    return list.map(([w], i) => ({ w, p: p[i], s: logit[i] }));
   }
   function sample(c, r, T) {
     if (T < 0.05) return 0;
@@ -249,14 +280,14 @@ dt { color: var(--muted); } dd { margin: 0; text-align: right; font-family: var(
     ['Roll', 'A weighted dice roll picks one. Temperature sets how loaded the dice are.'],
     ['Repeat', 'The new token drops alone. It reads the cached work of every earlier token instead of redoing it, but every active weight is read from VRAM again. One full pass per token.'],
   ];
-  const S = { mode: 'dense', speed: 1, flash: [], experts: [] };
+  const S = { mode: 'dense', speed: 1, flash: [], experts: [], pegs: [], zoom: null };
   let tl = null, CAPS = [], INFOS = [];
 
   STAGES.forEach(([t], i) => { const li = document.createElement('li'); li.textContent = (i + 1) + ' ' + t; $('#stages').appendChild(li); });
 
   function drawStatic() {
     const g = $('#static'); g.innerHTML = '';
-    S.flash = []; S.experts = [];
+    S.flash = []; S.experts = []; S.pegs = [];
     el('rect', { x: 50, y: 4, width: 760, height: 1022, rx: 18, class: 'board' }, g);
     el('text', { x: 66, y: 21, class: 'lbl' }, g, 'TOKENS');
     el('text', { x: 66, y: 98, class: 'lbl' }, g, 'EMBEDDINGS');
@@ -287,8 +318,10 @@ dt { color: var(--muted); } dd { margin: 0; text-align: right; font-family: var(
           const x = 430 + m * 44 + (r === 1 ? 0 : 22);
           if (x < 72 || x > 788) continue;
           el('circle', { cx: x, cy: y, r: 3, class: 'peg' }, g);
+          S.pegs.push({ x, y, band: bi, n: S.pegs.filter(p => p.band === bi).length + 1 });
         }
       });
+      el('rect', { x: 66, y: b.y + 88, width: 728, height: 74, class: 'ffhit', 'data-band': bi }, g);
     });
     el('text', { x: 66, y: 784, class: 'lbl' }, g, 'NEXT-TOKEN SCORES');
     for (let k = 0; k < 5; k++) el('rect', { x: 70 + k * 146, y: 792, width: 136, height: 140, rx: 8, class: 'bin' }, g);
@@ -450,6 +483,7 @@ dt { color: var(--muted); } dd { margin: 0; text-align: right; font-family: var(
       t = pass([c], c, t, 0.42);
       t = score(k, c, t);
     }
+    S.zoom = { word: all[nP - 1], vals: bars[nP - 1].map(([, h]) => h), prev: lastWord(prompt), T, c: steps[0].c, pick: steps[0].pick };
     tl.timeScale(S.speed);
     window.__timelines = window.__timelines || {};
     window.__timelines.plinko = tl;
@@ -492,6 +526,70 @@ dt { color: var(--muted); } dd { margin: 0; text-align: right; font-family: var(
     $('#play').textContent = tl.isActive() ? 'Pause' : tl.progress() >= 1 ? 'Replay' : 'Play';
   }
   function settle() { build(); tl.progress(1); sync(); }
+
+  // ---- zoom into one peg: a real dot product and a real softmax on small numbers ----
+  // Values are kept in integer tenths so the printed sums are exact.
+  const minus = s => s.replace('-', '−');
+  const f1 = v => minus((v / 10).toFixed(1)), f2 = v => minus((v / 100).toFixed(2));
+  function fillTable(tbl, head, rows, hi) {
+    tbl.innerHTML = '';
+    const tr = tbl.insertRow();
+    head.forEach(h => { const th = document.createElement('th'); th.textContent = h; tr.appendChild(th); });
+    rows.forEach((r, i) => { const row = tbl.insertRow(); if (i === hi) row.className = 'hi'; r.forEach(c => { row.insertCell().textContent = c; }); });
+  }
+  function openZoom(peg) {
+    if (tl.isActive()) { tl.pause(); setPlayLabel(); }
+    const Z = S.zoom, sel = $('#sel');
+    sel.innerHTML = '';
+    el('circle', { cx: peg.x, cy: peg.y, r: 9, class: 'win' }, sel);
+    const moe = S.mode === 'moe';
+    $('#zWhere').textContent = BANDS[peg.band].n + (moe ? ' · expert ' + (Math.floor((peg.x - 66) / 91) + 1) + ' · peg ' : ' · feed-forward peg ') + peg.n;
+
+    const r = rng(hash('peg|' + S.mode + '|' + peg.band + '|' + peg.n));
+    const ball = Z.vals.slice(0, 4).map(h => h - 15);
+    const wts = ball.map(() => Math.round(r() * 20) - 10);
+    const prods = ball.map((b, i) => b * wts[i]);
+    const sum = prods.reduce((a, b) => a + b, 0);
+    $('#zLead').textContent = `The ball for “${Z.word}” is a list of numbers. A real model uses a few thousand; here are the first 4 (the first 4 bars drawn for it). The peg holds 4 numbers of its own, called weights, which were fixed when the model was trained. Multiply each pair:`;
+    fillTable($('#zDot'), ['', 'ball', '× weight', '= product'], ball.map((b, i) => ['#' + (i + 1), f1(b), f1(wts[i]), f2(prods[i])]));
+    $('#zSum').textContent = 'add them: ' + prods.map((p, i) => (i ? (p < 0 ? ' − ' : ' + ') + f2(Math.abs(p)) : f2(p))).join('') + ' = ' + f2(sum);
+    $('#zAfter').textContent = `That one number, ${f2(sum)}, is this peg's output. It is called a dot product: it is large when the ball's numbers line up with the peg's weights. Real models then bend it (negative results get squeezed toward 0) and the ball carries it into the next layer. A real layer has tens of millions of pegs like this, and the GPU works them all at once` + (moe
+      ? '. In this MoE model the router sends each token to only 2 experts, so only their pegs do this work and only their weights are read from memory.'
+      : ', which is why every weight is read from memory for every token.');
+
+    const T = Z.T;
+    $('#zSoftLead').textContent = `At the bottom of the board the last ball becomes a score for every word in the vocabulary. After “${Z.prev}”, the toy model's top five scores are below. Softmax turns them into chances that add up to 100%:`;
+    const steps = $('#zSteps'); steps.innerHTML = '';
+    const li = t => { const e = document.createElement('li'); e.textContent = t; steps.appendChild(e); };
+    if (T < 0.05) {
+      li('Temperature is 0, so there is no dice roll: the top score simply wins. (Dividing by 0 would push it to 100% anyway.)');
+      fillTable($('#zSoft'), ['word', 'score', 'chance'], Z.c.map((c, i) => [shortW(c.w), minus(c.s.toFixed(2)), i ? '0%' : '100%']), Z.pick);
+    } else {
+      const xs = Z.c.map(c => c.s / T), es = xs.map(x => Math.exp(x - xs[0])), tot = es.reduce((a, b) => a + b, 0);
+      li(`Divide each score by the temperature (${T.toFixed(1)}). Below 1 this spreads the scores apart; above 1 it squeezes them together.`);
+      li('Raise e (about 2.718) to each one, after shifting them so the top one is 0. The top word gets exactly 1 and the rest get less. Nothing can go negative.');
+      li(`Divide each by the total (${tot.toFixed(3)}). Those are the chances the dice roll uses.`);
+      fillTable($('#zSoft'), ['word', 'score', '÷ ' + T.toFixed(1), 'e^(shifted)', 'chance'],
+        Z.c.map((c, i) => [shortW(c.w) + (i === Z.pick ? ' ✓' : ''), minus(c.s.toFixed(2)), minus(xs[i].toFixed(2)), es[i].toFixed(3), fmtPct(es[i] / tot)]), Z.pick);
+    }
+    $('#zoom').showModal();
+  }
+  function pegAt(evt) {
+    const svg = $('#board'), pt = svg.createSVGPoint();
+    pt.x = evt.clientX; pt.y = evt.clientY;
+    const p = pt.matrixTransform(svg.getScreenCTM().inverse()), band = +evt.target.getAttribute('data-band');
+    let best = null, d = Infinity;
+    for (const q of S.pegs) { if (q.band !== band) continue; const dq = Math.hypot(q.x - p.x, q.y - p.y); if (dq < d) { d = dq; best = q; } }
+    return best;
+  }
+  $('#static').addEventListener('click', e => { if (e.target.classList.contains('ffhit')) openZoom(pegAt(e)); });
+  $('#zoomBtn').addEventListener('click', () => {
+    const mid = S.pegs.filter(p => p.band === 0 && p.y === BANDS[0].y + 124);
+    openZoom(mid.reduce((a, b) => (Math.abs(b.x - 430) < Math.abs(a.x - 430) ? b : a)));
+  });
+  $('#zClose').addEventListener('click', () => $('#zoom').close());
+  $('#zoom').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.close(); });
+  $('#zoom').addEventListener('close', () => { $('#sel').innerHTML = ''; });
 
   $('#promptForm').addEventListener('submit', e => { e.preventDefault(); build(); tl.play(0); setPlayLabel(); });
   $('#play').addEventListener('click', () => {
