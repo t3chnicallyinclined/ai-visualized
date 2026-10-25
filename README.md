@@ -59,7 +59,7 @@ Click any token's strip (or **Explore embeddings**) to see what embedding really
 
 ### The token cloud (what you can and cannot read inside a model)
 
-A cloud of 2,000 common tokens, placed by their real embedding rows (t-SNE, computed once). With the real model, the last token's ball traces a path through it: after each layer the ball is drawn among the tokens it now points at most (the same reading as the guess on the ball). Early layers wander; late layers settle near the next word, and at the end the candidates light up, sized by their chances. The explorer's **Thought path** tab replays the whole path for any token.
+A cloud of 2,000 common tokens, placed by their real embedding rows (t-SNE, computed once). With the real model, the last token's ball traces a path through it: after each layer the ball is drawn among the tokens it now points at most (the same reading as the guess on the ball). Early layers wander; late layers settle near the next word, and at the end the candidates light up, sized by their chances. The cloud is interactive: hover a dot to see its token, click to select it (its closest tokens light up, by the real 576 numbers in real mode), search for a word, scroll or pinch to zoom, drag to move. The explorer's **Thought path** tab adds a layer slider to walk the path and a chart of how the ball ranked the selected token after every layer.
 
 What the cloud is not: the dots are the vocabulary's coordinates, not stored knowledge. A model's knowledge lives in its weights, spread across every layer, not in places you can point at, and nothing is searched: at the end the ball is compared with every token at once. Its memory of the conversation is the KV cache. The path is the thinking; where it ends is the prediction.
 
