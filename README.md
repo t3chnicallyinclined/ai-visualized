@@ -22,7 +22,16 @@ Read the board left to right. Each token gets a **lane**, and the lanes run thro
 
 Both add onto the ball rather than replacing it. Point at any lane in any layer and the inspector lists the exact steps inside that station (norm, query/key/value, scores, softmax, mix, add; or norm, gate and up, SiLU, down, add), with the real numbers in real model mode.
 
-The page walks through six stages: **tokenize**, **embed** (each token's ID picks a row of a big learned table), **read the prompt** (all lanes move through the layers together), **score**, **roll** (a weighted dice roll, loaded by the temperature, picks the next token, which becomes a new lane) and **repeat** (only the new lane moves, reading what earlier lanes left in the cache).
+A strip above the board shows the whole process, in order, and lights up each step as it runs (click one to jump to it):
+
+1. **Text**: the prompt is just characters.
+2. **Tokenize**: the text is cut into pieces the model knows, and each piece is looked up in the vocabulary to get its ID.
+3. **Embed**: each ID picks one row of a big learned table; that row of numbers is the ball. It carries no word order.
+4. **Layers**: every lane goes through every layer: talk, then think. Word order gets in during talk, where each query and key is rotated by its position (RoPE).
+5. **Unembed**: one more norm, then the ball is compared with every row of an output table, giving one score per token (SmolLM2 reuses its embedding table here).
+6. **Choose**: softmax over the top five, temperature, and a weighted dice roll.
+7. **Detokenize**: the winning ID turns back into text and is added to the output.
+8. **Repeat**: the new token becomes a new lane and goes through alone, reading the KV cache, until an end-of-text token or a length limit.
 
 ### Two kinds of attention
 
