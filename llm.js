@@ -140,6 +140,9 @@
     const kvBytesPerToken = 2 * L * KVH * HD * 2; // keys + values, every layer, stored as bf16 in a real runtime
     const weightBytes = Object.values(W).reduce((a, t) => a + t.data.length * 2, 0);
 
+    // optional: a list of token IDs whose scores are kept after every layer (the page's token cloud)
+    let watch = null;
+    const setWatch = ids => { watch = ids ? Int32Array.from(ids) : null; };
     function newState() { return { pos: 0, K: layers.map(() => []), Vc: layers.map(() => []) }; }
     const buf = { x: new Float32Array(D), h: new Float32Array(D), q: new Float32Array(D), k: new Float32Array(KVH * HD), v: new Float32Array(KVH * HD),
       att: new Float32Array(D), o: new Float32Array(D), g: new Float32Array(F), u: new Float32Array(F), d: new Float32Array(D), logits: new Float32Array(V), hn: new Float32Array(D) };
@@ -191,6 +194,7 @@
             const tl = performance.now();
             Object.assign(ly, { ffnIn: buf.h.slice(), neurons: topk(buf.g.map(Math.abs), 5).map(i => ({ i, v: buf.g[i] })), down: f6(buf.d), downNorm: nrm(buf.d),
               first: Array.from(x.subarray(0, 16)), norm: nrm(x), lens: l < L - 1 ? lens(x, lensTop) : null });
+            if (watch && l < L - 1) ly.watch = Float32Array.from(watch, i => buf.logits[i]); // buf.logits holds this layer's lens scores
             lensMs += performance.now() - tl;
           }
           rec.layers.push(ly);
@@ -200,7 +204,7 @@
       rmsnorm(x, normW, eps, buf.hn); matvec(E, V, D, buf.hn, buf.logits);
       state.pos++;
       const logits = buf.logits.slice();
-      if (full) { const { lse } = softmaxStats(logits); rec.layers[L - 1].lens = topk(logits, lensTop).map(i => ({ id: i, p: Math.exp(logits[i] - lse) })); }
+      if (full) { const { lse } = softmaxStats(logits); rec.layers[L - 1].lens = topk(logits, lensTop).map(i => ({ id: i, p: Math.exp(logits[i] - lse) })); if (watch) rec.layers[L - 1].watch = Float32Array.from(watch, i => logits[i]); }
       return { logits, rec, ms: performance.now() - t0 - lensMs };
     }
     const embedding = (id, n = 8) => Array.from(E.subarray(id * D, id * D + n));
@@ -214,7 +218,7 @@
       return topk(sims, k).map(i => ({ id: i, sim: sims[i] }));
     }
     const neuron = (l, n) => ({ gate: layers[l].gate.subarray(n * D, n * D + D), up: layers[l].up.subarray(n * D, n * D + D) }); // one feed-forward neuron's two weight rows
-    return { cfg, tok, step, newState, lens, embedding, neighbors, neuron, D, L, H, KVH, HD, F, V, kvBytesPerToken, weightBytes, name: 'SmolLM2-135M' };
+    return { cfg, tok, step, newState, setWatch, lens, embedding, neighbors, neuron, D, L, H, KVH, HD, F, V, kvBytesPerToken, weightBytes, name: 'SmolLM2-135M' };
   }
 
   // Top-k sampling as the page teaches it: keep the top k scores, divide by the temperature, softmax, roll.

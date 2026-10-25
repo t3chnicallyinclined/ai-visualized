@@ -57,6 +57,12 @@ Click any token's strip (or **Explore embeddings**) to see what embedding really
 - **Nearest tokens**: the 8 most similar rows out of all 49,152, with cosine similarity worked out for the closest.
 - **Compare two**: any two words, their rows side by side, the pairwise products and the similarity (·cat/·dog 0.59, ·cat/·car 0.26, ·happy/·sad 0.49: opposites are used in the same places).
 
+### The token cloud (what you can and cannot read inside a model)
+
+A cloud of 2,000 common tokens, placed by their real embedding rows (t-SNE, computed once). With the real model, the last token's ball traces a path through it: after each layer the ball is drawn among the tokens it now points at most (the same reading as the guess on the ball). Early layers wander; late layers settle near the next word, and at the end the candidates light up, sized by their chances. The explorer's **Thought path** tab replays the whole path for any token.
+
+What the cloud is not: the dots are the vocabulary's coordinates, not stored knowledge. A model's knowledge lives in its weights, spread across every layer, not in places you can point at, and nothing is searched: at the end the ball is compared with every token at once. Its memory of the conversation is the KV cache. The path is the thinking; where it ends is the prediction.
+
 ### Real model mode
 
 Pick **Real: SmolLM2-135M** and the page downloads a real small language model ([SmolLM2-135M](https://huggingface.co/HuggingFaceTB/SmolLM2-135M), Apache 2.0, 269 MB, kept by your browser after the first time) and runs it in your browser with plain JavaScript. Then everything on the board is the model's actual output:
