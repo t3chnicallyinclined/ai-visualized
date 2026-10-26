@@ -96,6 +96,8 @@ button:hover { border-color: var(--ink); }
 #ctxTape { width: 100%; height: auto; display: block; }
 #ctxTape text { font-family: var(--mono); }
 #ctxTape .tarc { fill: none; stroke: var(--attn); stroke-linecap: round; }
+.uenote { margin: 0; font-size: 13px; color: var(--st-ink2); line-height: 1.45; }
+#ueSvg { width: 100%; height: auto; display: block; } #ueSvg text { font-family: var(--mono); }
 .lensrow { display: grid; grid-template-columns: repeat(auto-fill, minmax(56px, 1fr)); gap: 3px; }
 .lensrow div { font: 10.5px/1.3 var(--mono); background: var(--st-bg); border: 1px solid var(--st-rail); border-radius: 5px; padding: 2px 4px; text-align: center; color: var(--st-ink3); min-width: 0; }
 .lensrow div b { display: block; font-weight: 500; color: var(--st-ink2); overflow: hidden; text-overflow: ellipsis; white-space: pre; }
@@ -351,6 +353,11 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
       <svg id="ctxTape" viewBox="0 0 900 40" role="img" aria-label="Every token the model can read, with a bar under each for how much attention the current token gives it"></svg>
       <div class="ctxhead"><span id="lensTitle">If it stopped after each layer</span></div>
       <div class="lensrow" id="lensRow"></div>
+      <div id="unembed" hidden>
+        <div class="ctxhead"><span id="ueTitle">Unembed</span></div>
+        <p class="uenote" id="ueNote"></p>
+        <svg id="ueSvg" viewBox="0 0 900 300" role="img" aria-label="Unembed: the last ball is compared with every row of the output table; one score per token, like a bank of meters"></svg>
+      </div>
     </section>
     <div class="boardscroll">
       <svg id="board" viewBox="0 0 1000 560" role="img" aria-label="Board: your device at the top; each token is a lane falling down through every layer (bands of the layer's real weights) to the exit into the token cloud">
@@ -1261,6 +1268,57 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
       $('#lensTitle').textContent = `If “${m.tok.piece(ids[focus])}” stopped after each layer (the logit lens)` + (upto >= L - 1 ? ` · its final pick first appears in layer ${from + 1}` : '');
     }
   }
+  // Unembed: the ball after the last layer, through the final norm, is compared with every row of the output table
+  // (one dot product per token in the vocabulary: a bank of meters, one per token). Computed here from the real
+  // weights and the recorded ball; the top scores match the model's own.
+  const ueCache = new Map(); let ueKey = '';
+  function unembedData(p) {
+    const D = S.data, m = S.llm, k = [D.prompt, S.mode, p].join('|'); if (ueCache.has(k)) return ueCache.get(k);
+    const rec = D.recs[p], L = rec.layers.length, x = rec.layers[L - 1].vec && rec.layers[L - 1].vec.xout; if (!x) return null;
+    const hn = new Float32Array(m.D); m.arch.finalNorm(Float32Array.from(x), hn);
+    const E = m.mats.Eout, V = m.V, Dm = m.D, sc = new Float32Array(V);
+    for (let v = 0; v < V; v++) { let a = 0; const o = v * Dm; for (let c = 0; c < Dm; c++) a += E[o + c] * hn[c]; sc[v] = a; }
+    let mx = -Infinity, mn = Infinity; for (let v = 0; v < V; v++) { if (sc[v] > mx) mx = sc[v]; if (sc[v] < mn) mn = sc[v]; }
+    let z = 0; for (let v = 0; v < V; v++) z += Math.exp(sc[v] - mx);
+    const top = Array.from(sc.keys()).sort((a, b) => sc[b] - sc[a]).slice(0, 5).map(id => ({ id, s: sc[id], p: Math.exp(sc[id] - mx) / z, row: E.subarray(id * Dm, id * Dm + Dm) }));
+    const d = { hn, sc, mx, mn, top, V, Dm }; ueCache.set(k, d); return d;
+  }
+  function syncUnembed(st, p) {
+    const D = S.data, m = S.llm, show = D && D.real && (st >= 5 && st <= 7 || st >= 10); $('#unembed').hidden = !show; if (!show) return;
+    const key = [D.prompt, S.mode, p, $('#ueSvg').clientWidth].join('|'); if (key === ueKey) return; ueKey = key;
+    const u = unembedData(p); if (!u) { $('#unembed').hidden = true; return; }
+    const VW = Math.max(320, Math.round($('#ueSvg').clientWidth || 800)), LX = 112, SW = VW - LX - 210, parts = [], esc2 = t => t.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
+    const strip = (vals, y, h, scale) => { const w = SW / vals.length; let o = ''; for (let i = 0; i < vals.length; i++) { const a = Math.max(-1, Math.min(1, vals[i] / scale)); o += `<rect x="${(LX + i * w).toFixed(2)}" y="${y}" width="${Math.max(0.6, w).toFixed(2)}" height="${h}" fill="${a >= 0 ? 'var(--ffn)' : 'var(--neg)'}" fill-opacity="${(0.12 + 0.88 * Math.abs(a)).toFixed(2)}"/>`; } return o; };
+    const p98 = a => { const t = Array.from(a, Math.abs).sort((x, y) => x - y); return t[Math.floor(t.length * 0.98)] || 1; };
+    let y = 4;
+    parts.push(`<text x="0" y="${y + 11}" font-size="11" style="fill:var(--st-ink)">the ball</text><text x="0" y="${y + 23}" font-size="9.5" style="fill:var(--st-ink3)">${u.Dm} numbers</text>`);
+    parts.push(strip(u.hn, y + 2, 20, p98(u.hn)));
+    y += 34;
+    const rs = p98(u.top[0].row);
+    u.top.forEach((t, i) => {
+      const w = m.tok.piece(t.id);
+      parts.push(`<text x="0" y="${y + 11}" font-size="11" style="fill:${i === 0 ? 'var(--score)' : 'var(--st-ink2)'}">${esc2(w.length > 12 ? w.slice(0, 11) + '…' : w)}</text><text x="0" y="${y + 21}" font-size="9" style="fill:var(--st-ink3)">row ${t.id}</text>`);
+      parts.push(strip(t.row, y + 2, 16, rs));
+      // the meter: this token's score, on the scale of every score in the vocabulary
+      const mxp = LX + SW + 14, f = (t.s - u.mn) / (u.mx - u.mn);
+      parts.push(`<rect x="${mxp}" y="${y + 4}" width="80" height="12" rx="6" fill="var(--st-bg)" stroke="var(--st-rail)"/><rect x="${mxp}" y="${y + 4}" width="${(80 * f).toFixed(1)}" height="12" rx="6" fill="${i === 0 ? 'var(--score)' : 'var(--lin)'}"/>`);
+      parts.push(`<text x="${mxp + 86}" y="${y + 14}" font-size="10.5" style="fill:var(--st-ink)">${t.s.toFixed(1)} · ${fmtPct(t.p)}</text>`);
+      y += 24;
+    });
+    y += 8;
+    // every score in the vocabulary, as a histogram (counts on a log scale): the whole bank of meters
+    const NB = 70, bins = new Array(NB).fill(0); for (let v = 0; v < u.V; v++) bins[Math.min(NB - 1, Math.floor((u.sc[v] - u.mn) / (u.mx - u.mn) * NB))]++;
+    const HH = 60, bw = SW / NB, lmax = Math.log10(Math.max(...bins) + 1);
+    parts.push(`<text x="0" y="${y + 14}" font-size="11" style="fill:var(--st-ink)">all ${nf(u.V)}</text><text x="0" y="${y + 27}" font-size="9.5" style="fill:var(--st-ink3)">scores (log count)</text>`);
+    bins.forEach((c, i) => { if (!c) return; const h = Math.max(1.5, Math.log10(c + 1) / lmax * HH); parts.push(`<rect x="${(LX + i * bw).toFixed(1)}" y="${(y + HH - h).toFixed(1)}" width="${Math.max(0.8, bw - 1).toFixed(1)}" height="${h.toFixed(1)}" fill="var(--st-ink3)"/>`); });
+    u.top.slice(0, 3).forEach((t, i) => { const x = LX + (t.s - u.mn) / (u.mx - u.mn) * SW; parts.push(`<line x1="${x.toFixed(1)}" y1="${y - 2}" x2="${x.toFixed(1)}" y2="${y + HH}" stroke="${i === 0 ? 'var(--score)' : 'var(--lin)'}" stroke-width="1.5"/>`); });
+    parts.push(`<text x="${LX}" y="${y + HH + 13}" font-size="9.5" style="fill:var(--st-ink3)">${u.mn.toFixed(1)}</text><text x="${LX + SW}" y="${y + HH + 13}" font-size="9.5" text-anchor="end" style="fill:var(--st-ink3)">${u.mx.toFixed(1)} (top)</text>`);
+    y += HH + 18;
+    $('#ueSvg').setAttribute('viewBox', `0 0 ${VW} ${y}`); $('#ueSvg').innerHTML = parts.join('');
+    const top = u.top[0];
+    $('#ueTitle').textContent = `Unembed · one score for every one of the ${nf(u.V)} tokens`;
+    $('#ueNote').textContent = `After the last layer the ball goes through one more norm. Then it is compared with every row of the output table: ${nf(u.V)} rows of ${u.Dm} numbers${G.kind === 'neox' ? ' (Pythia has its own output table)' : ' (here it is the same table as the embedding)'}. Each comparison is a dot product: multiply the ball and the row number by number, add it all up. Think of a bank of ${nf(u.V)} meters, one per token: each shows how well the ball matches that token's row. “${m.tok.piece(top.id)}” reads highest (${top.s.toFixed(1)}). Softmax turns all the readings into chances (${fmtPct(top.p)} for it), and then the dice picks.`;
+  }
   function liveLine(time, st) { // one line of real numbers for this exact moment
     const D = S.data, m = S.llm; if (!D || !D.real || st < 4 || st >= 10) return '';
     const now = nowAt(time); if (!now) return '';
@@ -1293,6 +1351,7 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
       syncGuess(time);
       syncCloud(time);
       syncCtx(time, st);
+      { const now = st >= 4 && st < 10 ? nowAt(time) : null; syncUnembed(st, now ? now.p : S.data.recs.length - 1); }
     }
     const live = isReal() ? liveLine(time, st) : '';
     if ($('#bLive').textContent !== live) $('#bLive').textContent = live;
