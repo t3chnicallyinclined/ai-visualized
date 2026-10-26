@@ -16,8 +16,8 @@
   --orange: #e2733b; --blue: #3d7be0; --green: #2f9e6b; --purple: #7b5cd6; --pink: #d6457a; --sun: #f2b63d;
   --head: 'Fredoka', 'Segoe UI', system-ui, sans-serif; --body: 'Atkinson Hyperlegible', 'Segoe UI', system-ui, sans-serif;
 }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #191521; --card: #231e2e; --ink: #f4eefa; --muted: #b9aec6; --line: #3a3248; --soft: #2c2539; color-scheme: dark; } }
-:root[data-theme="dark"] { --bg: #191521; --card: #231e2e; --ink: #f4eefa; --muted: #b9aec6; --line: #3a3248; --soft: #2c2539; color-scheme: dark; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #191521; --card: #231e2e; --ink: #f4eefa; --muted: #cfc5dc; --line: #3a3248; --soft: #2c2539; color-scheme: dark; } }
+:root[data-theme="dark"] { --bg: #191521; --card: #231e2e; --ink: #f4eefa; --muted: #cfc5dc; --line: #3a3248; --soft: #2c2539; color-scheme: dark; }
 html, body { background: var(--bg); color: var(--ink); }
 body { margin: 0; font: 18px/1.6 var(--body); }
 [hidden] { display: none !important; }
@@ -26,17 +26,18 @@ h1 { font: 700 clamp(32px, 6vw, 52px)/1.05 var(--head); margin: 0; }
 h2 { font: 700 clamp(24px, 4vw, 32px)/1.15 var(--head); margin: 0 0 6px; }
 h3 { font: 600 21px/1.2 var(--head); margin: 0 0 4px; }
 p { margin: 0 0 10px; text-wrap: pretty; } a { color: var(--blue); font-weight: 700; }
-.lead { font-size: 20px; color: var(--muted); }
+.lead { font-size: 20px; color: var(--ink); }
 .card { background: var(--card); border: 2px solid var(--line); border-radius: 22px; padding: 20px 22px; }
 .step { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 14px; align-items: start; }
 .num { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; font: 700 26px var(--head); color: #fff; }
 .c1 { background: var(--orange); } .c2 { background: var(--blue); } .c3 { background: var(--purple); } .c4 { background: var(--green); } .c5 { background: var(--pink); }
 button { font: 700 18px var(--head); border-radius: 999px; border: 2px solid var(--line); background: var(--card); color: var(--ink); padding: 10px 20px; cursor: pointer; }
 button.big { background: var(--orange); border-color: var(--orange); color: #fff; padding: 14px 30px; font-size: 22px; }
-button:focus-visible, input:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
+button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
 button:disabled { opacity: 0.5; cursor: default; }
 .start { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-#prompt { flex: 1 1 260px; min-width: 0; font: 600 20px var(--body); padding: 14px 18px; border-radius: 16px; border: 2px solid var(--line); background: var(--card); color: var(--ink); }
+textarea.grow { display: block; box-sizing: border-box; resize: none; overflow: hidden; line-height: 1.35; white-space: pre-wrap; overflow-wrap: anywhere; }
+#prompt { flex: 1 1 260px; min-width: 0; font: 600 20px/1.35 var(--body); padding: 14px 18px; border-radius: 16px; border: 2px solid var(--line); background: var(--card); color: var(--ink); }
 .load { display: flex; flex-direction: column; gap: 6px; } .bar { height: 14px; border-radius: 99px; background: var(--soft); overflow: hidden; } .bar i { display: block; height: 100%; width: 0; background: var(--green); transition: width .2s; }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
 .chip { font: 700 20px var(--head); padding: 6px 12px; border-radius: 12px; color: #fff; white-space: pre; animation: pop .35s ease-out both; }
@@ -63,7 +64,7 @@ button:disabled { opacity: 0.5; cursor: default; }
 .myth .q { font: 700 20px var(--head); } .myth .a { font-weight: 700; color: var(--green); }
 .myth .out { font-size: 16px; background: var(--soft); border-radius: 12px; padding: 8px 12px; min-height: 1.6em; white-space: pre-wrap; }
 .risk { border-left: 6px solid var(--pink); padding-left: 14px; margin: 10px 0; } .risk h3 { color: var(--pink); }
-.note { font-size: 15px; color: var(--muted); }
+.note { font-size: 16px; color: var(--muted); }
 .powers { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 14px; margin-top: 10px; }
 .power { background: var(--soft); border-radius: 18px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
 .power h3 { color: var(--purple); }
@@ -71,7 +72,7 @@ button:disabled { opacity: 0.5; cursor: default; }
 .beat { background: var(--soft); border-radius: 18px; padding: 14px 16px; } .beat h3 { color: var(--orange); } .beat p { margin-bottom: 8px; }
 .power .out { font-size: 16px; background: var(--card); border-radius: 12px; padding: 8px 12px; min-height: 1.6em; white-space: pre-wrap; }
 .cmp { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); gap: 10px; }
-.cmp input { width: 100%; box-sizing: border-box; font: 600 17px var(--body); padding: 8px 12px; border-radius: 12px; border: 2px solid var(--line); background: var(--card); color: var(--ink); }
+.cmp textarea { width: 100%; box-sizing: border-box; font: 600 17px/1.35 var(--body); padding: 8px 12px; border-radius: 12px; border: 2px solid var(--line); background: var(--card); color: var(--ink); }
 .big-idea { font: 700 clamp(22px, 3.6vw, 28px)/1.3 var(--head); color: var(--purple); margin: 6px 0 12px; }
 .vs { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 14px; margin: 12px 0; }
 .vs > div { border-radius: 18px; padding: 14px 16px; } .vs ul { margin: 6px 0 0; padding-left: 22px; } .vs li { margin-bottom: 6px; }
@@ -92,7 +93,7 @@ button:disabled { opacity: 0.5; cursor: default; }
 .wc.sys { background: rgba(47,158,107,.18); border: 2px solid var(--green); } .wc.user { background: rgba(226,115,59,.18); border: 2px solid var(--orange); }
 .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 15px; color: var(--muted); } .legend i { display: inline-block; width: 14px; height: 14px; border-radius: 4px; vertical-align: -2px; margin-right: 5px; }
 .cmds { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; } .cmds button { font-size: 16px; padding: 7px 14px; }
-.cmdrow { display: flex; gap: 10px; flex-wrap: wrap; } .cmdrow input { flex: 1 1 240px; min-width: 0; font: 600 18px var(--body); padding: 10px 14px; border-radius: 14px; border: 2px solid var(--line); background: var(--card); color: var(--ink); }
+.cmdrow { display: flex; gap: 10px; flex-wrap: wrap; } .cmdrow textarea { flex: 1 1 240px; min-width: 0; font: 600 18px/1.35 var(--body); padding: 10px 14px; border-radius: 14px; border: 2px solid var(--line); background: var(--card); color: var(--ink); }
 .two { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 14px; margin: 10px 0; }
 .two > div { background: var(--soft); border-radius: 18px; padding: 12px 14px; } .two h3 { font-size: 18px; }
 .reply { font: 600 18px/1.5 var(--body); white-space: pre-wrap; min-height: 3em; overflow-wrap: anywhere; }
@@ -125,7 +126,7 @@ button:disabled { opacity: 0.5; cursor: default; }
   <section class="card">
     <div class="load" id="load"><span id="loadText">Downloading the model's numbers…</span><div class="bar"><i id="loadBar"></i></div></div>
     <div class="start" id="startRow" hidden>
-      <input id="prompt" value="Once upon a time, there was a little" maxlength="80" aria-label="The start of your story">
+      <textarea id="prompt" class="grow" rows="1" maxlength="80" data-go="go" aria-label="The start of your story">Once upon a time, there was a little</textarea>
       <button class="big" id="go" type="button">Let's go!</button>
     </div>
     <p class="note" style="margin-top:8px">Write the start of a story. The AI will add the next words.</p>
@@ -196,7 +197,7 @@ button:disabled { opacity: 0.5; cursor: default; }
     <div id="cmdBody" hidden>
       <p>Pick a command, or write your own:</p>
       <div class="cmds" id="cmdPicks"></div>
-      <div class="cmdrow"><input id="cmdText" value="What is the capital of France?" maxlength="100" aria-label="Your command"><button class="big" id="cmdGo" type="button">Send</button></div>
+      <div class="cmdrow"><textarea id="cmdText" class="grow" rows="1" maxlength="100" data-go="cmdGo" aria-label="Your command">What is the capital of France?</textarea><button class="big" id="cmdGo" type="button">Send</button></div>
 
       <div id="cmdOut" hidden>
         <h3 style="margin-top:16px">1. What the AI actually reads</h3>
@@ -216,7 +217,7 @@ button:disabled { opacity: 0.5; cursor: default; }
 
       <h3 style="margin-top:18px">3. But can it actually <i>do</i> things?</h3>
       <p>Let's ask it to change the colour of this pretend web page.</p>
-      <div class="cmdrow"><input id="paintText" value="Make the background blue." maxlength="80" aria-label="A colour command"><button id="paintGo" type="button">Ask the AI</button></div>
+      <div class="cmdrow"><textarea id="paintText" class="grow" rows="1" maxlength="80" data-go="paintGo" aria-label="A colour command">Make the background blue.</textarea><button id="paintGo" type="button">Ask the AI</button></div>
       <div class="demo">
         <div class="fakepage" aria-live="polite"><div class="chrome">pretend web page</div><div class="body" id="fakeBody">Hello!</div></div>
         <div><div class="prog" id="prog"><b>// The program, written by people:</b>
@@ -259,7 +260,7 @@ otherwise: do nothing</div></div>
       <div class="power"><h3>It has read more than any person could</h3><p>Big AIs learn from giant piles of text. One model in <a href="index.html">the full version</a>, Pythia, read about 300 billion pieces of text while it was being made. A person reading 8 hours a day, every day, would need <b>about 5,000 years</b> to read that much.</p><p class="note">Rough sum: 300 billion pieces ≈ 225 billion words; reading 250 words a minute for 8 hours ≈ 120,000 words a day.</p></div>
       <div class="power"><h3>It is very fast</h3><p>Even this tiny AI, on your own computer, writes words quicker than you can read them. Let's measure it:</p><button id="pSpeed" type="button">Time it</button><div class="out" id="oSpeed"></div></div>
       <div class="power"><h3>What you give it shapes what you get</h3><p>Change the start, and its guesses for the next piece change. That is <b>attention</b> at work: before each guess, the piece it's on looks back at every earlier piece and borrows most from the ones that matter. Big AI helpers work the same way: <b>your question steers the answer</b>.</p>
-        <div class="cmp"><input id="cmpA" value="The little girl was very" maxlength="60" aria-label="First start"><input id="cmpB" value="The big scary dragon was very" maxlength="60" aria-label="Second start"></div>
+        <div class="cmp"><textarea id="cmpA" class="grow" rows="1" maxlength="60" data-go="pCmp" aria-label="First start">The little girl was very</textarea><textarea id="cmpB" class="grow" rows="1" maxlength="60" data-go="pCmp" aria-label="Second start">The big scary dragon was very</textarea></div>
         <button id="pCmp" type="button">Compare its guesses</button><div class="out" id="oCmp"></div><p class="note">The real model's top 3. Each chance is for the word's first piece; the AI itself finishes words like "hun|gry".</p></div>
       <div class="power"><h3>It never gets tired of questions</h3><p>You can ask "but why?" a hundred times, at any hour, and ask it to explain the same idea in five different ways. It never sighs or laughs at you (it has no feelings at all, remember).</p></div>
     </div>
@@ -357,13 +358,18 @@ otherwise: do nothing</div></div>
     const F = { vocab: m.V.toLocaleString('en-US'), dim: m.D, layers: m.L, knobs: knobs.toLocaleString('en-US'), layerKnobs: mil(layerKnobs), tableKnobs: mil(knobs - layerKnobs), ctx: CTX };
     document.querySelectorAll('[data-n]').forEach(e => { if (F[e.dataset.n] != null) e.textContent = F[e.dataset.n]; });
   }
-  const show = id => { const e = $(id); e.hidden = false; if (!reduce) e.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+  // text boxes grow to fit what is typed (so the whole prompt is readable on a phone); Enter presses the box's button
+  const fit = t => { if (/\n/.test(t.value)) t.value = t.value.replace(/\n+/g, ' '); t.style.height = 'auto'; t.style.height = (t.scrollHeight + t.offsetHeight - t.clientHeight) + 'px'; }; // + the border, so the last line is never clipped
+  const fitAll = () => document.querySelectorAll('textarea.grow').forEach(fit);
+  document.querySelectorAll('textarea.grow').forEach(t => { t.addEventListener('input', () => fit(t)); t.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); const b = document.getElementById(t.dataset.go); if (b && !b.disabled) b.click(); } }); });
+  addEventListener('resize', fitAll); if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitAll);
+  const show = id => { const e = $(id); e.hidden = false; fitAll(); if (!reduce) e.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
 
   // load the real model (30 MB)
   LLM.load('tiny-stories', (got, total) => {
     if (got < 0) { $('#loadText').textContent = 'Unpacking the numbers…'; return; }
     $('#loadText').textContent = `Downloading the model's numbers: ${Math.round(got / 1e6)} of ${Math.round(total / 1e6)} MB`; $('#loadBar').style.width = (got / total * 100) + '%';
-  }).then(m => { M = m; fillFacts(m); $('#load').hidden = true; $('#startRow').hidden = false; })
+  }).then(m => { M = m; fillFacts(m); $('#load').hidden = true; $('#startRow').hidden = false; fitAll(); })
     .catch(err => { $('#loadText').textContent = 'Could not download the model: ' + err.message + '. Check the internet connection and reload.'; });
 
   // run the start of the story through the model; keep what each tunnel (layer) points to for the last piece
@@ -432,7 +438,7 @@ otherwise: do nothing</div></div>
       // 4: score and dice
       show('#s4'); guesses(r.res.logits, -1);
       show('#s5'); $('#story').textContent = text;
-      $('#cmd').hidden = false; $('#agent').hidden = false; if (!agentMounted) { AGENT.mount($('#agentView'), { kids: true }); agentMounted = true; } $('#myths').hidden = false; $('#power').hidden = false; $('#who').hidden = false; $('#learn').hidden = false; $('#risks').hidden = false;
+      $('#cmd').hidden = false; $('#agent').hidden = false; if (!agentMounted) { AGENT.mount($('#agentView'), { kids: true }); agentMounted = true; } $('#myths').hidden = false; $('#power').hidden = false; $('#who').hidden = false; $('#learn').hidden = false; $('#risks').hidden = false; fitAll();
     } finally { busy = false; $('#go').disabled = false; }
   });
   // one dice roll: add the picked word to the story and run the model again for the next one
@@ -531,7 +537,7 @@ otherwise: do nothing</div></div>
     LLM.load('smollm2-instruct', (got, total) => {
       if (got < 0) { $('#cmdLoadText').textContent = 'Unpacking the numbers…'; return; }
       $('#cmdLoadText').textContent = `Downloading the chat AI: ${Math.round(got / 1e6)} of ${Math.round(total / 1e6)} MB`; $('#cmdLoadBar').style.width = (got / total * 100) + '%';
-    }).then(m => { C = m; $('#cmdLoadBox').hidden = true; $('#cmdBody').hidden = false; })
+    }).then(m => { C = m; $('#cmdLoadBox').hidden = true; $('#cmdBody').hidden = false; fitAll(); })
       .catch(err => { $('#cmdLoad').disabled = false; $('#cmdLoadText').textContent = 'Could not load the chat AI: ' + err.message; });
   });
   $('#cmdGo').addEventListener('click', async () => {
