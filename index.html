@@ -92,6 +92,10 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
 .lay .detail { grid-column: 1 / -1; font: 13px/1.45 var(--mono); color: var(--s-ink2); display: none; } .lay.on .detail { display: block; }
 @media (max-width: 700px) { .lay { grid-template-columns: 4em minmax(0, 1fr); } .lay .g { grid-column: 1 / -1; text-align: left; } .lay:not(.on):not(.done) .g, .lay:not(.on) canvas { display: none; } }
 .lights { display: flex; flex-direction: column; gap: 6px; }
+.allgrid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 14px; align-items: start; }
+.cloudbox { position: sticky; top: 12px; } .cloudbox canvas { width: 100%; display: block; border-radius: 12px; background: #07080d; border: 1px solid var(--s-line); }
+.cloudbox .note { margin-top: 6px; font-size: 12.5px; }
+@media (max-width: 760px) { .allgrid { grid-template-columns: 1fr; } .cloudbox { position: static; order: -1; } }
 .light { display: grid; grid-template-columns: 1.6em minmax(0, 7em) minmax(0, 1fr) 4.2em; gap: 10px; align-items: center; font: 600 14px var(--mono); }
 .light i { width: 18px; height: 18px; border-radius: 50%; background: var(--pick); box-shadow: 0 0 calc(var(--g) * 22px) calc(var(--g) * 6px) rgb(255 233 184 / .65); opacity: calc(.15 + var(--g) * .85); }
 .light span:nth-child(2) { overflow: hidden; text-overflow: ellipsis; white-space: pre; } .light .b { height: 10px; border-radius: 99px; background: #1d2336; overflow: hidden; } .light .b em { display: block; height: 100%; background: var(--pick); }
@@ -155,9 +159,11 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
           <div class="box"><h3>Its sound, before and after this layer</h3><div class="rows" id="beforeAfter"></div><p class="note" id="baNote"></p></div>
         </div>
         <p class="pic"><b>The picture:</b> rows of volume knobs, set at the factory and glued. Before each row, the newest word listens back to the earlier words (pink) and blends in what matters. That listening is the only step whose mixing depends on what you type.</p></section>
-      <section class="sec" id="s-all"><h2><i>4</i>Through every layer</h2><p class="cap"></p><div class="layers" id="layers"></div>
-        <p class="pic"><b>The picture:</b> the same thing, row after row of knobs. On the right: what it would say if it stopped after that layer (the “logit lens”). Early layers are not built to be read this way, so their guesses look odd.</p></section>
-      <section class="sec" id="s-lights"><h2><i>5</i>The wall of lights</h2><p class="cap"></p><div class="lights" id="lights"></div><p class="note" id="lightsNote" style="margin-top:8px"></p>
+      <section class="sec" id="s-all"><h2><i>4</i>Through every layer</h2><p class="cap"></p>
+        <div class="allgrid"><div class="layers" id="layers"></div><div class="cloudbox"><canvas id="cloud" aria-label="The thought cloud: every piece in the dictionary as a dot, similar pieces close together; the pieces it would say after this layer light up"></canvas><p class="note" id="cloudNote">The thought cloud: every piece in the dictionary is a dot, and pieces used alike sit close together.</p></div></div>
+        <p class="pic"><b>The picture:</b> the same thing, row after row of knobs. Next to each layer: what it would say if it stopped there (the “logit lens”), and in the cloud, every piece it might say lights up. Early layers are not built to be read this way, so their guesses look odd. The cloud is a flat map of the model's own embedding rows (made with t-SNE); distances on it are approximate.</p></section>
+      <section class="sec" id="s-lights"><h2><i>5</i>The wall of lights</h2><p class="cap"></p>
+        <div class="allgrid"><div class="lights" id="lights"></div><div class="cloudbox"><canvas id="cloud2" aria-label="The wall of lights laid out as the thought cloud: every piece's final chance as light"></canvas><p class="note">The same wall of lights, laid out as the thought cloud.</p></div></div><p class="note" id="lightsNote" style="margin-top:8px"></p>
         <p class="pic"><b>The picture:</b> a wall with one light for every piece in the dictionary. Each glows by how well the final sound matches that piece's row in the output table.</p></section>
       <section class="sec" id="s-dice"><h2><i>6</i>The weighted dice</h2><p class="cap"></p>
         <div class="lights" id="chances"></div>
@@ -216,14 +222,62 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
   function meanAtt(ly) { const Tn = ly.attn.length / ly.heads, w = new Float32Array(Tn); for (let h = 0; h < ly.heads; h++) for (let j = 0; j < Tn; j++) w[j] += ly.attn[h * Tn + j] / ly.heads; return w; }
   const piece = id => M.tok.piece(id);
 
+  // ---------- the thought cloud: the model's vocabulary on a flat map (prep/cloud_layout.py), lit by its chances ----------
+  const CLOUD_FILE = { 'tiny-stories': 'cloud-tiny.js', 'pythia-14m': 'cloud-pythia.js', distilgpt2: 'cloud-gpt2.js' };
+  const needCloud = k => (window.CLOUDS && window.CLOUDS[k]) ? Promise.resolve() : new Promise(ok => { const sc = document.createElement('script'); sc.src = CLOUD_FILE[k]; sc.onload = ok; sc.onerror = ok; document.head.appendChild(sc); });
+  const unb64 = t => Uint8Array.from(atob(t || ''), ch => ch.charCodeAt(0));
+  let MAP = null;
+  function setMap(k) { const c = window.CLOUDS && window.CLOUDS[k]; if (!c) { MAP = null; return; } MAP = { xy: new Uint16Array(unb64(c.xy).buffer), cat: unb64(c.cat), base: null }; }
+  const onMap = id => MAP && id < MAP.cat.length && MAP.cat[id] !== 255;
+  function hue(id) { const dx = MAP.xy[2 * id] / 65534 - 0.5, dy = MAP.xy[2 * id + 1] / 65534 - 0.5; return [(Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360, Math.min(1, Math.hypot(dx, dy) * 2.3)]; }
+  const FLOOR = Math.log(1e-6), pOfQ = q => (q ? Math.exp(FLOOR * (1 - q / 255)) : 0);
+  function drawCloud(cv, watch, labels, path) {
+    if (!MAP) { cv.hidden = true; return; } cv.hidden = false;
+    const W = cv.clientWidth || 320, H = Math.round(Math.min(W * 0.8, 340)), dpr = Math.min(2, devicePixelRatio || 1);
+    if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); cv.style.height = H + 'px'; MAP.base = null; }
+    const c = cv.getContext('2d'), pad = 10 * dpr, X = id => pad + MAP.xy[2 * id] / 65534 * (cv.width - 2 * pad), Y = id => pad + MAP.xy[2 * id + 1] / 65534 * (cv.height - 2 * pad);
+    if (!MAP.base || MAP.base.width !== cv.width) { // every piece as a dim dot, coloured by where it sits
+      const b = document.createElement('canvas'); b.width = cv.width; b.height = cv.height; const bc = b.getContext('2d');
+      for (let id = 0; id < MAP.cat.length; id++) { if (MAP.cat[id] === 255) continue; const [h, r] = hue(id); bc.fillStyle = `hsla(${h.toFixed(0)},${(20 + 55 * r).toFixed(0)}%,60%,0.35)`; bc.fillRect(X(id), Y(id), 1.2 * dpr, 1.2 * dpr); }
+      MAP.base = b;
+    }
+    c.clearRect(0, 0, cv.width, cv.height); c.drawImage(MAP.base, 0, 0);
+    if (watch) { // the chance of every piece as light (one in a million and up)
+      c.globalCompositeOperation = 'lighter';
+      for (let id = 0; id < Math.min(watch.length, MAP.cat.length); id++) {
+        const q = watch[id]; if (q < 60 || MAP.cat[id] === 255) continue;
+        const a = (q - 60) / 195, [h] = hue(id); c.fillStyle = `hsla(${h.toFixed(0)},90%,${(55 + 30 * a).toFixed(0)}%,${(0.25 + 0.75 * a).toFixed(2)})`;
+        const r = (1 + 4 * a * a) * dpr; c.beginPath(); c.arc(X(id), Y(id), r, 0, Math.PI * 2); c.fill();
+      }
+      c.globalCompositeOperation = 'source-over';
+    }
+    if (path && path.length > 1) { // where its best guess moved, layer by layer
+      c.strokeStyle = 'rgba(255,233,184,.7)'; c.lineWidth = 1.5 * dpr; c.beginPath();
+      path.forEach((id, i) => { if (!onMap(id)) return; i ? c.lineTo(X(id), Y(id)) : c.moveTo(X(id), Y(id)); }); c.stroke();
+    }
+    c.font = `600 ${12 * dpr}px "IBM Plex Mono", monospace`; c.textBaseline = 'middle';
+    const placed = []; // labels never overlap: each one moves down until it has room, with a thin line back to its dot
+    (labels || []).forEach(([id, txt], i) => {
+      if (!onMap(id)) return; const x = X(id), y = Y(id);
+      c.fillStyle = i ? 'rgba(255,255,255,.9)' : '#ffe9b8'; c.beginPath(); c.arc(x, y, (i ? 3 : 4.5) * dpr, 0, Math.PI * 2); c.fill();
+      const tw = c.measureText(txt).width, h = 18 * dpr, tx = Math.min(cv.width - tw - 6 * dpr, x + 10 * dpr); let ty = y;
+      while (placed.some(r => tx < r.x + r.w && tx + tw + 6 * dpr > r.x && Math.abs(ty - r.y) < h + 2 * dpr)) ty += h + 2 * dpr;
+      if (ty + h / 2 > cv.height) ty = y - (h + 2 * dpr) * (1 + placed.length);
+      placed.push({ x: tx - 3 * dpr, y: ty, w: tw + 6 * dpr });
+      if (ty !== y) { c.strokeStyle = 'rgba(255,255,255,.45)'; c.lineWidth = dpr; c.beginPath(); c.moveTo(x, y); c.lineTo(tx - 3 * dpr, ty); c.stroke(); }
+      c.fillStyle = 'rgba(7,8,13,.8)'; c.fillRect(tx - 3 * dpr, ty - h / 2, tw + 6 * dpr, h);
+      c.fillStyle = i ? '#e7e9f3' : '#ffe9b8'; c.fillText(txt, tx, ty);
+    });
+  }
+
   // ---------- loading ----------
   function loadModel(k) {
     key = k; $('#start').disabled = true; $('#load').hidden = false; $('#loadText').textContent = 'Downloading the model\'s numbers…'; $('#loadBar').style.width = '0';
-    if (MODELS[k]) { M = MODELS[k]; $('#load').hidden = true; $('#start').disabled = false; return; }
+    if (MODELS[k]) { M = MODELS[k]; setMap(k); $('#load').hidden = true; $('#start').disabled = false; return; }
     LLM.load(k, (got, total) => {
       if (got < 0) { $('#loadText').textContent = 'Unpacking the numbers…'; return; }
       $('#loadText').textContent = `Downloading the model's numbers: ${Math.round(got / 1e6)} of ${Math.round(total / 1e6)} MB`; $('#loadBar').style.width = (got / total * 100) + '%';
-    }).then(m => { MODELS[k] = m; if (key === k) { M = m; $('#load').hidden = true; $('#start').disabled = false; } })
+    }).then(m => needCloud(k).then(() => m)).then(m => { MODELS[k] = m; if (key === k) { M = m; setMap(k); $('#load').hidden = true; $('#start').disabled = false; } })
       .catch(e => { $('#loadText').textContent = 'Could not download the model: ' + e.message; });
   }
   document.querySelectorAll('.models button').forEach(b => b.addEventListener('click', () => { if (running) return; document.querySelectorAll('.models button').forEach(x => x.setAttribute('aria-pressed', x === b)); loadModel(b.dataset.key); }));
@@ -237,11 +291,12 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
   // ---------- the walk-through ----------
   async function walk(text) {
     running = true; paused = false; $('#play').textContent = 'Pause'; $('#ctl').hidden = false; $('#walk').classList.add('live');
+    [$('#cloud'), $('#cloud2')].forEach(cv => drawCloud(cv, null, null, null));
     ['#chips', '#rows', '#lookChips', '#knobs', '#beforeAfter', '#layers', '#lights', '#chances', '#sentence', '#picks'].forEach(q => { $(q).innerHTML = ''; });
     document.querySelectorAll('.cap').forEach(c => { c.textContent = ''; }); $('#knobNote').textContent = ''; $('#baNote').textContent = ''; $('#lightsNote').textContent = ''; $('#diceNote').textContent = '';
     const ids = (M.meta.bos != null ? [M.meta.bos] : []).concat(M.tok.encode(text)), n = ids.length, L = M.L, last = n - 1;
     // the real run: read every piece; the last one keeps everything (every layer's numbers, attention and guesses)
-    const st = M.newState(); await M.prefill(st, ids.slice(0, -1)); let res = await M.step(st, ids[last], true, 3);
+    const st = M.newState(); await M.prefill(st, ids.slice(0, -1)); M.setWatch('all'); let res = await M.step(st, ids[last], true, 3); M.setWatch(null);
 
     // 1 pieces
     focus('pieces', `The model can't read letters. First its tokenizer cuts your words into pieces it knows: ${n} pieces here, each with its number in a dictionary of ${nf(M.V)} pieces.` + (M.meta.bos != null ? ' The first one, <s>, just marks the start.' : ''));
@@ -292,6 +347,8 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
       const gEl = d.querySelector('.g'); gEl.textContent = `${piece(g.id)} ${pct(g.p)}`; gEl.classList.toggle('final', l >= from);
       d.querySelector('.detail').textContent = `listened most to “${piece(ids[top])}” (${pct(w[top])}${j0 ? ', not counting the start marker' : ''}) · ${nf(layerKnobs(l))} knobs · would say “${piece(g.id)}” (${pct(g.p)})`;
       d.scrollIntoView({ block: 'nearest', behavior: reduce || SPEED > 3 ? 'auto' : 'smooth' });
+      drawCloud($('#cloud'), q.watch, q.lens.slice(0, 3).map(x => [x.id, `${piece(x.id)} ${pct(x.p)}`]), rec.layers.slice(0, l + 1).map(x => x.lens[0].id));
+      $('#cloudNote').textContent = `After layer ${l + 1}: every piece it might say lights up, brighter for more likely. The line follows its best guess from layer to layer.`;
       await beat(L > 12 ? 1100 : 2400);
     }
     rowsEls.forEach(e => { e.classList.remove('on'); e.classList.add('done'); });
@@ -306,6 +363,7 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
       const p = Math.exp(lg[c.id] - lmx) / z, d = document.createElement('div'); d.className = 'light'; d.style.setProperty('--g', Math.min(1, p * 1.4 + 0.05).toFixed(2));
       d.innerHTML = `<i></i><span></span><span class="b"><em style="width:${(p * 100).toFixed(1)}%"></em></span><span>${pct(p)}</span>`; d.children[1].textContent = piece(c.id); $('#lights').appendChild(d); await beat(500);
     }
+    drawCloud($('#cloud2'), rec.layers[L - 1].watch, top5.slice(0, 3).map(x => [x.id, `${piece(x.id)} ${pct(Math.exp(lg[x.id] - lmx) / z)}`]), null);
     let above = 0; for (let i = 0; i < lg.length; i++) if (Math.exp(lg[i] - lmx) / z >= 0.01) above++;
     $('#lightsNote').textContent = `Scores turned into chances with softmax, over all ${nf(M.V)} pieces. Only ${above} of them have a chance of 1% or more; the rest of the wall is almost dark.`;
     await beat(4200);
