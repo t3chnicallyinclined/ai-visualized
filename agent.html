@@ -78,6 +78,19 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--c-attn); ou
 .prog .json { color: #8ff0ff; } .prog .cmd { color: #fff; background: rgb(47 198 216 / 0.2); border-radius: 4px; padding: 1px 5px; font-size: 16px; }
 .prog .stepline { display: block; opacity: 0.3; transition: opacity 0.3s; } .prog .stepline.on { opacity: 1; color: var(--s-ink); }
 .ask { margin-top: 10px; border: 1.5px solid var(--c-attn); border-radius: 12px; padding: 10px 12px; font: 15px var(--body); color: #fff; } .ask button { margin: 8px 8px 0 0; }
+.sysparts { display: flex; flex-direction: column; gap: 8px; }
+.sp { display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 10px; background: #0f1322; border: 1px solid var(--s-line); border-radius: 10px; padding: 8px 10px; transition: border-color .3s, background .3s; }
+@media (max-width: 700px) { .sp { grid-template-columns: 1fr; } }
+.sp.on { border-color: var(--c-sys); background: rgb(127 220 181 / 0.08); }
+.sp h4 { margin: 0; font: 600 13px var(--body); color: var(--c-sys); } .sp h4 small { display: block; font: 12px var(--mono); color: var(--s-ink3); margin-top: 2px; }
+.sp p { margin: 4px 0 0; font-size: 13.5px; color: var(--s-ink2); }
+.sp pre { margin: 0; font: 12.5px/1.5 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; color: var(--s-ink); }
+.why2 { margin-top: 12px; font-size: 15px; } .why2 summary { cursor: pointer; font-weight: 600; color: #fff; } .why2 p { color: var(--s-ink2); margin: 8px 0; } .why2 code { color: #8ff0ff; }
+.exprow { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 8px 0; } .exprow select { font: 14px var(--body); background: var(--s-2); color: var(--s-ink); border: 1px solid var(--s-line); border-radius: 8px; padding: 5px 8px; }
+table.exp { width: 100%; border-collapse: collapse; font-size: 13.5px; } table.exp th, table.exp td { text-align: left; vertical-align: top; padding: 6px 8px; border-bottom: 1px solid var(--s-line); }
+table.exp th { font: 600 11.5px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--s-ink2); } table.exp td:nth-child(2) { font: 600 14px var(--mono); color: var(--c-tool); white-space: nowrap; }
+table.exp td:nth-child(3) { font: 12.5px/1.45 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; color: var(--s-ink); }
+@media (max-width: 700px) { table.exp, table.exp tbody, table.exp tr, table.exp td { display: block; } table.exp thead { display: none; } table.exp tr { border-bottom: 1px solid var(--s-line); padding: 6px 0; } table.exp td { border: 0; padding: 2px 0; } }
 .termbox { background: #05070c; border: 1px solid #2a3350; border-radius: 12px; padding: 10px 12px; }
 .termbox .ag-term { max-height: 260px; font-size: 15px; }
 .back { font: 15px/1.5 var(--body); color: var(--s-ink2); } .back b { color: #fff; }
@@ -126,6 +139,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--c-attn); ou
   <div class="walk" id="walk">
     <ol class="rail" id="rail">
       <li data-s="task">Your task</li>
+      <li data-s="sys">The hidden instructions</li>
       <li data-s="ctx">The program builds what the model reads</li>
       <li data-s="model">The model reads, then decides</li>
       <li data-s="words">The model writes, one token at a time</li>
@@ -136,14 +150,25 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--c-attn); ou
     </ol>
     <div class="secs">
       <section class="sec" id="s-task"><h2><i>1</i>Your task</h2><p class="cap"></p><div class="bubble" id="bubble"></div></section>
-      <section class="sec" id="s-ctx"><h2><i>2</i>The context: everything the model reads</h2><p class="cap"></p><div class="svgwrap"><svg id="tape" class="ag-svg" viewBox="0 0 900 120" role="img" aria-label="Everything the model reads, as a tape of real tokens, with the newest token's attention as pink arcs"></svg></div><pre class="syspre" id="syspre" hidden></pre></section>
-      <section class="sec" id="s-model"><h2><i>3</i>The model: 24 layers of fixed knobs</h2><p class="cap"></p><div class="svgwrap"><svg id="model" class="ag-svg" viewBox="0 0 900 160" role="img" aria-label="The model's 24 layers with real knobs, and the logit lens of the first token of each turn"></svg></div><div class="gauge" id="gauge"></div></section>
-      <section class="sec" id="s-words"><h2><i>4</i>The model writes</h2><p class="cap"></p><div class="words" id="words"></div>
+      <section class="sec" id="s-sys"><h2><i>2</i>The hidden instructions</h2><p class="cap"></p>
+        <p class="note" style="margin-bottom:10px">Before your task, the program puts text you never see in front of it: the <b>system prompt</b>. Apps do this too. Here it has three parts:</p>
+        <div class="sysparts" id="sysparts"></div>
+        <details class="why2" id="whyBox"><summary>Why does a bit of text make it use a shell? Test it.</summary>
+          <p>The text does not switch anything on inside the model: the 494 million knobs are the same with or without it. It is just more tokens to read. It works because, after its first training on ordinary text, the Qwen team trained this model further on many example conversations written in exactly this chat form, with tool lists and <code>&lt;tool_call&gt;</code> answers. So when the model reads this pattern, a <code>&lt;tool_call&gt;</code> becomes a likely next token, and when it writes the tool's name it reads the list through attention (the arcs reach into the green squares).</p>
+          <p>The test: run the same task with parts of the hidden instructions removed, and see what the real model does. Each row runs the model from scratch (a few seconds each).</p>
+          <div class="exprow"><label>Task <select id="expTask"><option>What is 23 times 47?</option><option>Delete every file with rm *.</option></select></label><button type="button" id="expGo">Run the test</button><span class="note" id="expStatus"></span></div>
+          <table class="exp" id="expTable"><thead><tr><th>Hidden instructions</th><th>Chance it starts with &lt;tool_call&gt;</th><th>What it wrote</th></tr></thead><tbody></tbody></table>
+          <p class="note" id="expNote"></p>
+        </details>
+      </section>
+      <section class="sec" id="s-ctx"><h2><i>3</i>The context: everything the model reads</h2><p class="cap"></p><div class="svgwrap"><svg id="tape" class="ag-svg" viewBox="0 0 900 120" role="img" aria-label="Everything the model reads, as a tape of real tokens, with the newest token's attention as pink arcs"></svg></div><pre class="syspre" id="syspre" hidden></pre></section>
+      <section class="sec" id="s-model"><h2><i>4</i>The model: 24 layers of fixed knobs</h2><p class="cap"></p><div class="svgwrap"><svg id="model" class="ag-svg" viewBox="0 0 900 160" role="img" aria-label="The model's 24 layers with real knobs, and the logit lens of the first token of each turn"></svg></div><div class="gauge" id="gauge"></div></section>
+      <section class="sec" id="s-words"><h2><i>5</i>The model writes</h2><p class="cap"></p><div class="words" id="words"></div>
         <div class="why"><div><h3>Its next-token chances</h3><div class="cands" id="cands"></div></div><div><h3>Where it looked back (attention)</h3><div class="look" id="look"></div></div></div></section>
-      <section class="sec" id="s-prog"><h2><i>5</i>The program (written by people)</h2><p class="cap"></p><div class="prog" id="prog"></div></section>
-      <section class="sec" id="s-shell"><h2><i>6</i>The shell</h2><p class="cap"></p><div class="termbox"><pre class="ag-term" id="term"></pre></div></section>
-      <section class="sec" id="s-back"><h2><i>7</i>Back into the context</h2><p class="cap"></p><div class="back" id="back"></div></section>
-      <section class="sec" id="s-done"><h2><i>8</i>What actually happened</h2><p class="cap"></p>
+      <section class="sec" id="s-prog"><h2><i>6</i>The program (written by people)</h2><p class="cap"></p><div class="prog" id="prog"></div></section>
+      <section class="sec" id="s-shell"><h2><i>7</i>The shell</h2><p class="cap"></p><div class="termbox"><pre class="ag-term" id="term"></pre></div></section>
+      <section class="sec" id="s-back"><h2><i>8</i>Back into the context</h2><p class="cap"></p><div class="back" id="back"></div></section>
+      <section class="sec" id="s-done"><h2><i>9</i>What actually happened</h2><p class="cap"></p>
         <div class="out"><div><h3>What the model said</h3><p class="said" id="said"></p></div><div><h3>What actually happened</h3><p id="happened"></p><div class="files" id="files"></div><p class="note" id="lesson" style="margin-top:8px"></p></div></div>
         <p style="margin:12px 0 0"><button type="button" id="resetFiles">Put the files back</button> <button type="button" id="again">Try another</button></p></section>
     </div>
@@ -177,7 +202,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--c-attn); ou
   document.querySelectorAll('.speed button').forEach(b => b.addEventListener('click', () => { SPEED = +b.dataset.sp; document.querySelectorAll('.speed button').forEach(x => x.setAttribute('aria-pressed', x === b)); }));
 
   // ---------- where the eye should be ----------
-  const STEP_NAMES = { task: 'Your task', ctx: 'The context', model: 'The model', words: 'The model writes', prog: 'The program', shell: 'The shell', back: 'Back into the context', done: 'What actually happened' };
+  const STEP_NAMES = { sys: 'The hidden instructions', task: 'Your task', ctx: 'The context', model: 'The model', words: 'The model writes', prog: 'The program', shell: 'The shell', back: 'Back into the context', done: 'What actually happened' };
   let round = 1;
   function focus(k, cap) {
     document.querySelectorAll('.sec').forEach(s => s.classList.toggle('on', s.id === 's-' + k));
@@ -205,6 +230,46 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--c-attn); ou
     await beat(500); caret.remove(); term.append('\n' + out + (out && !out.endsWith('\n') ? '\n' : ''));
     const pr = document.createElement('span'); pr.className = 'pr'; pr.textContent = PROMPT; term.append(pr); const c = document.createElement('span'); c.className = 'caret'; term.append(c);
   }
+  // the hidden instructions in three parts (the exact text the model reads, cut where its meaning changes)
+  const SYS_ID = 'You are Qwen, created by Alibaba Cloud. You are a helpful assistant.';
+  const SYS_TOOLS = A.SYSTEM.slice(SYS_ID.length, A.SYSTEM.indexOf('\n\nFor each function call')).replace(/^\n+/, '');
+  const SYS_FORMAT = A.SYSTEM.slice(A.SYSTEM.indexOf('For each function call'));
+  const PARTS = [
+    ['Who it is', SYS_ID, 'The default identity line from Qwen\'s own chat template.'],
+    ['The tool list', SYS_TOOLS, 'Describes the one tool the program offers: its name, what it does, and what to fill in (the command).'],
+    ['The format rule', SYS_FORMAT, 'Says exactly how to ask: a JSON object between <tool_call> and </tool_call>. The program looks for exactly this.'],
+  ];
+  function sysParts() {
+    $('#sysparts').innerHTML = PARTS.map(([h, t, n], i) => `<div class="sp" data-i="${i}"><div><h4>${esc(h)}<small>${model ? model.tok.encode(t).length + ' tokens' : ''}</small></h4><p>${esc(n)}</p></div><pre>${esc(t)}</pre></div>`).join('');
+  }
+  sysParts();
+  // the test: the same task with parts left out; the real model, the same greedy choice with the repetition penalty
+  async function variant(sys, task) {
+    const ids = model.tok.encode(`<|im_start|>system\n${sys}<|im_end|>\n<|im_start|>user\n${task}<|im_end|>\n<|im_start|>assistant\n`);
+    const st = model.newState(), seen = new Set(ids); let res = await model.prefill(st, ids);
+    const sc = lg => { const s2 = lg.slice(); for (const id of seen) s2[id] = s2[id] > 0 ? s2[id] / 1.1 : s2[id] * 1.1; return s2; };
+    const lg = sc(res.logits); let mx = -Infinity; for (const v of lg) if (v > mx) mx = v; let z = 0; for (const v of lg) z += Math.exp(v - mx);
+    const pTool = Math.exp(lg[TOOL_ID] - mx) / z, out = [];
+    for (let n = 0; n < 40; n++) { const s2 = sc(res.logits); let g = 0; for (let i = 1; i < s2.length; i++) if (s2[i] > s2[g]) g = i; if (g === IM_END || g === 151643) break; out.push(g); seen.add(g); res = await model.step(st, g, false); }
+    return { pTool, text: model.tok.decode(out) + (out.length >= 40 ? ' …' : ''), n: ids.length };
+  }
+  $('#expGo').addEventListener('click', async () => {
+    if (!model) { $('#expStatus').textContent = 'Load the model first (the button at the top).'; return; }
+    if (running) { $('#expStatus').textContent = 'Wait for the walk-through to finish.'; return; }
+    running = true; $('#expGo').disabled = true; const task = $('#expTask').value, body = $('#expTable tbody'); body.innerHTML = ''; $('#expNote').textContent = '';
+    const rows = [['All three parts (what the agent uses)', A.SYSTEM], ['No hidden instructions at all (just "who it is")', SYS_ID], ['Who it is + the tool list, without the format rule', SYS_ID + '\n\n' + A.SYSTEM.slice(SYS_ID.length + 2, A.SYSTEM.indexOf('\n\nFor each function call'))], ['Who it is + the format rule, with an empty tool list', A.SYSTEM.replace(/<tools>[\s\S]*<\/tools>/, '<tools>\n</tools>')]];
+    const res = [];
+    try {
+      for (const [label, sys] of rows) {
+        $('#expStatus').textContent = `Running: ${label}…`;
+        const r = await variant(sys, task); res.push(r);
+        const tr = document.createElement('tr'); tr.innerHTML = `<td></td><td>${pct(r.pTool)}</td><td></td>`; tr.children[0].textContent = label; tr.children[2].textContent = r.text; body.appendChild(tr);
+      }
+      $('#expStatus').textContent = 'Done. Every row is a real run.';
+      $('#expNote').textContent = 'What to look for: without the format rule the chance of <tool_call> drops to almost nothing, even with the tool listed, so the model just answers in words. With the format rule but no tool listed, it still asks for a tool and makes up one that does not exist. The tool list decides what it asks for; the format rule decides that it asks. Neither changes a single knob.' + (/rm/.test(task) && /sorry/i.test(res[1].text) ? ' And notice: without the hidden instructions it refuses to delete anything. Same knobs, different text in front of the task, different behaviour.' : '');
+    } catch (e) { $('#expStatus').textContent = 'Error: ' + e.message; }
+    running = false; $('#expGo').disabled = false;
+  });
   function filesView(before) {
     const now = A.SHELL.files(), all = Array.from(new Set(Object.keys(A.FILES).concat(Object.keys(now)))).sort();
     $('#files').innerHTML = all.map(f => `<span class="${f in now ? '' : 'gone'}">${esc(f)}</span>`).join('');
@@ -239,6 +304,10 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--c-attn); ou
           focus('task', 'This is what you asked. The agent program takes it from here.');
           for (const ch of task) { $('#bubble').textContent += ch; await beat(28); }
           await beat(1400);
+          focus('sys', 'First, the program puts its hidden instructions in front of your task. The model reads them as ordinary text.');
+          for (const sp of document.querySelectorAll('.sp')) { sp.classList.add('on'); await beat(2600); sp.classList.remove('on'); }
+          capOf('sys').textContent = 'These words are why it will ask for the shell. Open “Why does a bit of text make it use a shell?” after the run to test it.';
+          await beat(1800);
           const sys = e.segs.find(s => s.kind === 'system'), usr = e.segs.find(s => s.kind === 'user');
           focus('ctx', `The program builds what the model will read: hidden instructions that describe its one tool, a shell (${sys.ids.length} tokens, the green squares), then your task (${usr.ids.length} tokens), then “assistant”: the model's turn.`);
         } else {
@@ -346,7 +415,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--c-attn); ou
       if (got < 0) { $('#loadText').textContent = 'Unpacking the numbers…'; return; }
       $('#loadText').textContent = `Downloading the model: ${Math.round(got / 1e6)} of ${Math.round(total / 1e6)} MB`; $('#loadBar').style.width = (got / total * 100) + '%';
     }).then(m => {
-      model = m; DIALS = A.dials(m); TOOL_ID = m.tok.encode('<tool_call>')[0];
+      model = m; DIALS = A.dials(m); TOOL_ID = m.tok.encode('<tool_call>')[0]; sysParts();
       $('#loadBox').hidden = true; render(); termReset(); filesView();
       if (wanted) { const t = wanted; wanted = null; go(t); }
     }).catch(e => { $('#load').disabled = false; $('#loadText').textContent = 'Could not load the model: ' + e.message; });
