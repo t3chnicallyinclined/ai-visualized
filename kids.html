@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>How AI Writes · AI Visualized</title>
-<meta name="description" content="For kids and classrooms: look inside a real AI as it writes a story, word by word. It is numbers and a dice roll, made by people. What it can and cannot do, why it is powerful, and how to use it to learn more, not think less.">
+<title>How AI Works · AI Visualized</title>
+<meta name="description" content="For kids and classrooms: look inside a real AI as it writes a story, word by word, and watch a real chat AI follow a command. It is numbers and a dice roll, made by people. What it can and cannot do, why it is powerful, and how to use it to learn more, not think less.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Cellipse cx=%2716%27 cy=%2718%27 rx=%2710%27 ry=%278%27 fill=%27%23e2733b%27/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
@@ -84,6 +84,23 @@ button:disabled { opacity: 0.5; cursor: default; }
 .habits li::before { content: counter(h); position: absolute; left: 14px; top: 12px; width: 32px; height: 32px; border-radius: 50%; background: var(--green); color: #fff; display: grid; place-items: center; font: 700 18px var(--head); }
 .habits b { display: block; font: 700 19px var(--head); }
 .starters { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 12px; } .starters span { background: var(--soft); border: 2px solid var(--line); border-radius: 999px; padding: 4px 14px; font-weight: 700; }
+.wrapchips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; align-items: center; }
+.wc { font: 600 16px var(--body); padding: 4px 10px; border-radius: 10px; white-space: pre-wrap; }
+.wc.mark { background: var(--purple); color: #fff; font-family: ui-monospace, Consolas, monospace; font-size: 14px; }
+.wc.sys { background: rgba(47,158,107,.18); border: 2px solid var(--green); } .wc.user { background: rgba(226,115,59,.18); border: 2px solid var(--orange); }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 15px; color: var(--muted); } .legend i { display: inline-block; width: 14px; height: 14px; border-radius: 4px; vertical-align: -2px; margin-right: 5px; }
+.cmds { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; } .cmds button { font-size: 16px; padding: 7px 14px; }
+.cmdrow { display: flex; gap: 10px; flex-wrap: wrap; } .cmdrow input { flex: 1 1 240px; min-width: 0; font: 600 18px var(--body); padding: 10px 14px; border-radius: 14px; border: 2px solid var(--line); background: var(--card); color: var(--ink); }
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 14px; margin: 10px 0; }
+.two > div { background: var(--soft); border-radius: 18px; padding: 12px 14px; } .two h3 { font-size: 18px; }
+.reply { font: 600 18px/1.5 var(--body); white-space: pre-wrap; min-height: 3em; overflow-wrap: anywhere; }
+.reply .new { color: var(--green); }
+.demo { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 14px; margin: 10px 0; align-items: start; }
+.fakepage { border: 3px solid var(--ink); border-radius: 14px; overflow: hidden; background: var(--card); }
+.fakepage .chrome { background: var(--line); padding: 6px 10px; font-size: 13px; color: var(--muted); }
+.fakepage .body { height: 150px; display: grid; place-items: center; font: 700 22px var(--head); transition: background .6s; color: #2b2236; background: #ffffff; }
+.prog { font: 14px/1.5 ui-monospace, Consolas, monospace; background: #241c30; color: #f4eefa; border-radius: 14px; padding: 12px 14px; white-space: pre-wrap; overflow-x: auto; }
+.prog b { color: #f2b63d; }
 .teacher summary { font: 700 20px var(--head); cursor: pointer; }
 .teacher li { margin-bottom: 6px; }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
@@ -92,8 +109,8 @@ button:disabled { opacity: 0.5; cursor: default; }
 <body>
 <main>
   <header>
-    <h1>How does an AI write a story?</h1>
-    <p class="lead">Let's look inside a real one while it writes, one word at a time. You will see that it is <b>numbers and a dice roll, made by people</b>. No magic, no secret mind. Then let's see why it is still a powerful tool, and how to use it to <b>learn more, not think less</b>.</p>
+    <h1>How does an AI really work?</h1>
+    <p class="lead">Let's look inside a real one while it writes a story, one word at a time. You will see that it is <b>numbers and a dice roll, made by people</b>. No magic, no secret mind. Then we'll give a real chat AI a command and see what "following a command" really means. Then let's see why it is still a powerful tool, and how to use it to <b>learn more, not think less</b>.</p>
     <p class="note">This AI is a small real model called TinyStories (15 million numbers, trained only on simple children's stories). It runs right here in your web browser: nothing you type is sent anywhere. The first visit downloads its numbers (30 MB). Grown-ups and teachers: <a href="index.html">the full version</a> shows every detail.</p>
   </header>
 
@@ -159,6 +176,53 @@ button:disabled { opacity: 0.5; cursor: default; }
     </div>
   </section>
 
+  <section class="card" id="cmd" hidden>
+    <h2>Part 2: Can it follow a command?</h2>
+    <p>The story AI above only continues stories. The AI helpers in apps answer questions and follow commands. Is that a different kind of machine? Let's test a real one: <b>SmolLM2</b>, a small chat AI made by Hugging Face (135 million knobs, 30 tunnels).</p>
+    <div id="cmdLoadBox">
+      <button class="big" id="cmdLoad" type="button">Load the chat AI (269 MB)</button>
+      <p class="note" style="margin-top:8px">It is 9 times bigger than the story AI, so it takes a while on school Wi-Fi and needs a computer or tablet with plenty of memory. It runs here in the browser too: nothing is sent anywhere.</p>
+      <div class="load" id="cmdLoading" hidden><span id="cmdLoadText"></span><div class="bar"><i id="cmdLoadBar"></i></div></div>
+    </div>
+    <div id="cmdBody" hidden>
+      <p>Pick a command, or write your own:</p>
+      <div class="cmds" id="cmdPicks"></div>
+      <div class="cmdrow"><input id="cmdText" value="What is the capital of France?" maxlength="100" aria-label="Your command"><button class="big" id="cmdGo" type="button">Send</button></div>
+
+      <div id="cmdOut" hidden>
+        <h3 style="margin-top:16px">1. What the AI actually reads</h3>
+        <p>The app secretly wraps your command in a <b>chat form</b> before the AI sees it: some hidden instructions, then your message, then the word "assistant", where the AI starts writing. The purple markers are special tokens it learned to recognise.</p>
+        <div class="legend"><span><i style="background:var(--purple)"></i>markers</span><span><i style="background:var(--green)"></i>hidden instructions (the "system prompt")</span><span><i style="background:var(--orange)"></i>your command</span></div>
+        <div class="wrapchips" id="wrapChips"></div>
+        <p class="note" id="wrapCount"></p>
+
+        <h3 style="margin-top:16px">2. Then the same loop as before: one word at a time</h3>
+        <p>Both AIs get your command and pick the most likely next word, over and over ("careful" dice).</p>
+        <div class="two">
+          <div><h3>Story AI (never saw a conversation)</h3><div class="reply" id="repStory"></div></div>
+          <div><h3>Chat AI (trained on example conversations)</h3><div class="reply" id="repChat"></div></div>
+        </div>
+        <p><b>Same kind of machine, different training.</b> Both are numbers, knobs and one word at a time. The chat AI's knobs were also tuned on lots of example conversations, where a question is followed by a good answer. So after "assistant", an answer is simply the most likely next words. It doesn't obey you the way a person does: <b>following a command is a pattern it learned</b>. And it can be wrong or get stuck: try "Say hello in French."</p>
+      </div>
+
+      <h3 style="margin-top:18px">3. But can it actually <i>do</i> things?</h3>
+      <p>Let's ask it to change the colour of this pretend web page.</p>
+      <div class="cmdrow"><input id="paintText" value="Make the background blue." maxlength="80" aria-label="A colour command"><button id="paintGo" type="button">Ask the AI</button></div>
+      <div class="demo">
+        <div class="fakepage" aria-live="polite"><div class="chrome">pretend web page</div><div class="body" id="fakeBody">Hello!</div></div>
+        <div><div class="prog" id="prog"><b>// The program, written by people:</b>
+reply = the AI's words
+look for one of these words in the reply:
+  red, orange, yellow, green, blue, purple, pink
+if one is found: paint the pretend page that colour
+otherwise: do nothing</div></div>
+      </div>
+      <div class="two"><div><h3>The AI wrote</h3><div class="reply" id="paintReply"></div></div><div><h3>The program did</h3><div class="reply" id="paintDid"></div></div></div>
+      <p>The AI can only <b>write words</b>. A program that <b>people wrote</b> read those words and did the painting, and it can only do what people allowed: paint one box, seven colours. That is all an "AI agent" is: an AI's words plus a program people built, with permissions people chose. Small AIs get this wrong a lot (try "Make it the color of a banana"); bigger ones get it right more often, but people still decide what the program is allowed to do.</p>
+      <p class="note">For this test the hidden instructions say: "Answer with one word: the color the user asks for." The reply and the program are both real; nothing is staged.</p>
+    </div>
+  </section>
+
   <section id="myths" hidden>
     <h2>Is it alive? Let's test it!</h2>
     <p>Press each button: the real AI on this page does the test.</p>
@@ -166,7 +230,7 @@ button:disabled { opacity: 0.5; cursor: default; }
       <div class="myth"><span class="q">Does it think like a person?</span><span class="a">No. It's arithmetic.</span><span>It has 15,191,712 knobs. Making each word means multiplying the numbers by millions of knobs and adding them up. No feelings, no wishes, no secret plan.</span><button id="mCount" type="button">Count the work</button><div class="out" id="oCount"></div></div>
       <div class="myth"><span class="q">Does it choose on its own?</span><span class="a">No. Same start + careful dice = same story.</span><span>Set to "careful", it is a machine: the same start gives the same words, every time.</span><button id="mSame" type="button">Run it twice</button><div class="out" id="oSame"></div></div>
       <div class="myth"><span class="q">Does it know what's true?</span><span class="a">No. It writes what sounds right.</span><span>It learned from stories, so it writes something story-like, true or not. Here it finishes a science fact.</span><button id="mTrue" type="button">"The sun is made of…"</button><div class="out" id="oTrue"></div></div>
-      <div class="myth"><span class="q">Can it do things by itself, or get loose?</span><span class="a">No. It only makes the next word when a program asks.</span><span>On this page it can't click, browse, remember you or send anything. Close the tab and it stops. "AI agents" are programs that <b>people</b> build around a model, and people choose what those programs may do.</span></div>
+      <div class="myth"><span class="q">Can it do things by itself, or get loose?</span><span class="a">No. It only makes the next word when a program asks.</span><span>On this page it can't click, browse, remember you or send anything. Close the tab and it stops. "AI agents" are programs that <b>people</b> build around a model, and people choose what those programs may do (Part 2 shows one).</span></div>
       <div class="myth"><span class="q">Who made it?</span><span class="a">People.</span><span>People wrote the stories it learned from, built the computers, wrote the program that turned the knobs during training, and decided when to stop. Every knob is just a number that training set.</span></div>
     </div>
   </section>
@@ -235,6 +299,7 @@ button:disabled { opacity: 0.5; cursor: default; }
     <ul>
       <li><b>K–2:</b> read steps 1, 4 and 5 aloud. Play "guess the next word" as a class, then roll the dice. Main idea: it picks one word at a time, like a game.</li>
       <li><b>3–5:</b> all five steps, then the "Is it alive?" tests. Try careful vs silly. Main idea: it's numbers made by people, and it can be wrong.</li>
+      <li><b>4 and up:</b> Part 2, "Can it follow a command?" (a 269 MB download, best done once on the teacher's computer). Main ideas: a command is just more text in a hidden chat form; the chat AI follows it because it was trained on example conversations; and the AI only writes words, while programs written by people do the actions.</li>
       <li><b>All grades:</b> "Your limit is your curiosity". Play the copy machine or coach game together, then have students upgrade a "do it for me" ask into a coach question (try first, ask why, ask for a hint, ask to be quizzed). Main idea: AI is a tool for sharpening your own thinking, not a replacement for it.</li>
       <li><b>6–8:</b> add the risks section: why fluent isn't the same as true, where unfairness comes from (the training text), and private information.</li>
       <li><b>9–12:</b> move to <a href="index.html">the full version</a>: tokens, embeddings, attention, the logit lens, the training checkpoints of a real model, and how different model designs compare.</li>
@@ -324,7 +389,7 @@ button:disabled { opacity: 0.5; cursor: default; }
       // 4: score and dice
       show('#s4'); guesses(r.res.logits, -1);
       show('#s5'); $('#story').textContent = text;
-      $('#myths').hidden = false; $('#power').hidden = false; $('#learn').hidden = false; $('#risks').hidden = false;
+      $('#cmd').hidden = false; $('#myths').hidden = false; $('#power').hidden = false; $('#learn').hidden = false; $('#risks').hidden = false;
     } finally { busy = false; $('#go').disabled = false; }
   });
   // one dice roll: add the picked word to the story and run the model again for the next one
@@ -395,6 +460,56 @@ button:disabled { opacity: 0.5; cursor: default; }
     d.querySelector('.ask').textContent = ask;
     d.querySelectorAll('button').forEach((bt, i) => bt.addEventListener('click', () => { const fb = d.querySelector('.fb'); fb.className = 'fb ' + (i === ans ? 'ok' : 'no'); fb.textContent = (i === ans ? 'Yes! ' : 'Not quite. ') + why; }));
     quiz.appendChild(d);
+  });
+  // Part 2: a real chat model (SmolLM2-135M-Instruct) given a command, next to the story model
+  const SYS = 'You are a helpful AI assistant named SmolLM, trained by Hugging Face', PAINT_SYS = 'Answer with one word: the color the user asks for.';
+  const PAINT = { red: '#e5484d', orange: '#f2994a', yellow: '#f5d547', green: '#46b37b', blue: '#4d8ef0', purple: '#8e6ad8', pink: '#ef7fb0' };
+  let C = null;
+  const chatIds = (sys, user) => C.tok.encode(`<|im_start|>system\n${sys}<|im_end|>\n<|im_start|>user\n${user}<|im_end|>\n<|im_start|>assistant\n`);
+  async function stream(m, ids, n, stops, box) { // careful (greedy) generation, shown piece by piece
+    const st = m.newState(); let res; for (let i = 0; i < ids.length; i++) res = await m.step(st, ids[i], i === ids.length - 1);
+    const out = []; if (box) box.textContent = '';
+    for (let k = 0; k < n; k++) {
+      let g = 0; for (let i = 1; i < res.logits.length; i++) if (res.logits[i] > res.logits[g]) g = i;
+      if (stops.includes(g)) break; out.push(g);
+      if (box) { box.querySelectorAll('.new').forEach(e => e.classList.remove('new')); const sp = document.createElement('span'); sp.className = 'new'; sp.textContent = m.tok.decode([g], true); box.appendChild(sp); }
+      res = await m.step(st, g, false);
+      if (k === n - 1 && box) box.append('…');
+    }
+    return m.tok.decode(out, true);
+  }
+  ['What is the capital of France?', 'Write one sentence about a cat.', 'List three animals that live in the ocean.', 'Say hello in French.'].forEach(t => {
+    const bt = document.createElement('button'); bt.type = 'button'; bt.textContent = t; bt.addEventListener('click', () => { $('#cmdText').value = t; $('#cmdGo').click(); }); $('#cmdPicks').appendChild(bt);
+  });
+  $('#cmdLoad').addEventListener('click', () => {
+    $('#cmdLoad').disabled = true; $('#cmdLoading').hidden = false; $('#cmdLoadText').textContent = 'Downloading the chat AI…';
+    LLM.load('smollm2-instruct', (got, total) => {
+      if (got < 0) { $('#cmdLoadText').textContent = 'Unpacking the numbers…'; return; }
+      $('#cmdLoadText').textContent = `Downloading the chat AI: ${Math.round(got / 1e6)} of ${Math.round(total / 1e6)} MB`; $('#cmdLoadBar').style.width = (got / total * 100) + '%';
+    }).then(m => { C = m; $('#cmdLoadBox').hidden = true; $('#cmdBody').hidden = false; })
+      .catch(err => { $('#cmdLoad').disabled = false; $('#cmdLoadText').textContent = 'Could not load the chat AI: ' + err.message; });
+  });
+  $('#cmdGo').addEventListener('click', async () => {
+    if (!C || !M || busy) return; busy = true; $('#cmdGo').disabled = true;
+    try {
+      const user = $('#cmdText').value.trim() || 'What is the capital of France?', ids = chatIds(SYS, user);
+      const wc = $('#wrapChips'); wc.innerHTML = '';
+      [['mark', '<|im_start|>system'], ['sys', SYS], ['mark', '<|im_end|>'], ['mark', '<|im_start|>user'], ['user', user], ['mark', '<|im_end|>'], ['mark', '<|im_start|>assistant']].forEach(([k, t]) => { const e = document.createElement('span'); e.className = 'wc ' + k; e.textContent = t; wc.appendChild(e); });
+      $('#wrapCount').textContent = `Your command is ${C.tok.encode(user).length} tokens; with the chat form the AI reads ${ids.length}. (This is the chat form SmolLM2 was trained with.)`;
+      $('#cmdOut').hidden = false; $('#repStory').textContent = ''; $('#repChat').textContent = '';
+      await stream(M, [M.meta.bos].concat(M.tok.encode(user)), 30, [2], $('#repStory'));
+      await stream(C, ids, 50, [2, 0], $('#repChat'));
+    } finally { busy = false; $('#cmdGo').disabled = false; }
+  });
+  $('#paintGo').addEventListener('click', async () => {
+    if (!C || busy) return; busy = true; $('#paintGo').disabled = true;
+    try {
+      $('#paintDid').textContent = '';
+      const reply = await stream(C, chatIds(PAINT_SYS, $('#paintText').value.trim() || 'Make the background blue.'), 30, [2, 0], $('#paintReply'));
+      const m = reply.toLowerCase().match(/\b(red|orange|yellow|green|blue|purple|pink)\b/);
+      if (m) { $('#fakeBody').style.background = PAINT[m[1]]; $('#paintDid').textContent = `Found the word "${m[1]}" in the reply, so it painted the page ${m[1]}.`; }
+      else $('#paintDid').textContent = 'No colour word from its list in the reply, so it did nothing.';
+    } finally { busy = false; $('#paintGo').disabled = false; }
   });
 })();
 </script>
