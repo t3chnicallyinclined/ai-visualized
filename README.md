@@ -53,12 +53,21 @@ What the cloud is not: the dots are the vocabulary's coordinates, not stored kno
 
 ### Real models only
 
-Every number on the page comes from a real model. Two real models run in your browser with plain JavaScript (`llm.js`), downloaded once from Hugging Face and kept by your browser:
+Every number on the page comes from a real model running in your browser with plain JavaScript (`llm.js`), downloaded once from Hugging Face (pinned revisions) and kept by your browser. Five models, four designs:
 
-- **Chat model: [SmolLM2-135M-Instruct](https://huggingface.co/HuggingFaceTB/SmolLM2-135M-Instruct)** (Apache 2.0, 269 MB, 30 layers, 576 numbers per token, 49,152 tokens). It reads its chat template: `<|im_start|>system` + the **system prompt**, then `<|im_start|>user` + your message, then `<|im_start|>assistant`, where it starts writing. The system prompt box is shown above the prompt (in chat apps it is hidden); the board gives the system prompt and the template markers their own band lanes, so you can see the new token's attention reaching back into them.
-- **TinyStories 15M** loads by itself when the page opens: **[TinyStories 15M](https://huggingface.co/nickypro/tinyllama-15M)** (MIT, Andrej Karpathy's llama2.c model, 30 MB, 6 layers, 288 numbers per token, 32,000 tokens). It only ever read children's stories, so it continues them; it is small enough to see every layer and every knob clearly.
+| Model | Design | Download | What it shows |
+|---|---|---|---|
+| **[TinyStories 15M](https://huggingface.co/nickypro/tinyllama-15M)** (loads by itself) | Llama: RMSNorm, rotation (RoPE), SwiGLU | 30 MB | 6 layers you can see clearly; children's stories only |
+| **[Pythia-14M](https://huggingface.co/EleutherAI/pythia-14m)** | GPT-NeoX: talk and think **side by side**, RoPE on a quarter of each head, LayerNorm, a separate output table | 28 MB | one station per layer; its **real training checkpoints** in the training view |
+| **[DistilGPT-2](https://huggingface.co/distilbert/distilgpt2)** | GPT-2: a **learned position table** added at the start, LayerNorm, GELU | 353 MB | "+p" under each embedding; no rotation |
+| **[Mamba-130M](https://huggingface.co/state-spaces/mamba-130m-hf)** | Mamba: **no attention**, a fixed-size memory per layer | 517 MB | memory boxes on the board; the memory update step by step |
+| **[SmolLM2-135M-Instruct](https://huggingface.co/HuggingFaceTB/SmolLM2-135M-Instruct)** | Llama, chat-tuned | 269 MB | the chat template and a **system prompt**, compared in the cloud |
 
-With either one, everything on the board is the model's actual output: tokens and IDs from its own tokenizer, embedding rows, attention arcs (real weights, summed over a band's tokens), the guess on the ball (the logit lens), the busiest neurons, the knobs' needles (each one real weight), every token's chance in the cloud after every layer, and the real scores. Speed is measured on your device.
+With any of them, everything on the board is the model's actual output: tokens and IDs from its own tokenizer, embedding rows, attention arcs (or Mamba's memory writes), the guess on the ball (the logit lens), the knobs' needles (real weights), every token's chance in the cloud after every layer, and the real scores.
+
+**How these models relate** opens a family tree from *Attention Is All You Need* (2017) through GPT-2, FNet (2021: token mixing with a Fourier transform instead of attention), GPT-NeoX/Pythia and Llama-style models to Mamba (2023), with what each changed (word order, how tokens mix, the feed-forward, normalisation, the output table) and links to the papers. The 2017 Transformer (a translation model) and FNet (an encoder that does not predict the next word) are explained there but cannot run on the board.
+
+**Checked against the reference.** Every model was checked against the official Hugging Face `transformers` implementation (float32): identical tokens on tricky texts (including the chat template's special tokens, SentencePiece byte fallback, and GPT-NeoX's whitespace tokens), identical greedy continuations, identical top-10 scores, the ball's numbers after every layer within a few millionths, and the same logit-lens top token after every layer. In the page, every "knobs × ball" grid in the layer view is recomputed from the real weights and shows a ✓ when it matches. Each model has its own token-cloud map (`cloud-*.js`, made by `prep/cloud_layout.py`).
 
 **Why the system prompt matters.** It is not stored anywhere special and it never changes the knobs: it is more tokens at the start of the context, read through attention. Tick **Compare with a second system prompt** and the same message is also read with that prompt; its light shows in blue in the cloud, and the line under the cloud lists the tokens each prompt makes more likely. With "Talk like a pirate. Always start with Arr." the chance that the reply starts with "Ar" rises about 21,000 times and "Arr" about 7,000 times, but this small model still answers "A fireball is…" (94% → 55% for "A"): bigger models are trained to follow the system prompt much more strongly. The right context lights up the tokens that fit it.
 
@@ -72,7 +81,7 @@ Every parameter is a knob, set once in training and never moved while the model 
 
 ### Training: how the knobs get set
 
-**How training sets the knobs** runs a real training run in your browser, just tiny: a model with one grid of 26 × 26 = 676 knobs (a bigram model: it only looks at the current letter) learns from the short text built into the page by plain gradient descent. You watch the needles turn, the loss fall towards the best this model can do, and its writing turn into almost-words. Below it, the page says how the real models were trained (SmolLM2: 2 trillion tokens of pre-training, then fine-tuning and DPO, which is where it learned to follow a system prompt) and that after training the knobs are frozen.
+**How training sets the knobs** first shows **a real model learning**: Pythia-14M at 9 of its 154 published training checkpoints (step 0 = random knobs, to step 143,000 ≈ 300 billion tokens). Each snapshot is loaded (28 MB), writes the same continuation of the same prompt, and is scored on a fixed test sentence; the loss falls (about 11.1 at step 0, 5.2 at step 1,000, 4.0 at the end) and the same 24 knobs turn into place. Below that it runs a real training run in your browser, just tiny: a model with one grid of 26 × 26 = 676 knobs (a bigram model: it only looks at the current letter) learns from the short text built into the page by plain gradient descent. You watch the needles turn, the loss fall towards the best this model can do, and its writing turn into almost-words. Below it, the page says how the real models were trained (SmolLM2: 2 trillion tokens of pre-training, then fine-tuning and DPO, which is where it learned to follow a system prompt) and that after training the knobs are frozen.
 
 ### The guided tour
 

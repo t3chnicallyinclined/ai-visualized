@@ -144,6 +144,12 @@ dialog.dlg p { margin: 0 0 10px; text-wrap: pretty; }
 .trgrid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 14px; align-items: start; }
 .trside .eyebrow { margin-bottom: 4px; } .trsample { font: 14px/1.5 var(--mono); background: var(--st-bg); color: var(--score); border-radius: 10px; padding: 10px 12px; min-height: 4.5em; white-space: pre-wrap; overflow-wrap: anywhere; }
 @media (max-width: 760px) { .trgrid { grid-template-columns: minmax(0, 1fr); } }
+.ckrows { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; }
+.ckrow { display: grid; grid-template-columns: 7em 11em 6em 320px minmax(0, 1fr); gap: 4px 12px; align-items: center; padding: 6px 8px; border-radius: 8px; background: var(--band); }
+.ckrow .note { font-size: 12px; } .ckrow button { white-space: nowrap; padding: 5px 10px; font-size: 13px; } .ckstep { font-weight: 600; } .ckloss { font-size: 13px; } .cktext { grid-column: 1 / -1; font-size: 13px; overflow-wrap: anywhere; }
+@media (max-width: 760px) { .ckrow { grid-template-columns: 1fr 1fr; } .ckknobs { grid-column: 1 / -1; } }
+.fatable { overflow-x: auto; margin-bottom: 10px; } table.fa { min-width: 760px; } table.fa td, table.fa th { text-align: left !important; vertical-align: top; font-family: var(--body); font-size: 12.5px; padding: 6px; border-bottom: 1px solid var(--line); } table.fa td:first-child { font-weight: 600; white-space: nowrap; }
+.fapapers { font-size: 13px; padding-left: 20px; } .fapapers a { color: var(--ink); }
 .pcv { width: 100%; display: block; border-radius: 10px; background: var(--st-bg); margin-bottom: 8px; }
 #pCv { cursor: pointer; }
 .plegend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--muted); margin-bottom: 8px; }
@@ -280,8 +286,11 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
       <button id="drop" type="submit">Drop it</button>
     </form>
     <div class="seg" role="group" aria-label="Model">
-      <button type="button" data-mode="tiny" aria-pressed="true">TinyStories 15M · 30 MB</button>
-      <button type="button" data-mode="real" aria-pressed="false">Chat model: SmolLM2-135M-Instruct · 269 MB</button>
+      <button type="button" data-mode="tiny" aria-pressed="true" title="Llama design: RMSNorm, rotation (RoPE), SwiGLU">TinyStories 15M · Llama · 30 MB</button>
+      <button type="button" data-mode="pythia" aria-pressed="false" title="GPT-NeoX design: talk and think side by side; 154 training checkpoints">Pythia-14M · GPT-NeoX · 28 MB</button>
+      <button type="button" data-mode="gpt2" aria-pressed="false" title="GPT-2 design: a position table added at the start">DistilGPT-2 · GPT-2 · 353 MB</button>
+      <button type="button" data-mode="mamba" aria-pressed="false" title="Mamba: no attention; a fixed-size memory per layer">Mamba-130M · no attention · 517 MB</button>
+      <button type="button" data-mode="real" aria-pressed="false" title="Llama design, tuned to chat: reads a system prompt">Chat: SmolLM2-135M-Instruct · 269 MB</button>
     </div>
   </div>
   <div class="realload" id="realLoad" hidden>
@@ -336,6 +345,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
     <button id="parBtn" type="button">What are the parameters?</button>
     <button id="trainBtn" type="button">How training sets the knobs</button>
     <button id="tourBtn" type="button">Take the tour</button>
+    <button id="famBtn" type="button">How these models relate</button>
   </div>
 
   <details class="hwd">
@@ -400,9 +410,56 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
   <div id="lyBody"></div>
 </dialog>
 
+<dialog id="family" class="dlg wide" aria-labelledby="faTitle">
+  <div class="zhead"><p class="eyebrow">The family tree</p><button id="faClose" type="button">Close</button></div>
+  <h2 id="faTitle">How these models relate, from the 2017 Transformer to Mamba</h2>
+  <p>Every model on this page does the same job: turn tokens into balls of numbers, mix information between the tokens, let each token work on its own ball, and score every possible next token. They differ in <b>how word order gets in</b>, <b>how tokens mix</b>, and a few smaller choices. Four of the designs below run on this page with their real weights; two are here because the others grew out of them or answer them.</p>
+  <div class="fatable" role="region" aria-label="Comparison table" tabindex="0">
+  <table class="zt fa">
+    <tr><th></th><th>Transformer<br>2017</th><th>GPT-2<br>2019</th><th>FNet<br>2021</th><th>GPT-NeoX · Pythia<br>2022–23</th><th>Llama-style<br>2023–25</th><th>Mamba<br>2023</th></tr>
+    <tr><td>Here</td><td>not on the board (translation)</td><td>DistilGPT-2</td><td>not on the board (no next-token output)</td><td>Pythia-14M</td><td>TinyStories 15M, SmolLM2 chat</td><td>Mamba-130M</td></tr>
+    <tr><td>Job</td><td>translation: an encoder reads the sentence, a decoder writes the translation</td><td>predict the next token (the decoder half only)</td><td>understand text (an encoder that sees both directions); does not write</td><td>predict the next token</td><td>predict the next token</td><td>predict the next token</td></tr>
+    <tr><td>Word order</td><td>fixed sine waves added to each token's row</td><td>a learned position table added to each token's row</td><td>learned positions</td><td>rotation (RoPE) of a quarter of each head's query and key</td><td>rotation (RoPE) of whole heads</td><td>none added: order comes from reading tokens one after another</td></tr>
+    <tr><td>Tokens mix by</td><td>attention (8 heads)</td><td>attention</td><td>a Fourier transform: no knobs at all</td><td>attention</td><td>attention (SmolLM2: heads share keys and values)</td><td>a fixed-size memory per layer, written and read by each token</td></tr>
+    <tr><td>Each token alone</td><td>feed-forward, ReLU</td><td>feed-forward, GELU</td><td>feed-forward</td><td>feed-forward, GELU, <b>side by side</b> with attention</td><td>feed-forward, SwiGLU (gate × up)</td><td>no separate block: a gate inside the memory block</td></tr>
+    <tr><td>Rescaling</td><td>LayerNorm after each step</td><td>LayerNorm before each step</td><td>LayerNorm</td><td>LayerNorm before</td><td>RMSNorm before</td><td>RMSNorm before</td></tr>
+    <tr><td>Output table</td><td>the embedding table reused</td><td>the embedding table reused</td><td>(no next-token output)</td><td>a separate table</td><td>the embedding table reused</td><td>the embedding table reused</td></tr>
+  </table>
+  </div>
+  <h3 class="eh3">Attention Is All You Need (2017)</h3>
+  <p>Vaswani and others at Google introduced the Transformer for machine translation: an encoder of 6 layers reads the source sentence, a decoder of 6 layers writes the translation, and both are built from attention (8 heads, 512 numbers per token) and small feed-forward blocks, with no recurrence at all. Word order came from fixed sine-wave patterns added to each token's row (they reported that learned position rows worked about as well, which is what GPT-2 later used). Each step was followed by a LayerNorm, and the embedding table was reused as the output table. It is a translation model that needs a source sentence to work from, so it does not fit this board; GPT-style models keep only the decoder half, without its link to an encoder.</p>
+  <h3 class="eh3">GPT-2 (2019) → DistilGPT-2</h3>
+  <p>OpenAI's GPT-2 is a stack of decoder layers trained only to predict the next token. It moved each LayerNorm to the start of its step and added one at the end, and it adds a learned position row to every token at the start. DistilGPT-2 is Hugging Face's 6-layer version, trained to imitate GPT-2's outputs (knowledge distillation, the method of DistilBERT). On this page: the "+p" under each embedding strip, and no rotation in the layer view.</p>
+  <h3 class="eh3">FNet (2021): mixing without attention</h3>
+  <p>Lee-Thorp and others at Google replaced every attention block in a BERT-style encoder with a plain two-dimensional Fourier transform (across the tokens and across each token's numbers, keeping the real part), which has no knobs at all. It reached 92–97% of BERT's accuracy on the GLUE benchmark while training 80% faster on GPUs and 70% faster on TPUs at 512 tokens. FNet is an encoder: it looks both ways and fills in or classifies text, it does not predict the next word, so it cannot run on this board. Its lesson carries over: tokens have to mix, but the mixing does not have to be attention. Mamba is another answer to that.</p>
+  <h3 class="eh3">GPT-NeoX and Pythia (2022–23)</h3>
+  <p>EleutherAI's GPT-NeoX design rotates only the first quarter of each head's query and key (rotary embeddings, RoPE, from Su and others, 2021), computes attention and the feed-forward block side by side from the same ball and adds both (an idea from GPT-J), and keeps a separate output table. Pythia is a family of these models trained on the same public data in the same order, with 154 checkpoints each, so that training itself can be studied; Pythia-14M was added later with the same setup. On this page: one station per layer on the board, both changes added at once, and the real training checkpoints in the training view.</p>
+  <h3 class="eh3">Llama-style models (2023–25)</h3>
+  <p>Meta's LLaMA settled the recipe most open models now use: RMSNorm before each step (a simpler rescaling), rotation of whole heads, and the SwiGLU feed-forward (a gate and an up grid multiplied together). SmolLM2 (Hugging Face, 2025) follows it, with grouped-query attention (several query heads share one key and value head, which shrinks the KV cache) and a tied output table; TinyStories 15M was trained by Andrej Karpathy (llama2.c) on the TinyStories dataset of simple stories (Eldan and Li, 2023).</p>
+  <h3 class="eh3">Mamba (2023): a memory instead of attention</h3>
+  <p>Gu and Dao's Mamba has no attention and no feed-forward block. Each layer keeps a fixed-size memory per channel; for every token it decides how much to keep and how much to replace (the step size), writes the token in, and reads it back, so a token learns about earlier ones only through that memory. Its cost grows in line with the text, not with its square, and nothing grows per token. On this page: the memory boxes on the board and the step-by-step memory update in the layer view.</p>
+  <h3 class="eh3">Papers</h3>
+  <ul class="fapapers">
+    <li>Vaswani et al., <a href="https://arxiv.org/abs/1706.03762" target="_blank" rel="noopener">Attention Is All You Need</a> (2017)</li>
+    <li>Radford et al., <a href="https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf" target="_blank" rel="noopener">Language Models are Unsupervised Multitask Learners</a> (GPT-2, 2019); Sanh et al., <a href="https://arxiv.org/abs/1910.01108" target="_blank" rel="noopener">DistilBERT</a> (2019)</li>
+    <li>Lee-Thorp et al., <a href="https://arxiv.org/abs/2105.03824" target="_blank" rel="noopener">FNet: Mixing Tokens with Fourier Transforms</a> (2021)</li>
+    <li>Su et al., <a href="https://arxiv.org/abs/2104.09864" target="_blank" rel="noopener">RoFormer: Enhanced Transformer with Rotary Position Embedding</a> (2021)</li>
+    <li>Black et al., <a href="https://arxiv.org/abs/2204.06745" target="_blank" rel="noopener">GPT-NeoX-20B</a> (2022); Biderman et al., <a href="https://arxiv.org/abs/2304.01373" target="_blank" rel="noopener">Pythia</a> (2023)</li>
+    <li>Touvron et al., <a href="https://arxiv.org/abs/2302.13971" target="_blank" rel="noopener">LLaMA</a> (2023); Zhang and Sennrich, <a href="https://arxiv.org/abs/1910.07467" target="_blank" rel="noopener">RMSNorm</a> (2019); Shazeer, <a href="https://arxiv.org/abs/2002.05202" target="_blank" rel="noopener">GLU Variants Improve Transformer</a> (2020); Ainslie et al., <a href="https://arxiv.org/abs/2305.13245" target="_blank" rel="noopener">GQA</a> (2023)</li>
+    <li>Allal et al., <a href="https://arxiv.org/abs/2502.02737" target="_blank" rel="noopener">SmolLM2</a> (2025); Eldan and Li, <a href="https://arxiv.org/abs/2305.07759" target="_blank" rel="noopener">TinyStories</a> (2023)</li>
+    <li>Gu and Dao, <a href="https://arxiv.org/abs/2312.00752" target="_blank" rel="noopener">Mamba: Linear-Time Sequence Modeling with Selective State Spaces</a> (2023)</li>
+  </ul>
+</dialog>
+
 <dialog id="train" class="dlg wide" aria-labelledby="trTitle">
   <div class="zhead"><p class="eyebrow">Training</p><button id="trClose" type="button">Close</button></div>
   <h2 id="trTitle">How the knobs get set: training</h2>
+  <h3 class="eh3">A real model learning: Pythia-14M at its training checkpoints</h3>
+  <p>EleutherAI published 154 snapshots of one training run of Pythia-14M, from step 0 (random knobs) to step 143,000. Each step read a batch of about 2 million tokens of the Pile, about 300 billion tokens in all. Load a few snapshots (28 MB each) and watch the same model, on the same prompt, go from noise to sentences: its loss on a fixed test sentence falls, and the same 24 knobs (dials) turn into place.</p>
+  <div class="trbar"><button id="ckAll" type="button" class="nb-next">Load all 9 snapshots (9 × 28 MB)</button><span class="mono note" id="ckStatus"></span></div>
+  <div id="ckRows" class="ckrows"></div>
+  <p class="note">Loss here is the average surprise at each next token of: “The capital of France is Paris. The sun rises in the east and sets in the west. Water is made of hydrogen and oxygen.” (lower is better; a model that guesses at random over the 50,304 tokens scores about 10.8). The continuation is the most likely next token each time. Everything comes from the real checkpoints, run in your browser.</p>
+  <h3 class="eh3">The same loop, tiny enough to watch every knob</h3>
   <p id="trLead"></p>
   <div class="trbar"><button id="trGo" type="button" class="nb-next">Train</button><button id="trStep" type="button">One step</button><button id="trReset" type="button">Start over</button><span class="mono" id="trStat"></span></div>
   <div class="trgrid">
@@ -415,7 +472,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
     </div>
   </div>
   <p class="note" id="trInfo">Point at a knob to see what it means.</p>
-  <h3 class="eh3">The same loop, at full size</h3>
+  <h3 class="eh3">At full size</h3>
   <p id="trBig"></p>
 </dialog>
 
@@ -485,14 +542,14 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
   const getSys = q => ($(q).value.trim() || DEFAULT_SYS).slice(0, 200);
   const chatText = (sys, user) => `<|im_start|>system\n${sys}<|im_end|>\n<|im_start|>user\n${user}<|im_end|>\n<|im_start|>assistant\n`;
   function promptIds(m, prompt, sys) { // the token IDs the model reads, and each one's role
-    if (!m.meta.chat) { const ids = m.tok.encode(prompt); return { ids: [m.meta.bos].concat(ids.length ? ids : m.tok.encode('Once')), roles: null }; }
+    if (!m.meta.chat) { const ids = m.tok.encode(prompt), body = ids.length ? ids : m.tok.encode('Once'); return { ids: m.meta.bos != null ? [m.meta.bos].concat(body) : body, roles: null, bos: m.meta.bos != null }; }
     const ids = m.tok.encode(chatText(sys, prompt)), b1 = ('<|im_start|>system\n' + sys + '<|im_end|>\n').length, b2 = b1 + '<|im_start|>user\n'.length, b3 = b2 + prompt.length;
     const roles = ids.map((_, k) => { const at = m.tok.decode(ids.slice(0, k)).length; return at < b1 ? 'sys' : at < b2 ? 'tpl' : at < b3 ? 'user' : 'tpl'; });
     return { ids, roles };
   }
-  function groupRows(ids, roles) { // lanes: runs of one role share a band; the last token and the last 8 prompt tokens get their own
-    const n = ids.length, role = k => (roles ? roles[k] : k === 0 ? 'bos' : 'user'), userPos = ids.map((_, k) => k).filter(k => role(k) === 'user');
-    const single = new Set(userPos.slice(-8).concat([n - 1, ...(roles ? [] : [0])])), rows = [];
+  function groupRows(ids, roles, hasBos) { // lanes: runs of one role share a band; the last token and the last 8 prompt tokens get their own
+    const n = ids.length, role = k => (roles ? roles[k] : k === 0 && hasBos ? 'bos' : 'user'), userPos = ids.map((_, k) => k).filter(k => role(k) === 'user');
+    const single = new Set(userPos.slice(-8).concat([n - 1, ...(roles || !hasBos ? [] : [0])])), rows = [];
     for (let k = 0; k < n;) {
       if (single.has(k)) { rows.push({ pos: [k], kind: role(k) }); k++; continue; }
       const r = role(k), pos = [];
@@ -503,7 +560,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
   }
   async function realData(prompt, T, onStatus) {
     const m = S.llm, tok = m.tok, chat = m.meta.chat, sys = chat ? getSys('#sys') : null, cmp = chat && $('#cmpOn').checked ? getSys('#sysB') : null;
-    const { ids, roles } = promptIds(m, prompt, sys), rows = groupRows(ids, roles), lastOf = new Set(rows.map(r => r.pos[r.pos.length - 1]));
+    const { ids, roles, bos } = promptIds(m, prompt, sys), rows = groupRows(ids, roles, bos), lastOf = new Set(rows.map(r => r.pos[r.pos.length - 1]));
     const cmpIds = cmp ? promptIds(m, prompt, cmp).ids : [], total = ids.length + 5 + cmpIds.length, r = rng(hash(prompt + '|' + T + '|' + (sys || '') + '|real'));
     const st = m.newState(), rowRecs = [];
     let res, done = 0;
@@ -537,28 +594,36 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
   const MODELS = { // the board's layer count and the inspector's wording, per real model
     real: { label: 'SmolLM2-135M-Instruct', layers: 30, dims: { d: 576, ff: '1,536 neurons', heads: '9 query heads share 3 key/value heads', hd: 64 } },
     tiny: { label: 'TinyStories 15M', layers: 6, dims: { d: 288, ff: '768 neurons', heads: '6 heads, each with its own key and value', hd: 48 } },
+    pythia: { label: 'Pythia-14M', layers: 6, dims: { d: 128, ff: '512 neurons', heads: '4 heads, each with its own key and value', hd: 32 } },
+    gpt2: { label: 'DistilGPT-2', layers: 6, dims: { d: 768, ff: '3,072 neurons', heads: '12 heads, each with its own key and value', hd: 64 } },
+    mamba: { label: 'Mamba-130M', layers: 24, dims: { d: 768, ff: '1,536 channels', heads: 'no attention heads', hd: 0 } },
   };
   const PIPE = ['Type', 'Send', 'Tokenize', 'Embed', 'Layers', 'Unembed', 'Choose', 'Detokenize', 'Stream back', 'Repeat'];
   const STAGES_REAL = () => {
-    const R = RM(), chat = R.chat;
+    const R = RM(), chat = R.chat, kind = kindOf();
     return [
-      ['Type', chat ? 'Your message goes into the model\'s chat template after a system prompt (instructions written by whoever built the app, usually hidden from you), shown at the top of the board. At this point it is all just characters.' : 'Your text appears at the top of the board. This tiny model only ever saw children\'s stories, so it continues them; a start-of-text token (<s>) goes in front, as in training. At this point it is just characters.'],
+      ['Type', chat ? 'Your message goes into the model\'s chat template after a system prompt (instructions written by whoever built the app, usually hidden from you), shown at the top of the board. At this point it is all just characters.' : R.key === 'tiny-stories' ? 'Your text appears at the top of the board. This tiny model only ever saw children\'s stories, so it continues them; a start-of-text token (<s>) goes in front, as in training. At this point it is just characters.' : `Your text appears at the top of the board. ${R.name} is a base model: it was only trained to continue text (${R.key === 'distilgpt2' ? 'web pages linked from Reddit (OpenWebText)' : 'the Pile, a large mix of web, books, papers and code'}), not to answer questions.`],
       ['Send', 'In a chat app this is where your message would travel over the internet to a server. Here nothing is sent: the model was downloaded once and runs right in this browser tab, on your computer\'s processor.' + (chat ? ' The app first wraps everything in the model\'s chat template: the system prompt, then your message, each between <|im_start|> and <|im_end|> markers, then "assistant", where the model starts writing.' : ' A start-of-text token (<s>) goes in front, as in training.')],
       ['Tokenize', `The model's own tokenizer cuts the text into pieces it learned from data (${nf(R.V)} of them) and looks each one up to get its ID. A dot (·) means the piece starts with a space.` + (chat ? ' The system prompt and the template markers are tokens like any other; long stretches share one band lane on the board (sys, tpl).' : '')],
-      ['Embed', `Each ID picks one row of the model's embedding table (the small grid left of the lanes): ${nf(R.V)} rows, one per token, each ${R.D} numbers learned in training. That row is the ball. The embedding says nothing about word order; that comes later.`],
-      ['Layers', `All the lanes move through all ${R.L} layers at the same time. Each layer is a bank of knobs (its weights), set once in training and never moved while it runs: the ball is multiplied through them. In each layer a token first talks (attention: the pink lines are the model's real attention; this is the only place it can read earlier tokens` + (chat ? ', including the system prompt' : '') + `) and then thinks alone (feed-forward: the amber burst is how much it really added). After every layer the cloud reads the ball with the model's final reader and lights up every token by the chance it would give it. The little bar under each ball is its first 16 numbers: the whole prompt goes through every layer together, and every ball's numbers change as each + is added. Click any layer to look inside it.`],
-      ['Unembed', `After the last layer comes one more norm, then the ball leaves the board and is compared with every row of the output table, which here is the embedding table reused: one score for each of the ${nf(R.V)} tokens. A token scores high when the ball points the same way as its row.` + (chat ? ' The context decides which way the ball points, so the right context lights up the tokens that fit it.' : '')],
+      ['Embed', `Each ID picks one row of the model's embedding table (the small grid left of the lanes): ${nf(R.V)} rows, one per token, each ${R.D} numbers learned in training. That row is the ball.` + (kind === 'gpt2' ? ' GPT-2 then adds a second learned row from a position table (one row per position, 1,024 of them), so word order is in the ball from the start: that is the "+p" under each strip.' : kind === 'mamba' ? ' The embedding says nothing about word order; in Mamba, order comes from reading the tokens one after another through each layer\'s memory.' : ' The embedding says nothing about word order; that comes later, inside attention.')],
+      ['Layers', `All the lanes move through all ${R.L} layers. Each layer is a bank of knobs (its weights, the dials), set once in training and never moved while it runs: the ball is multiplied through them. ` + (kind === 'mamba'
+        ? 'Mamba has no attention: each layer keeps one fixed-size memory. Each token writes into it and reads from it (the line to the memory box), so a token only learns about earlier ones through that memory, which fades and refills as the text goes on. A gate and the output grid then make the change added onto the ball.'
+        : kind === 'neox' ? 'In GPT-NeoX a token talks and thinks side by side: attention (pink lines: who it reads) and the feed-forward block both read the same incoming ball, and both changes are added at once.'
+        : `In each layer a token first talks (attention: the pink lines are the model's real attention; this is the only place it can read earlier tokens` + (chat ? ', including the system prompt' : '') + `) and then thinks alone (feed-forward: the amber burst is how much it really added).`) + ` After every layer the cloud reads the ball with the model's final reader and lights up every token by the chance it would give it. The little bar under each ball is its first 16 numbers: the whole prompt goes through every layer together, and every ball's numbers change as each + is added. Click any layer to look inside it.`],
+      ['Unembed', `After the last layer comes one more norm, then the ball leaves the board and is compared with every row of the output table, ${kind === 'neox' ? 'which in GPT-NeoX is a second, separate table (not the embedding table)' : 'which here is the embedding table reused'}: one score for each of the ${nf(R.V)} tokens. A token scores high when the ball points the same way as its row.` + (chat ? ' The context decides which way the ball points, so the right context lights up the tokens that fit it.' : '')],
       ['Choose', 'Softmax turns the top five scores into chances, temperature sets how loaded the dice are, and a weighted dice roll picks one: watch the dice hop between the candidates in the cloud.'],
       ['Detokenize', 'The tokenizer runs backwards: the winning ID becomes its piece of text and is added to the output. It also becomes a new lane.'],
       ['Stream back', 'Each new piece goes to the reply at the top the moment it is chosen. In a chat app it would travel back over the internet; here it never leaves your computer.'],
-      ['Repeat', `Only the new lane moves now. Each layer reads the keys and values it kept for earlier lanes (teal ticks) instead of redoing them, but all ${R.mb} MB of weights (every knob) are read again for every new token. The loop runs until the model writes an end token or reaches a length limit.`],
+      ['Repeat', (kind === 'mamba' ? 'Only the new lane moves now. Each layer just reads and updates its memory, which stays the same size however long the text gets (no cache of keys and values),' : 'Only the new lane moves now. Each layer reads the keys and values it kept for earlier lanes (teal ticks) instead of redoing them,') + ` but all ${R.mb} MB of weights (every knob) are read again for every new token. The loop runs until the model writes an end token or reaches a length limit.`],
     ];
   };
   const DONE = ['Done', 'Six new tokens, six passes. A real model keeps going until it writes an end-of-text token or hits a length limit. Press Replay, or type a new prompt.'];
   const S = { mode: 'tiny', wantMode: 'tiny', speed: 1, data: null, llm: null, loading: null, wantReal: false, hover: null, pinned: false, mem: [], nb: {} };
   let tl = null, CAPS = [], INFOS = [], LENS = [], PASSES = [], STEPLOG = [], CHOOSE = [], G = null;
-  const isReal = () => S.mode === 'real' || S.mode === 'tiny';
-  const RKEY = { real: 'smollm2-instruct', tiny: 'tiny-stories' };
+  const RKEY = { real: 'smollm2-instruct', tiny: 'tiny-stories', pythia: 'pythia-14m', gpt2: 'distilgpt2', mamba: 'mamba-130m' };
+  const isReal = () => !!RKEY[S.mode];
+  const KIND_OF = { 'smollm2-instruct': 'llama', 'tiny-stories': 'llama', 'pythia-14m': 'neox', distilgpt2: 'gpt2', 'mamba-130m': 'mamba' };
+  const kindOf = mode => KIND_OF[RKEY[mode || S.mode]] || 'llama';
   const rkey = mode => RKEY[mode || S.mode] || 'smollm2-instruct';
   const RM = mode => { const m = LLM.MODELS[rkey(mode)]; return Object.assign({ key: rkey(mode), L: m.layers, D: m.hidden, F: m.ff, V: m.vocab }, m); }; // the real model's facts, before or after it is loaded
   const nf = v => v.toLocaleString('en-US');
@@ -618,9 +683,11 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
     G = layout();
     const real = isReal(), D = S.data;
     // header: what the board shows, and a legend that wraps to the width
-    el('text', { x: 8, y: 16, class: 'secname' }, g, `${G.L} layers, top to bottom. Each: talk, then think`);
+    const hk = S.llm && isReal() ? S.llm.kind : 'llama';
+    el('text', { x: 8, y: 16, class: 'secname' }, g, `${G.L} layers, top to bottom. Each: ${hk === 'mamba' ? 'one memory block (no attention)' : hk === 'neox' ? 'talk and think side by side' : 'talk, then think'}`);
     if (VBW > 620) el('text', { x: VBW - 8, y: 16, 'text-anchor': 'end', class: 'lbl' }, g, 'THE MODEL: IN THIS BROWSER TAB');
-    const leg = [['knob', 'dials = that layer\'s knobs (real weights, sampled), the same for every token'], ['att', 'talk: attention'], ['kvt', 'KV cache'], ['ff', 'think: feed-forward'], ['plus', '+ = added onto the ball']];
+    const legKind = S.llm && isReal() ? S.llm.kind : 'llama';
+    const leg = [['knob', 'dials = that layer\'s knobs (real weights, sampled), the same for every token'], ...(legKind === 'mamba' ? [['lin', 'memory: written and read by every token']] : [['att', 'talk: attention'], ['kvt', 'KV cache']]), ['ff', legKind === 'mamba' ? 'the change it makes' : 'think: feed-forward'], ['plus', '+ = added onto the ball']];
     let lx = 8, ly = 26;
     leg.forEach(([cls, txt]) => {
       const w = txt.length * 6.3; // 10.5px IBM Plex Mono: every character is 6.3 wide
@@ -640,7 +707,9 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
     for (let k = 1; k < 8; k++) el('line', { x1: G.TBL.x + 2, x2: G.TBL.x + G.TBL.w - 2, y1: G.TBL.y + k * G.TBL.h / 8, y2: G.TBL.y + k * G.TBL.h / 8, stroke: 'var(--line)', 'stroke-width': 0.5 }, g);
     // the layers: a band per layer, with that layer's real weights drawn into it
     G.Y0 = G.embY + 40; G.LH = Math.max(24, Math.min(72, Math.round(640 / G.L)));
-    G.talkY = l => G.Y0 + l * G.LH + G.LH * 0.34; G.thinkY = l => G.Y0 + l * G.LH + G.LH * 0.76;
+    G.kind = S.llm && isReal() ? S.llm.kind : 'llama'; G.one = G.kind === 'neox' || G.kind === 'mamba'; // one station per layer: side by side, or Mamba's single block
+    G.talkY = l => G.Y0 + l * G.LH + G.LH * (G.one ? 0.55 : 0.34); G.thinkY = l => G.Y0 + l * G.LH + G.LH * (G.one ? 0.55 : 0.76);
+    G.mem = [];
     G.cols = []; G.knobs = [];
     for (let l = 0; l < G.L; l++) {
       const y = G.Y0 + l * G.LH;
@@ -649,8 +718,12 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
       el('rect', { x: G.x0, y: y + 0.6, width: 3, height: G.LH - 1.2, class: 'lstripe full' }, g);
       const every = G.L > 10 ? 5 : 1;
       if (l === 0 || (l + 1) % every === 0) el('text', { x: GUT - 6, y: y + G.LH / 2 + 4, 'text-anchor': 'end', class: 'tiny' }, g, l === 0 ? 'layer 1' : String(l + 1));
+      // Mamba: the layer's memory, one fixed-size box (it never grows with the text)
+      if (G.kind === 'mamba') G.mem.push(el('rect', { x: G.x1 - 30, y: y + G.LH * 0.2, width: 24, height: G.LH * 0.6, rx: 3, class: 'mem', 'fill-opacity': 0.2 }, g));
     }
-    if (G.LH >= 40) { el('text', { x: G.x0 + 6, y: G.talkY(0) - 4, class: 'tiny', style: 'font-size:9.5px' }, g, 'talk'); el('text', { x: G.x0 + 6, y: G.thinkY(0) - 4, class: 'tiny', style: 'font-size:9.5px' }, g, 'think'); }
+    if (G.LH >= 40 && !G.one) { el('text', { x: G.x0 + 6, y: G.talkY(0) - 4, class: 'tiny', style: 'font-size:9.5px' }, g, 'talk'); el('text', { x: G.x0 + 6, y: G.thinkY(0) - 4, class: 'tiny', style: 'font-size:9.5px' }, g, 'think'); }
+    if (G.kind === 'neox') el('text', { x: G.x0 + 6, y: G.Y0 + 10, class: 'tiny', style: 'font-size:9.5px' }, g, 'talk + think, side by side');
+    if (G.kind === 'mamba') el('text', { x: G.x1 - 32, y: G.Y0 - 4, 'text-anchor': 'end', class: 'tiny', style: 'font-size:9.5px' }, g, 'memory (fixed size) →');
     // the exit: after the last layer the ball leaves the board for the output table, drawn as the token cloud
     G.gateY = G.Y0 + G.L * G.LH + 8;
     el('rect', { x: G.x0, y: G.gateY, width: G.x1 - G.x0, height: 30, rx: 6, class: 'gate' }, g);
@@ -694,8 +767,9 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
       const look = [el('rect', { x: G.TBL.x + 1, y: rowLineY - 1.2, width: G.TBL.w - 2, height: 2.4, fill: color(i), style: 'opacity:0' }, rg),
         el('path', { d: `M${G.TBL.x + G.TBL.w} ${rowLineY} C${x} ${rowLineY} ${x} ${G.embY + 10} ${x} ${G.embY + 6}`, fill: 'none', stroke: color(i), 'stroke-width': 1.4, style: 'opacity:0' }, rg)];
       el('rect', { x: x - G.LW / 2, y: G.embY - 9, width: G.LW, height: 18, class: 'cell', 'fill-opacity': 0, 'data-row': i, 'data-sec': -2 }, rg);
+      if (G.kind === 'gpt2' && rk && rk.pos.length === 1 && G.LW >= 22) el('text', { x, y: G.embY + 17, 'text-anchor': 'middle', class: 'tiny', style: 'font-size:9px' }, rg, '+p' + rk.pos[0]); // GPT-2 adds position row p
       // KV ticks: in every layer each token's key and value stay behind
-      ticks.push(Array.from({ length: L }, (_, l) => el('rect', { x: x - 6, y: G.talkY(l) - 1.2, width: 12, height: 2.4, rx: 1, class: 'kvt', style: 'opacity:0' }, rg)));
+      ticks.push(G.kind === 'mamba' ? null : Array.from({ length: L }, (_, l) => el('rect', { x: x - 6, y: G.talkY(l) - 1.2, width: 12, height: 2.4, rx: 1, class: 'kvt', style: 'opacity:0' }, rg)));
       rows.push({ g: rg, bars: bs, look });
       burst.push(el('circle', { cx: x, cy: G.thinkY(0), r: 2, class: 'burst', style: 'opacity:0' }, gBalls));
       ball.push(el('circle', { cx: x, cy: G.embY + 16, r: 0, fill: color(i), class: 'ball' }, gBalls));
@@ -737,7 +811,10 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
     // lanes whose full readings are kept); every other ball keeps its own token's map colour
     const colAt = all.map((_, i) => Array.from({ length: L }, (_, l) => { const ly = recOf(i) && recOf(i).layers[l]; return ly && ly.lens ? idColour(ly.lens[0].id) : base[i]; }));
     // how much a station adds, 0..1: the size of the addition relative to the ball
-    const added = (i, l, which) => { const ly = recOf(i) && recOf(i).layers[l]; return ly && ly.downNorm != null ? Math.min(1, (which ? ly.downNorm : ly.outNorm) / Math.max(1e-6, ly.norm) * 2.5) : 0.35; };
+    const added = (i, l, which) => { const ly = recOf(i) && recOf(i).layers[l]; if (!ly || ly.outNorm == null) return 0.35; const v = G.kind === 'mamba' ? ly.outNorm : which ? ly.downNorm : ly.outNorm; return Math.min(1, v / Math.max(1e-6, ly.norm) * 2.5); };
+    // Mamba: how strongly each token writes into a layer's memory, against the strongest write on the board
+    let memMax = 1e-9; if (G.kind === 'mamba') D.rowRecs.forEach(r => r && r.layers.forEach(q => { memMax = Math.max(memMax, q.memWrite || 0); }));
+    const memW = (i, l) => { const q = recOf(i) && recOf(i).layers[l]; return q ? (q.memWrite || 0) / memMax : 0; };
     const arcPath = (y, i, j) => { const xi = X(i), xj = X(j), bend = Math.min(G.LH * 0.9, 6 + (i - j) * G.LW * 0.22); return `M${xi} ${y} Q${(xi + xj) / 2} ${y - bend} ${xj} ${y}`; };
     function embed(i, t) {
       const [rowHl, line] = rows[i].look;
@@ -755,10 +832,14 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
         // talk: fall to the station, listen to earlier lanes, leave a KV tick
         cols.forEach(i => {
           tl.to(ball[i], { attr: { cy: ty2, fill: rgbStr(colAt[i][l]) }, duration: d * 0.42, ease: 'power1.inOut' }, t);
-          tl.to(ticks[i][l], { opacity: 1, duration: d * 0.3 }, t + d * 0.35);
+          if (ticks[i]) tl.to(ticks[i][l], { opacity: 1, duration: d * 0.3 }, t + d * 0.35);
         });
         STEPLOG.push([t + d * 0.2, l, 0, p]);
-        cols.forEach(i => {
+        if (G.kind === 'mamba') { // no attention: each token writes into and reads from the layer's one memory
+          const mx = G.x1 - 18, my = G.Y0 + l * G.LH + G.LH / 2;
+          cols.forEach(i => { const w = memW(i, l), pth = el('path', { d: `M${X(i)} ${ty2} L${mx} ${my}`, class: 'arc mw', style: 'opacity:0' }, gArcs); tl.to(pth, { opacity: (i === focus ? 1 : 0.35) * (0.15 + 0.85 * w), duration: d * 0.15 }, t + d * 0.2); tl.to(pth, { opacity: 0, duration: d * 0.3 }, t + d * 0.6); });
+          tl.to(G.mem[l], { attr: { 'fill-opacity': 0.85 }, duration: d * 0.15 }, t + d * 0.2); tl.to(G.mem[l], { attr: { 'fill-opacity': 0.2 }, duration: d * 0.3 }, t + d * 0.6);
+        } else cols.forEach(i => {
           const w = listen(i, l), mx = Math.max(1e-9, ...w.slice(0, i)), strong = i === focus ? 1 : 0.3;
           for (let j = 0; j < i; j++) {
             const r = w[j] / mx; if (r < 0.06) continue;
@@ -767,9 +848,9 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
             tl.to(pth, { opacity: 0, duration: d * 0.3 }, t + d * 0.6);
           }
         });
-        for (let j = 0; j < focus; j++) if (!cols.includes(j)) { tl.to(ticks[j][l], { attr: { height: 4.4, y: ty2 - 2.2 }, duration: d * 0.12 }, t + d * 0.2); tl.to(ticks[j][l], { attr: { height: 2.4, y: ty2 - 1.2 }, duration: d * 0.3 }, t + d * 0.45); }
+        if (G.kind !== 'mamba') for (let j = 0; j < focus; j++) if (!cols.includes(j)) { tl.to(ticks[j][l], { attr: { height: 4.4, y: ty2 - 2.2 }, duration: d * 0.12 }, t + d * 0.2); tl.to(ticks[j][l], { attr: { height: 2.4, y: ty2 - 1.2 }, duration: d * 0.3 }, t + d * 0.45); }
         // the + where each change is added onto the focus ball (after talk, after think)
-        [[ty2, d * 0.42], [hy, d * 0.84]].forEach(([py, at]) => { const pl = el('text', { x: X(focus) + 7, y: py + 4, class: 'plus', style: 'opacity:0' }, gArcs, '+'); tl.to(pl, { opacity: 1, duration: d * 0.06 }, t + at); tl.to(pl, { opacity: 0, duration: d * 0.2 }, t + at + d * 0.12); });
+        (G.one ? [[ty2, d * 0.84]] : [[ty2, d * 0.42], [hy, d * 0.84]]).forEach(([py, at]) => { const pl = el('text', { x: X(focus) + 7, y: py + 4, class: 'plus', style: 'opacity:0' }, gArcs, '+'); tl.to(pl, { opacity: 1, duration: d * 0.06 }, t + at); tl.to(pl, { opacity: 0, duration: d * 0.2 }, t + at + d * 0.12); });
         // think: fall on, and a burst shows how much the feed-forward block added
         cols.forEach(i => {
           tl.to(ball[i], { attr: { cy: hy }, duration: d * 0.42, ease: 'power1.inOut' }, t + d * 0.5);
@@ -886,48 +967,51 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
       const D = S.data, m = S.llm, gbps = m.weightBytes / 1e9 / (D.ms / 1000);
       $('#rSpeed').textContent = Math.round(D.ms) + ' ms/token';
       $('#rModel').textContent = m.name; $('#rW').textContent = m.meta.mb + ' MB'; $('#rDims').textContent = `${m.L} · ${m.D}`;
-      $('#rNote').textContent = `Each layer keeps its own keys and values: ${(m.kvBytesPerToken / 1024).toFixed(1)} KB per token across all ${m.L} layers, all in the same memory. Every new token reads all ${m.meta.mb} MB of weights again. Your browser did that in ${Math.round(D.ms)} ms, about ${gbps.toFixed(1)} GB/s; a 3090 GPU reads up to 936 GB/s.`;
+      $('#rNote').textContent = (m.kind === 'mamba' ? `No cache of keys and values: each layer keeps a fixed memory, ${(m.stateBytes / 1024).toFixed(0)} KB in all, however long the text gets.` : `Each layer keeps its own keys and values: ${(m.kvBytesPerToken / 1024).toFixed(1)} KB per token across all ${m.L} layers, all in the same memory.`) + ` Every new token reads all ${m.meta.mb} MB of weights again. Your browser did that in ${Math.round(D.ms)} ms, about ${gbps.toFixed(1)} GB/s; a 3090 GPU reads up to 936 GB/s.`;
     }
   }
 
   // ---- the inspector: what the current (or pointed-at) station does, broken into its exact sub-steps ----
   const v6 = a => '[' + a.map(v => (v >= 0 ? ' ' : '−') + Math.abs(v).toFixed(3)).join(' ') + ' …]';
+  // what one station does, broken into its exact sub-steps, per design, with the real numbers where they are kept
+  const STEPS = {
+    llama: { att: [['norm', 'rescale the ball (RMS norm)'], ['qkv', 'query, key, value = three knob grids × ball'], ['rope', 'rotate query and key by position (RoPE): how word order gets in'], ['scores', 'compare the query with every earlier key'], ['softmax', 'turn the scores into weights (sum 100%)'], ['mix', 'blend the earlier values by those weights'], ['add', 'output knobs × blend, added onto the ball']],
+      ff: [['norm2', 'rescale again'], ['gateup', 'every neuron: a "gate" and an "up" dot product'], ['silu', 'SiLU(gate) × up: some neurons fire'], ['down', 'down knobs turn the neurons back into a change'], ['add2', 'added onto the ball']] },
+    gpt2: { att: [['norm', 'rescale the ball (LayerNorm, with bias knobs)'], ['qkv', 'one fused knob grid × ball (+ bias) = all queries, keys, values'], ['scores', 'compare the query with every earlier key (no rotation: position came with the ball)'], ['softmax', 'turn the scores into weights (sum 100%)'], ['mix', 'blend the earlier values by those weights'], ['add', 'output knobs × blend (+ bias), added onto the ball']],
+      ff: [['norm2', 'rescale again (LayerNorm)'], ['gateup', 'every neuron: one dot product with the ball (+ bias)'], ['silu', 'GELU (tanh form): some neurons fire'], ['down', 'down knobs (+ bias) turn the neurons back into a change'], ['add2', 'added onto the ball']] },
+    neox: { att: [['norm', 'rescale the incoming ball (LayerNorm, with bias knobs)'], ['qkv', 'one fused knob grid × ball (+ bias), head by head: [query | key | value]'], ['rope', 'rotate the first quarter of each head\'s query and key by position'], ['scores', 'compare the query with every earlier key'], ['softmax', 'turn the scores into weights (sum 100%)'], ['mix', 'blend the earlier values by those weights; output knobs (+ bias) make the talk change']],
+      ff: [['norm2', 'rescale the same incoming ball (its own LayerNorm): side by side with talk'], ['gateup', 'every neuron: one dot product with the ball (+ bias)'], ['silu', 'GELU (exact): some neurons fire'], ['down', 'down knobs (+ bias) make the think change'], ['add2', 'talk change + think change, both added onto the ball at once']] },
+    mamba: { att: [['norm', 'rescale the ball (RMS norm)'], ['in', 'in knobs × ball = x (for the memory) and z (the gate)'], ['conv', 'each channel looks back at the previous 3 tokens (4 knobs each), then SiLU'], ['select', 'from this token: a step size, B (how to write), C (how to read)'], ['memory', 'memory = fade × memory + step × B × x; read it with C (+ skip)'], ['gate', 'multiply by SiLU(z)'], ['add', 'out knobs turn it into a change, added onto the ball']] },
+  };
   function inspectLayer(l, which, row) {
-    const D = S.data, real = D.real, moe = S.mode === 'moe', full = isFull(l), dims = MODELS[S.mode].dims;
-    const who = row != null ? `“${D.all[row]}”` : '', kind = full ? 'full attention' : 'linear attention';
-    const { att, ff } = layerSteps(full ? 'full' : 'linear', moe, !real);
-    const where = `Layer ${l + 1} · ${which ? 'think' : 'talk'}${who ? ' · ' + who : ''}`;
+    const D = S.data, m = S.llm, kind = m.kind, dims = MODELS[S.mode].dims, who = row != null ? `“${D.all[row]}”` : '';
+    const st = STEPS[kind], keys = kind === 'mamba' ? st.att : which ? st.ff : st.att;
+    const where = `Layer ${l + 1} · ${kind === 'mamba' ? 'memory block' : which ? 'think' : 'talk'}${who ? ' · ' + who : ''}`;
     let title, text;
-    if (!which) {
-      title = `Layer ${l + 1} · talk (${kind})`;
-      text = full
-        ? `${who || 'The token'} compares itself with every earlier token and blends in information from the ones that match. This is the only place tokens share information; the ball takes on the colours of the tokens it listens to. Word order gets in here: the query and key are rotated by position before they are compared. Its own key and value stay in this layer's KV cache (teal tick) for later tokens. ${dims.heads}.`
-        : `${who || 'The token'} reads and updates this layer's one fixed-size memory instead of looking at every earlier token. Cheaper, and it never grows, but it remembers less exactly. Order comes from the memory being updated token by token, plus a short convolution over the previous 3 tokens.`;
-    } else {
-      title = `Layer ${l + 1} · think (feed-forward)`;
-      text = moe
-        ? `${who || 'The token'} works alone: a router picks 8 of 256 experts plus 1 shared expert, each a small block of 512 neurons, and their results are added onto the ball. The burst shows how much was added.`
-        : `${who || 'The token'} works alone: ${dims.ff} each check the ball for a pattern, a few fire strongly, and their results are added onto the ball. The burst shows how much was added. Click to see one neuron worked out.`;
+    if (kind === 'mamba') { title = `Layer ${l + 1} · the memory block (no attention)`; text = `${who || 'The token'} writes into this layer's one fixed-size memory and reads from it. That memory is the only way it learns about earlier tokens: it fades a little with every token, and the token itself decides (through its step size) how much to keep or replace. Nothing is kept per earlier token, so it never grows.`; }
+    else if (!which) { title = `Layer ${l + 1} · talk (attention)`; text = `${who || 'The token'} compares itself with every earlier token and blends in information from the ones that match: the only place tokens share information. ${dims.heads}. Its own key and value stay in this layer's KV cache (teal tick) for later tokens.` + (kind === 'neox' ? ' In GPT-NeoX this runs side by side with think.' : ''); }
+    else { title = `Layer ${l + 1} · think (feed-forward)`; text = `${who || 'The token'} works alone: ${dims.ff} each check the ball for a pattern, some fire, and their results make a change.` + (kind === 'neox' ? ' It reads the same incoming ball as talk, and both changes are added together.' : ' The change is added onto the ball.') + ' Click to look inside the layer.'; }
+    const rec = row != null ? D.rowRecs[row] : null, ly = rec && rec.layers[l], v = ly && ly.vec;
+    const s6 = a => v6(Array.from(a.slice(0, 6)));
+    let detail = {};
+    if (ly && ly.attn) {
+      const T = rec.pos + 1, avg = Array.from({ length: T }, (_, j) => { let s2 = 0; for (let h = 0; h < ly.heads; h++) s2 += ly.attn[h * T + j]; return s2 / ly.heads; });
+      const name = j => m.tok.piece(D.allIds[j]), top3 = (vals, f) => vals.map((x, j) => [j, x]).sort((a2, b2) => b2[1] - a2[1]).slice(0, 3).map(([j, x]) => `${name(j)} ${f(x)}`).join(', ');
+      detail.softmax = top3(avg, fmtPct);
+      if (v) detail.scores = 'head 1: ' + top3(Array.from(ly.sc), x => x.toFixed(2));
     }
-    const keys = which ? ff : att;
-    const rec = real && row != null ? D.rowRecs[row] : null, ly = rec && rec.layers[l], fullRec = ly && ly.xin != null;
-    let detail = null;
-    if (real && ly) {
-      const T = rec.pos + 1, avg = Array.from({ length: T }, (_, j) => { let s = 0; for (let h = 0; h < ly.heads; h++) s += ly.attn[h * T + j]; return s / ly.heads; });
-      const name = j => S.llm.tok.piece(D.allIds[j]);
-      const top3 = (vals, f) => vals.map((v, j) => [j, v]).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([j, v]) => `${name(j)} ${f(v)}`).join(', ');
-      detail = {
-        norm: fullRec && `size ${ly.xinNorm.toFixed(1)} → ${v6(ly.h1)}`, qkv: fullRec && `q ${v6(ly.q)}\n              k ${v6(ly.k)}`,
-        scores: fullRec && 'head 1: ' + top3(Array.from(ly.sc), v => v.toFixed(2)), softmax: top3(avg, fmtPct), mix: fullRec && v6(ly.mix),
-        add: fullRec && `added ${ly.outNorm.toFixed(1)} → ball size ${ly.x1Norm.toFixed(1)}`, norm2: fullRec && v6(Array.from(ly.ffnIn.subarray(0, 6))),
-        gateup: fullRec && 'busiest: ' + ly.neurons.slice(0, 3).map(n => '#' + n.i).join(', '), silu: fullRec && ly.neurons.slice(0, 3).map(n => '#' + n.i + ' ' + n.v.toFixed(2)).join(', '),
-        down: fullRec && v6(ly.down), add2: fullRec && `added ${ly.downNorm.toFixed(1)} → ball size ${ly.norm.toFixed(1)}` + (ly.lens ? `\n              guess now: ${ly.lens.map(g => S.llm.tok.piece(g.id) + ' ' + fmtPct(g.p)).join(', ')}` : ''),
-      };
-    }
-    const lines = keys.map((k, n) => `${n + 1} ${SUB[k]}` + (k === 'rope' && !real ? ' (Qwen3.6 rotates a quarter of each head)' : '') + (detail && detail[k] ? '\n              ' + detail[k] : ''));
+    if (v) {
+      Object.assign(detail, { norm: `size ${ly.xinNorm.toFixed(1)} → ${s6(v.h1)}`, mix: s6(v.mix || v.out), norm2: v.h2 && s6(v.h2), down: s6(v.down || v.out) });
+      if (kind !== 'mamba') Object.assign(detail, { qkv: `q ${s6(v.q)}\n              k ${s6(v.k)}`, rope: v.qPre && `before ${s6(v.qPre)}\n              after  ${s6(v.q)}`,
+        add: kind === 'neox' ? `talk change size ${ly.outNorm.toFixed(1)}` : `added ${ly.outNorm.toFixed(1)} → ball size ${ly.x1Norm.toFixed(1)}`,
+        gateup: 'busiest: ' + ly.neurons.slice(0, 3).map(n => '#' + n.i).join(', '), silu: ly.neurons.slice(0, 3).map(n => '#' + n.i + ' ' + n.v.toFixed(2)).join(', '),
+        add2: (kind === 'neox' ? `talk ${ly.outNorm.toFixed(1)} + think ${ly.downNorm.toFixed(1)}` : `added ${ly.downNorm.toFixed(1)}`) + ` → ball size ${ly.norm.toFixed(1)}` + (ly.lens ? `\n              guess now: ${ly.lens.map(g => m.tok.piece(g.id) + ' ' + fmtPct(g.p)).join(', ')}` : '') });
+      else Object.assign(detail, { in: `x ${s6(v.xs)}\n              z ${s6(v.z)}`, conv: s6(v.u), select: `step ${s6(v.dt)}\n              B ${s6(v.B)}`, memory: `wrote ${(ly.memWrite || 0).toFixed(3)} into the memory; read ${s6(v.scan)}`, gate: s6(v.gated),
+        add: `added ${ly.outNorm.toFixed(1)} → ball size ${ly.norm.toFixed(1)}` + (ly.lens ? `\n              guess now: ${ly.lens.map(g => m.tok.piece(g.id) + ' ' + fmtPct(g.p)).join(', ')}` : '') });
+    } else if (ly && kind === 'mamba') detail.memory = `wrote ${(ly.memWrite || 0).toFixed(3)} into the memory`;
+    const lines = keys.map(([k, txt], n) => `${n + 1} ${txt}` + (detail[k] ? '\n              ' + detail[k] : ''));
     let nums = 'Inside this station:\n' + lines.join('\n');
-    if (real && ly && !fullRec) nums += '\n\n(Full numbers are kept for the last token of each pass; point at the last prompt row or a new row.)';
-    if (!real) nums += '\n\nToy mode: no real numbers. Pick a real model to see them.';
+    if (ly && !v) nums += '\n\n(Full numbers are kept for the last token of each pass; point at the last prompt row or a new row.)';
     return { where, title, text, nums };
   }
   function inspect(si, l, row, which) {
@@ -1086,14 +1170,15 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
   // its needle shows the setting against that grid's spread. Drawn once per model, layer and size.
   function knobBank(l, w, h) {
     const key = [S.llm.meta.key, l, Math.round(w), Math.round(h)].join(':'); S.banks = S.banks || {}; if (S.banks[key]) return S.banks[key];
-    const P = S.llm.mats.layers[l], D = S.llm.D, KV = S.llm.KVH * S.llm.HD, F = S.llm.F, k2 = 2, cv = document.createElement('canvas');
+    const sp = pSpec(), k2 = 2, cv = document.createElement('canvas');
     cv.width = Math.round(w * k2); cv.height = Math.round(h * k2);
     const c = cv.getContext('2d'); c.scale(k2, k2);
-    const talk = [[P.q, D * D], [P.k, KV * D], [P.v, KV * D], [P.o, D * D]], think = [[P.gate, F * D], [P.up, F * D], [P.down, D * F]];
-    const two = h >= 34, rowsOf = two ? [talk, think] : [talk.concat(think)], r = Math.max(3, Math.min(8, (two ? h / 2 : h) * 0.3)), step = r * 2.7;
+    const of = kind => sp.layer.filter(g => g.kind === kind).map(g => [g.get(l), g.rows * g.cols]);
+    const talk = of('attn'), think = of('ffn'), all = sp.layer.map(g => [g.get(l), g.rows * g.cols]);
+    const two = h >= 34 && talk.length && think.length, rowsOf = two ? [talk, think] : [all], r = Math.max(3, Math.min(8, (two ? h / 2 : h) * 0.3)), step = r * 2.7;
     const n = Math.floor((w - 8) / step), ink = css('--st-ink2'), wt = css('--wt');
     rowsOf.forEach((mats, ri) => {
-      const tot = mats.reduce((a, [, len]) => a + len, 0), cy = two ? h * (ri ? 0.74 : 0.3) : h / 2;
+      const tot = mats.reduce((a2, [, len]) => a2 + len, 0), cy = two ? h * (ri ? 0.74 : 0.3) : h / 2;
       mats.forEach(([m]) => { m.sc = m.sc || p98v(m.subarray(0, 65536)); });
       for (let k = 0; k < n; k++) {
         let at = Math.floor((k + 0.5) / n * tot), j = 0; while (at >= mats[j][1]) at -= mats[j++][1];
@@ -1189,7 +1274,25 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
     if (real) {
       // the busiest of this layer's neurons for the last prompt token, worked out from the real weights
       const m = S.llm, h = S.data.recs[0].layers[l].ffnIn;
+      if (!m.neuron) { // Mamba
+        $('#zWhere').textContent = `${lname} · Mamba has no feed-forward neurons`; $('#zTitle').textContent = 'No neurons to zoom into';
+        $('#zLead').textContent = 'A Mamba layer has no separate feed-forward block: its channels go through the memory and a gate instead. Look inside the layer to see each step with the real numbers.';
+        $('#zDot').innerHTML = ''; $('#zSum').textContent = ''; $('#zAfter').textContent = ''; $('#zNote').textContent = '';
+        zoomSoftmax(Z, real); $('#zoom').showModal(); return;
+      }
       const silu = a => a / (1 + Math.exp(-a)), dot = w => { let s = 0; for (let i = 0; i < m.D; i++) s += h[i] * w[i]; return s; };
+      if (m.neuron(l, 0).fc) { // GPT-2 and GPT-NeoX: one row of knobs and a bias per neuron, then GELU
+        const act = m.neuron(l, 0).act, acts = new Float32Array(m.F);
+        for (let k = 0; k < m.F; k++) { const w = m.neuron(l, k); acts[k] = act(dot(w.fc) + w.bias); }
+        const order = Array.from(acts.keys()).sort((a, b) => Math.abs(acts[b]) - Math.abs(acts[a])), n = order[0], { fc, bias } = m.neuron(l, n), g = dot(fc);
+        $('#zWhere').textContent = `${lname} · neuron #${n} of ${nf(m.F)}`; $('#zTitle').textContent = 'One neuron: multiply, add, bend';
+        $('#zLead').textContent = `This is the busiest of the layer's ${nf(m.F)} feed-forward neurons for “${Z.word}”: a row of ${m.D} knobs plus one bias knob. It multiplies the token's ${m.D} numbers (normalised) by its knobs and adds them up. The first 4 of the ${m.D} pairs, from the real model:`;
+        fillTable($('#zDot'), ['', 'ball', '× weight', '= product'], [0, 1, 2, 3].map(i => ['#' + (i + 1), fx(h[i], 4), fx(fc[i], 4), fx(h[i] * fc[i], 5)]));
+        $('#zSum').textContent = `all ${m.D} add up to ${fx(g, 4)}; plus the bias ${fx(bias, 4)} = ${fx(g + bias, 4)}`;
+        $('#zAfter').textContent = `Then GELU bends it: ${fx(g + bias, 3)} → ${fx(act(g + bias), 4)} (positive values pass, negative ones shrink towards 0). The next busiest are ` + order.slice(1, 4).map(i => '#' + i + ' (' + fx(acts[i], 2) + ')').join(', ') + `. All ${nf(m.F)} outputs go through the down knobs back into the ball's ${m.D} numbers.`;
+        $('#zNote').textContent = `Real numbers from ${m.name}, computed in your browser from its published weights.`;
+        zoomSoftmax(Z, real); $('#zoom').showModal(); return;
+      }
       const acts = new Float32Array(m.F);
       for (let k = 0; k < m.F; k++) { const w = m.neuron(l, k); acts[k] = silu(dot(w.gate)) * dot(w.up); }
       const order = Array.from(acts.keys()).sort((a, b) => Math.abs(acts[b]) - Math.abs(acts[a])), n = order[0];
@@ -1337,7 +1440,7 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
     const a = []; for (let i = 0; i < CCAT.length; i++) if (CCAT[i] !== 255) a.push(i); ALL_PTS = Int32Array.from(a);
     try { mapColStr.clear(); PIECES = null; } catch (e) { /* first call, before the caches exist */ }
   }
-  const cloudFile = { 'tiny-stories': 'cloud-tiny.js' };
+  const cloudFile = { 'tiny-stories': 'cloud-tiny.js', 'pythia-14m': 'cloud-pythia.js', distilgpt2: 'cloud-gpt2.js', 'mamba-130m': 'cloud-mamba.js' };
   const needCloud = key => (window.CLOUDS && window.CLOUDS[key]) || !cloudFile[key] ? Promise.resolve() : new Promise((ok, no) => { const sc = document.createElement('script'); sc.src = cloudFile[key]; sc.onload = ok; sc.onerror = () => no(new Error('could not load the token map')); document.head.appendChild(sc); });
   setCloud('smollm2-instruct');
   const TOY_PTS = Int32Array.from(CLOUD.ids.filter(onMap)); // toy mode: 2,000 common tokens of SmolLM2's map
@@ -1711,42 +1814,55 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
     mk('p', 'note', 'What this is and is not: the dots are the vocabulary\'s coordinates, not stored knowledge. The model\'s knowledge lives in its weights, spread across every layer; its memory of this conversation is the KV cache. The path is the thinking; where it ends is the prediction.', box);
   }
 
-  // ---- the parameters: every weight grid of SmolLM2-135M, drawn to scale (area = how many numbers it holds) ----
-  // With the real model loaded, each pixel shows one real weight (warm = positive, blue = negative), sampled evenly.
-  const PSEG = [['q', 'q', 'attention: query', 'attn'], ['k', 'k', 'attention: key', 'attn'], ['v', 'v', 'attention: value', 'attn'], ['o', 'o', 'attention: output', 'attn'],
-    ['gate', 'gate', 'feed-forward: gate', 'ffn'], ['up', 'up', 'feed-forward: up', 'ffn'], ['down', 'down', 'feed-forward: down', 'ffn']];
-  let PSH, P_LAYER, P_NORMS, P_TOTAL;
-  function pShapes() { // the grids' shapes for the current real model (or SmolLM2's before one is loaded)
-    const R = S.llm ? { V: S.llm.V, D: S.llm.D, L: S.llm.L, F: S.llm.F, KV: S.llm.KVH * S.llm.HD } : { V: 49152, D: 576, L: 30, F: 1536, KV: 192 };
-    PSH = { V: R.V, D: R.D, L: R.L, q: [R.D, R.D], k: [R.KV, R.D], v: [R.KV, R.D], o: [R.D, R.D], gate: [R.F, R.D], up: [R.F, R.D], down: [R.D, R.F] };
-    P_LAYER = PSEG.reduce((a, [k]) => a + PSH[k][0] * PSH[k][1], 0); P_NORMS = (2 * PSH.L + 1) * PSH.D; P_TOTAL = PSH.V * PSH.D + PSH.L * P_LAYER + P_NORMS; // SmolLM2: 134,515,008
+  // ---- the parameters: every weight grid of the model, drawn to scale (area = how many numbers it holds) ----
+  // Each design lists its grids: the tables outside the layers (embedding table; GPT-NeoX's separate output table;
+  // GPT-2's position table) and the grids inside one layer, each with a kind (talk, think, or Mamba's memory block).
+  function pSpec() {
+    const m = S.llm, kind = m ? m.kind : 'llama', A = m ? m.arch : null;
+    const D = m ? m.D : 576, V = m ? m.V : 49152, L = m ? m.L : 30, F = m ? m.F : 1536, KV = m ? m.KVH * m.HD : 192;
+    const lay = (key, label, kind2, rows, cols, what) => ({ key, label, kind: kind2, rows, cols, what, get: l => m.mats.layers[l][key] });
+    const E = { key: 'E', label: 'embedding table', rows: V, cols: D, get: () => m.mats.E, what: 'One row per token. The board looks a row up at Embed; the token cloud places each row as a dot.' + (kind === 'neox' ? '' : ' Because the model ties its tables, the final ball is also compared with these rows at Unembed.') };
+    const spec = { kind, D, V, L, tables: [E], layer: [] };
+    if (kind === 'llama') spec.layer = [lay('q', 'attention: query', 'attn', D, D, 'Each row turns the ball into one number of the query: what this token is looking for.'), lay('k', 'attention: key', 'attn', KV, D, 'Each row makes one number of the key: what this token offers to later tokens (kept in the KV cache).'), lay('v', 'attention: value', 'attn', KV, D, 'Each row makes one number of the value: what this token passes on (kept in the KV cache).'), lay('o', 'attention: output', 'attn', D, D, 'Mixes the heads\' blended values into the change added onto the ball.'), lay('gate', 'feed-forward: gate', 'ffn', F, D, 'Each row is one neuron\'s knobs; SiLU of its dot product with the ball, times "up", is how strongly it fires.'), lay('up', 'feed-forward: up', 'ffn', F, D, 'A second row of knobs per neuron, multiplied by SiLU(gate).'), lay('down', 'feed-forward: down', 'ffn', D, F, 'Each column is one neuron\'s way of writing back onto the ball.')];
+    else if (kind === 'mamba') {
+      const I = A.I, N = A.N, R = A.R, KC = A.KC;
+      spec.layer = [lay('inp', 'in: x and gate z', 'mem', 2 * I, D, 'Turns the ball into two lists: x, which goes through the memory, and z, the gate.'), lay('conv', 'look back (conv, ' + KC + ' taps)', 'mem', I, KC, 'Each channel\'s own ' + KC + ' knobs for mixing it with the same channel of the previous tokens.'), lay('xp', 'selection: step, B, C', 'mem', R + 2 * N, I, 'Makes, per token, the step size input, B (how to write the memory) and C (how to read it).'), lay('dt', 'step size', 'mem', I, R, 'Turns the step-size input into one step size per channel.'), lay('Alog', 'memory fade (log −A)', 'mem', I, N, 'How fast each memory number fades: A = −exp(this). Fixed after training, like every knob.'), lay('out', 'out', 'mem', D, I, 'Turns the gated channels back into the change added onto the ball.')];
+    } else { // GPT-NeoX and GPT-2: fused query/key/value, output, and a 2-grid feed-forward
+      spec.layer = [lay('qkv', 'attention: query/key/value (fused)', 'attn', 3 * D, D, kind === 'neox' ? 'One grid makes queries, keys and values together, laid out head by head [q | k | v].' : 'One grid makes all queries, then all keys, then all values.'), lay('o', 'attention: output', 'attn', D, D, 'Mixes the heads\' blended values into the attention\'s change.'), lay('fc', 'feed-forward: neurons', 'ffn', F, D, 'Each row is one neuron\'s knobs; GELU of its dot product with the ball (plus a bias) is how strongly it fires.'), lay('proj', 'feed-forward: down', 'ffn', D, F, 'Each column is one neuron\'s way of writing back onto the ball.')];
+      if (kind === 'neox') spec.tables.push({ key: 'Eout', label: 'output table (separate)', rows: V, cols: D, get: () => m.mats.Eout, what: 'GPT-NeoX keeps a second table for Unembed: the final ball is compared with every row of this one, not with the embedding table.' });
+      if (kind === 'gpt2') spec.tables.push({ key: 'Pos', label: 'position table', rows: m ? m.mats.Pos.length / D : 1024, cols: D, get: () => m.mats.Pos, what: 'One learned row per position (0 to 1,023), added to each token\'s row at the start: how GPT-2 knows word order.' });
+    }
+    spec.perLayer = spec.layer.reduce((a, g) => a + g.rows * g.cols, 0);
+    spec.grids = spec.tables.reduce((a, g) => a + g.rows * g.cols, 0) + L * spec.perLayer;
+    spec.total = m ? m.weightBytes / 2 : 134515008; // every number the model has, including the small lists (norms, biases)
+    spec.small = spec.total - spec.grids;
+    return spec;
   }
-  pShapes();
-  const KIND_RGB = { emb: [157, 144, 255], attn: [255, 92, 138], ffn: [242, 169, 59] };
+  let SP = pSpec();
+  const KIND_RGB = { emb: [157, 144, 255], attn: [255, 92, 138], ffn: [242, 169, 59], mem: [115, 144, 255] };
   const PV = { lay: null, base: document.createElement('canvas'), hover: null, scales: {} };
   const fmtN = v => v.toLocaleString('en-US'), fmtM = v => (v / 1e6).toFixed(1) + 'M';
-  const pMat = b => (b.key === 'E' ? S.llm.mats.E : S.llm.mats.layers[b.l][b.key]);
-  function pScale(b) { // the 99th percentile of |weight| in this grid, from 4,096 evenly spaced samples
-    const id = b.l + ':' + b.key; if (PV.scales[id]) return PV.scales[id];
-    const m = pMat(b), n = 4096, step = Math.floor(m.length / n), a = new Float32Array(n);
+  const pMat = b => (b.l < 0 ? b.g.get() : b.g.get(b.l));
+  function pScale(b) { // the 99th percentile of |weight| in this grid, from evenly spaced samples
+    const id = b.l + ':' + b.g.key; if (PV.scales[id]) return PV.scales[id];
+    const m = pMat(b), n = Math.min(4096, m.length), step = Math.max(1, Math.floor(m.length / n)), a = new Float32Array(n);
     for (let i = 0; i < n; i++) a[i] = Math.abs(m[i * step]);
     a.sort(); return (PV.scales[id] = a[Math.floor(n * 0.99)] || 1);
   }
-  function pLayout(W) {
+  function pLayout(W) { // the overview without WebGL: one bar per layer, the tables above, all at the same scale
     const gut = 30, bw = W - gut - 6, hL = W < 520 ? 9 : 12, blocks = [];
     let y = 26;
-    const eh = Math.round(PSH.V * PSH.D / P_LAYER * hL); // same scale as the layers
-    blocks.push({ x: gut, y, w: bw, h: eh, key: 'E', rows: PSH.V, cols: PSH.D, l: -1, kind: 'emb', label: 'embedding table' });
-    y += eh + 34;
-    const headY = y - 5;
-    for (let l = 0; l < PSH.L; l++) {
+    SP.tables.forEach(g => { const h = Math.max(6, Math.round(g.rows * g.cols / SP.perLayer * hL)); blocks.push({ x: gut, y, w: bw, h, g, rows: g.rows, cols: g.cols, l: -1, kind: 'emb' }); y += h + 22; });
+    y += 12; const headY = y - 5;
+    for (let l = 0; l < SP.L; l++) {
       let x = gut;
-      PSEG.forEach(([k, short, label, kind]) => { const w = bw * PSH[k][0] * PSH[k][1] / P_LAYER; blocks.push({ x, y, w, h: hL, key: k, short, rows: PSH[k][0], cols: PSH[k][1], l, kind, label }); x += w; });
+      SP.layer.forEach(g => { const w = bw * g.rows * g.cols / SP.perLayer; blocks.push({ x, y, w, h: hL, g, rows: g.rows, cols: g.cols, l, kind: g.kind }); x += w; });
       y += hL + 2;
     }
     return { blocks, H: y + 4, headY, gut, bw, hL, W };
   }
   function drawParams() {
+    SP = pSpec();
     const cv = $('#pCv'), W = cv.clientWidth || 600, dpr = Math.min(2, devicePixelRatio || 1), lay = PV.lay = pLayout(W), real = !!S.llm;
     cv.width = Math.round(W * dpr); cv.height = Math.round(lay.H * dpr); cv.style.height = lay.H + 'px';
     const base = PV.base; base.width = cv.width; base.height = cv.height;
@@ -1767,20 +1883,14 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
       }
     });
     c.putImageData(img, 0, 0);
-    // labels on top
     c.setTransform(dpr, 0, 0, dpr, 0, 0);
     const ink = css('--st-ink'), ink2 = css('--st-ink2');
     c.font = '600 11px "IBM Plex Mono", monospace'; c.textBaseline = 'alphabetic'; c.fillStyle = ink;
-    const e = lay.blocks[0];
-    c.fillText(`EMBEDDING TABLE · ${fmtN(PSH.V)} rows × ${PSH.D} = ${fmtM(PSH.V * PSH.D)} (${Math.round(PSH.V * PSH.D / P_TOTAL * 100)}%) · the token cloud is this grid`, e.x, e.y - 8);
-    c.fillText(`${PSH.L} LAYERS · ${fmtM(P_LAYER)} each`, e.x, lay.headY - 13);
-    c.font = '500 10px "IBM Plex Mono", monospace'; c.fillStyle = ink2;
-    lay.blocks.slice(1, 8).forEach(b => { if (b.w > 14) { c.textAlign = 'center'; c.fillText(b.short, b.x + b.w / 2, lay.headY); } });
-    c.textAlign = 'right';
-    lay.blocks.filter(b => b.key === 'q' && (b.l === 0 || (b.l + 1) % 5 === 0)).forEach(b => c.fillText(String(b.l + 1), lay.gut - 5, b.y + b.h - 2));
+    lay.blocks.filter(b => b.l < 0).forEach(b => c.fillText(`${b.g.label.toUpperCase()} · ${fmtN(b.rows)} × ${b.cols} = ${fmtM(b.rows * b.cols)} (${Math.round(b.rows * b.cols / SP.total * 100)}%)`, b.x, b.y - 6));
+    c.fillText(`${SP.L} LAYERS · ${fmtM(SP.perLayer)} each`, lay.gut, lay.headY - 13);
+    c.textAlign = 'right'; c.fillStyle = ink2; c.font = '500 10px "IBM Plex Mono", monospace';
+    lay.blocks.filter(b => b.l >= 0 && b.g === SP.layer[0] && (b.l === 0 || (b.l + 1) % 5 === 0)).forEach(b => c.fillText(String(b.l + 1), lay.gut - 5, b.y + b.h - 2));
     c.textAlign = 'left';
-    // kind outlines: attention pink, feed-forward amber
-    lay.blocks.forEach(b => { if (b.key === 'q' || b.key === 'gate') { c.fillStyle = rgbStr(KIND_RGB[b.kind]); c.fillRect(b.x, b.y, 1.5, b.h); } });
     renderParams();
   }
   function renderParams() {
@@ -1789,17 +1899,7 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
     const b = PV.hover; if (!b) return;
     c.setTransform(dpr, 0, 0, dpr, 0, 0); c.strokeStyle = css('--st-ink'); c.lineWidth = 1.5; c.strokeRect(b.x + 0.5, b.y + 0.5, b.w - 1, b.h - 1);
   }
-  const pWhere = b => (b.key === 'E' ? 'Embedding table' : `Layer ${b.l + 1} · ${b.label}`);
-  const P_WHAT = {
-    E: 'One row per token. The board looks a row up at Embed; the token cloud places each row as a dot; and because the model ties its tables, the final ball is compared with these same rows at Unembed.',
-    q: 'Each row turns the ball into one number of the query, by a dot product: what this token is looking for.',
-    k: 'Each row makes one number of the key: what this token offers to later tokens. The keys are what the KV cache keeps.',
-    v: 'Each row makes one number of the value: what this token passes on when another token attends to it, kept in the KV cache.',
-    o: 'Mixes the heads\' blended values back into the ball\'s numbers, which are then added onto the ball.',
-    gate: 'Each row is one of the layer\'s neurons: a row of knobs multiplied with the ball and added up. SiLU of this, times "up", decides how strongly the neuron fires.',
-    up: 'A second row of knobs per neuron. Its dot product with the ball is multiplied by SiLU(gate).',
-    down: 'Each column is one neuron\'s way of writing back: the numbers it adds onto the ball, scaled by how strongly it fired.',
-  };
+  const pWhere = b => (b.l < 0 ? b.g.label[0].toUpperCase() + b.g.label.slice(1) : `Layer ${b.l + 1} · ${b.g.label}`);
   function pAt(e) { const r = $('#pCv').getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top; return PV.lay && PV.lay.blocks.find(b => x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h + 2) || null; }
   $('#pCv').addEventListener('pointermove', e => {
     const b = pAt(e); if (b === PV.hover) return; PV.hover = b; renderParams();
@@ -1810,14 +1910,9 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
     $('#pDetail').hidden = false;
     $('#pDTitle').textContent = `${pWhere(b)}: ${fmtN(b.rows)} × ${fmtN(b.cols)} = ${fmtN(b.rows * b.cols)} numbers`;
     const cv = $('#pZoom');
-    if (!S.llm) {
-      cv.hidden = true; $('#pDNums').hidden = true;
-      $('#pDText').textContent = P_WHAT[b.key] + ' Pick a real model (TinyStories is a 30 MB download) to see the actual numbers.';
-      $('#pDetail').scrollIntoView({ behavior: 'smooth', block: 'nearest' }); return;
-    }
-    // a crop at one number per pixel: the top-left corner of the grid
+    if (!S.llm) { cv.hidden = true; $('#pDNums').hidden = true; $('#pDText').textContent = b.g.what + ' Load a model to see the actual numbers.'; return; }
     const m = pMat(b), sc = pScale(b), rows = Math.min(b.rows, 192), cols = Math.min(b.cols, 576);
-    const W = cv.clientWidth || 600, k = Math.max(1, Math.floor(W / cols)), dpr = 1;
+    const W = cv.clientWidth || 600, k = Math.max(1, Math.floor(W / cols));
     cv.hidden = false; cv.width = cols * k; cv.height = rows * k; cv.style.width = Math.min(W, cols * k) + 'px'; cv.style.height = (rows * k * Math.min(W, cols * k) / (cols * k)) + 'px';
     const c = cv.getContext('2d'), img = c.createImageData(cols * k, rows * k), px = img.data, bg = hexRgb(css('--st-bg'));
     for (let y = 0; y < rows * k; y++) for (let x = 0; x < cols * k; x++) {
@@ -1825,44 +1920,39 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
       px[o] = bg[0] + (col[0] - bg[0]) * a; px[o + 1] = bg[1] + (col[1] - bg[1]) * a; px[o + 2] = bg[2] + (col[2] - bg[2]) * a; px[o + 3] = 255;
     }
     c.putImageData(img, 0, 0);
-    $('#pDText').textContent = `${P_WHAT[b.key]} Above: the top-left ${rows} × ${cols} corner, one number per pixel (warm positive, blue negative, brighter = bigger).`;
-    const row = r => Array.from(m.subarray(r * b.cols, r * b.cols + 6), v => (v >= 0 ? ' ' : '−') + Math.abs(v).toFixed(4)).join(' ');
+    $('#pDText').textContent = `${b.g.what} Above: the top-left ${rows} × ${cols} corner, one number per pixel (warm positive, blue negative, brighter = bigger).`;
+    const row = r => Array.from(m.subarray(r * b.cols, r * b.cols + Math.min(6, b.cols)), v => (v >= 0 ? ' ' : '−') + Math.abs(v).toFixed(4)).join(' ');
     $('#pDNums').hidden = false;
-    $('#pDNums').textContent = `the first 6 numbers of the first 4 rows${b.key === 'E' ? ' (tokens 0–3)' : ''}:\n` + [0, 1, 2, 3].map(row).join('\n') + '\n…';
-    $('#pDetail').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    $('#pDNums').textContent = `the first numbers of the first 4 rows:\n` + [0, 1, 2, 3].map(row).join('\n') + '\n…';
   }
   function openParams() {
     if (tl.isActive()) { tl.pause(); setPlayLabel(); }
-    const real = !!S.llm; pShapes(); PV.scales = {};
-    $('#pLead').textContent = `A model's parameters are the numbers it learned in training, and nothing else is stored: no sentences, no list of facts. ${real ? S.llm.name : 'SmolLM2-135M-Instruct'} has ${fmtN(P_TOTAL)} of them, kept in grids (matrices). Below, every grid is drawn to scale, so area is the number of parameters` +
-      (real ? ', and each pixel is a real weight from the model in your browser.' : '; pick a real model to fill them with the real weights.') +
-      ' Up close they look like static, and that is real: no single number means anything you could read; what the model knows is in the patterns across millions of them. The token cloud is not the parameters: it is a picture of one grid, the embedding table, with each of its rows squashed to a dot. The other four fifths live in the 30 layers, and every one of them is read for every new token.';
+    const real = !!S.llm; SP = pSpec(); PV.scales = {};
+    const name = real ? S.llm.name : 'This model', tableShare = Math.round(SP.tables.reduce((a, g) => a + g.rows * g.cols, 0) / SP.total * 100);
+    $('#pLead').textContent = `Think of every parameter as a knob. Training turned the knobs; after that they never move, not while you chat and not because of any prompt. ${name} has ${fmtN(SP.total)} of them, kept in grids (matrices)` +
+      (real ? ', and below is every grid, read from the model in your browser and drawn as one square per number. Zoom in until you can read single knobs.' : '.') +
+      ` Up close they look like static, and that is real: no single number means anything you could read; what the model knows is in the patterns across millions of them. ` +
+      `${tableShare}% of ${name}'s knobs are in its ${SP.tables.map(g => g.label).join(' and ')} (the tall strips); the token cloud is a picture of the embedding table, each row squashed to a dot. The rest are the ${SP.L} layers` +
+      (SP.kind === 'mamba' ? ', each one block of grids around its memory.' : SP.kind === 'llama' ? ': attention on top (q, o, k, v), feed-forward below, where row k of gate, up and down (turned on its side) all belong to neuron k.' : ': attention (fused query/key/value, output), then the feed-forward neurons and the grid that writes them back (turned on its side, so row k is neuron k).') + ' Every one of them is read for every new token.';
     $('#pLegend').innerHTML = '';
-    [['attention (q, k, v, o)', KIND_RGB.attn], ['feed-forward (gate, up, down)', KIND_RGB.ffn], ...(real ? [['positive', [239, 228, 204]], ['negative', [111, 134, 201]]] : [['embedding', KIND_RGB.emb]])].forEach(([t, rgb]) => {
+    const legend = SP.kind === 'mamba' ? [['memory block', KIND_RGB.mem]] : [['attention', KIND_RGB.attn], ['feed-forward', KIND_RGB.ffn]];
+    [...legend, ...(real ? [['positive', [239, 228, 204]], ['negative', [111, 134, 201]]] : [['tables', KIND_RGB.emb]])].forEach(([t, rgb]) => {
       const sp = document.createElement('span'), i = document.createElement('i'); i.style.background = rgbStr(rgb); sp.append(i, t); $('#pLegend').appendChild(sp);
     });
     $('#pDetail').hidden = true; PV.hover = null;
     $('#params').showModal();
-    if (real) {
-      $('#pLead').textContent = `Think of every parameter as a knob. Training turned the knobs; after that they never move, not while you chat and not because of any prompt. ${S.llm.name} has ${fmtN(P_TOTAL)} of them, kept in grids (matrices), and below is every one of them, read from the model in your browser and drawn on your graphics card as one square each. Zoom in until you can read single weights. Up close they look like static, and that is real: no single number means anything you could read; what the model knows is in the patterns across millions of them. ` +
-        `The token cloud is not the parameters: it is a picture of one grid, the embedding table (the tall strips), with each row squashed to a dot. The rest are the ${PSH.L} layers: attention on top (q, o, k, v), feed-forward below, where row k of gate, up and down (turned on its side) all belong to neuron k. Every one of them is read for every new token.`;
-      $('#pNote').textContent = 'How to read it: every one of the 134,479,872 numbers in the grids is here (only the norm weights, 35,136 numbers in short lists, are left out). Zoomed out, each pixel blends 16 evenly spread numbers; zoomed in, each square is one number, coloured by its value (warm positive, blue negative, stored on the graphics card at one byte each) and printed with its exact value from the model. Bigger models are the same kinds of grids: Qwen3.6-27B has about 200 times as many numbers.';
-      openParamsGL().then(ok => { if (!ok) { $('#pGLWrap').hidden = true; $('#pCv').hidden = false; drawParams(); } });
-      return;
-    }
+    $('#pNote').textContent = `How to read it: the grids hold ${fmtN(SP.grids)} numbers; the other ${fmtN(SP.small)} are short lists (norm scales and biases${SP.kind === 'mamba' ? ', each channel\'s skip knob D' : ''}) too thin to draw. ` +
+      (real ? 'Zoomed out, each pixel blends 16 evenly spread numbers; zoomed in, each square is one number, coloured by its value (stored on the graphics card at one byte each) and printed with its exact value from the model.' : '') +
+      ` Bigger models are the same kinds of grids: Qwen3.6-27B has about ${Math.round(27e9 / SP.total)} times as many numbers.`;
+    if (real) { openParamsGL().then(ok => { if (!ok) { $('#pGLWrap').hidden = true; $('#pCv').hidden = false; drawParams(); } }); return; }
     $('#pGLWrap').hidden = true; $('#pCv').hidden = false;
-    requestAnimationFrame(() => {
-      drawParams();
-      const shown = Math.round(($('#pCv').width * $('#pCv').height) * 0.85);
-      $('#pNote').textContent = `How to read it: the grids hold ${fmtM(P_TOTAL)} numbers and this picture has about ${(shown / 1e6).toFixed(1)} million pixels, so each pixel shows one number out of roughly ${Math.round(P_TOTAL / shown)}, picked evenly. The norm weights (${fmtN(P_NORMS)} numbers, one short list per norm) are too thin to see. ` +
-        `Bigger models are the same kinds of grids, only more and larger: Qwen3.6-27B has about 27 billion parameters, about ${Math.round(27e9 / P_TOTAL)} times this picture.`;
-    });
+    requestAnimationFrame(drawParams);
   }
 
   // ---- every parameter, one square each: the real weights packed onto the graphics card (WebGL2) ----
-  // 134,479,872 numbers (all but the norm weights) are quantised to one byte each, with each grid's own scale, and
-  // stored in three 8192-wide textures. The shader draws each grid as a rectangle of its true shape; zoomed out, a pixel
-  // averages 16 evenly spread numbers; zoomed in, one number fills many pixels and its exact value is printed on it.
+  // The grids' numbers are quantised to one byte each, with each grid's own scale, and stored in 8192-wide textures (up
+  // to three). The shader draws each grid as a rectangle of its true shape (very wide grids turned on their side);
+  // zoomed out, a pixel averages 16 evenly spread numbers; zoomed in, one number fills many pixels and is printed on it.
   function glProgram(gl, vs, fs) {
     const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; };
     const p = gl.createProgram(); gl.attachShader(p, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(p, sh(gl.FRAGMENT_SHADER, fs)); gl.linkProgram(p);
@@ -1870,23 +1960,29 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
     return p;
   }
   const PX = { gl: null, ready: false, packing: null, s: 1, x: 0, y: 0, fit: 1, hover: null, ptrs: new Map(), dragged: false, queued: false };
-  const PX_ORDER = ['q', 'k', 'v', 'o', 'gate', 'up', 'down'];
-  const PX_NAME = { q: 'attention: query', k: 'attention: key', v: 'attention: value', o: 'attention: output', gate: 'feed-forward: gate', up: 'feed-forward: up', down: 'feed-forward: down (turned)' };
-  function pxLayout() { // world units are numbers (texels); storage order: embedding table, then each layer's 7 grids
-    pShapes();
-    const D = PSH.D, V = PSH.V, KV = PSH.k[0], F = PSH.gate[0], L = PSH.L, g2 = 24, top = Math.max(D, 2 * KV + g2), BW = 3 * D + 2 * g2, BH = top + g2 + F, NS = L > 8 ? 4 : 8, SR = Math.ceil(V / NS), cols = L > 8 ? 6 : 3, items = [], offs = {};
-    let off = V * D;
-    for (let l = 0; l < L; l++) PX_ORDER.forEach(k => { offs[l + k] = off; off += PSH[k][0] * PSH[k][1]; });
-    for (let k = 0; k < NS; k++) items.push({ key: 'E', l: -1, x: k * (D + 48), y: 0, w: D, h: Math.min(SR, V - k * SR), off: k * SR * D, cols: D, tr: 0, row0: k * SR });
-    const LX = NS * D + (NS - 1) * 48 + 420;
+  function pxLayout() { // world units are numbers (texels). Storage order: the tables, then each layer's grids
+    SP = pSpec();
+    const D = SP.D, L = SP.L, gap = 24, items = [], grids = [];
+    let off = 0;
+    // the tables, each cut into strips so they stay near the height of the layer blocks
+    const turned = g => g.cols > g.rows * 1.5; // very wide grids are drawn turned on their side (row k = output k)
+    const blockOf = () => { let x = 0, h = 0; const parts = SP.layer.map(g => { const w = turned(g) ? g.rows : g.cols, hh = turned(g) ? g.cols : g.rows, p = { g, x, w, h: hh }; x += w + gap; h = Math.max(h, hh); return p; }); return { parts, W: x - gap, H: h }; };
+    const B = blockOf(), cols = Math.max(1, Math.round(Math.sqrt(L * (B.H + 300) / (B.W + 180) * 1.4))), rowsB = Math.ceil(L / cols), blocksH = rowsB * (B.H + 300);
+    let tx = 0;
+    SP.tables.forEach((g, ti) => {
+      const NS = Math.max(1, Math.ceil(g.rows / Math.max(blocksH, 2000))), SR = Math.ceil(g.rows / NS);
+      for (let k = 0; k < NS; k++) items.push({ g, gi: grids.length, l: -1, x: tx + k * (g.cols + 48), y: 0, w: g.cols, h: Math.min(SR, g.rows - k * SR), off: off + k * SR * g.cols, cols: g.cols, tr: 0, row0: k * SR, strips: NS });
+      grids.push({ g, l: -1, off }); off += g.rows * g.cols;
+      tx += NS * (g.cols + 48) + 140;
+    });
+    const LX = tx + 280;
     for (let l = 0; l < L; l++) {
-      const bx = LX + (l % cols) * (BW + 180), by = Math.floor(l / cols) * (BH + 300) + 200, it = (key, x, y, w, h, tr) => items.push({ key, l, x: bx + x, y: by + y, w, h, off: offs[l + key], cols: PSH[key][1], tr: tr || 0, row0: 0 });
-      it('q', 0, 0, D, D); it('o', D + g2, 0, D, D); it('k', 2 * (D + g2), 0, D, KV); it('v', 2 * (D + g2), KV + g2, D, KV);
-      it('gate', 0, top + g2, D, F); it('up', D + g2, top + g2, D, F); it('down', 2 * (D + g2), top + g2, D, F, 1); // down turned: row k = neuron k, like gate and up
+      const bx = LX + (l % cols) * (B.W + 180), by = Math.floor(l / cols) * (B.H + 300) + 200;
+      B.parts.forEach(pt => { items.push({ g: pt.g, gi: grids.length, l, x: bx + pt.x, y: by, w: pt.w, h: pt.h, off, cols: pt.g.cols, tr: turned(pt.g) ? 1 : 0, row0: 0 }); grids.push({ g: pt.g, l, off }); off += pt.g.rows * pt.g.cols; });
     }
-    return { items, total: off, W: LX + cols * BW + (cols - 1) * 180, H: Math.max(SR, Math.ceil(L / cols) * (BH + 300)), BW, LX, SR, NS, embW: NS * D + (NS - 1) * 48 };
+    return { items, grids, total: off, W: LX + cols * B.W + (cols - 1) * 180, H: Math.max(blocksH, ...items.filter(i => i.l < 0).map(i => i.h)), BW: B.W, LX };
   }
-  let PXL = pxLayout();
+  let PXL = null;
   function pxInit() {
     const cv = $('#pGL'), gl = cv.getContext('webgl2', { antialias: false });
     if (!gl || gl.getParameter(gl.MAX_TEXTURE_SIZE) < 8192) return false;
@@ -1919,19 +2015,19 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
     PX.gl = { gl, prog, vao, tex: [], u: Object.fromEntries(['u_rect', 'u_cam', 'u_view', 'u_t0', 'u_t1', 'u_t2', 'u_off', 'u_cols', 'u_tr', 'u_w', 'u_h', 'u_ppt', 'u_bg', 'u_pos', 'u_neg'].map(n => [n, gl.getUniformLocation(prog, n)])) };
     return true;
   }
-  async function pxPack() { // quantise every weight to a byte (grid by grid) and upload, 8192 x 8192 numbers per texture
-    const G = PX.gl, gl = G.gl, T = 8192, PER = T * T, m = S.llm.mats, total = PXL.total, buf = new Uint8Array(PER);
-    const grids = [m.E]; for (let l = 0; l < PSH.L; l++) PX_ORDER.forEach(k => grids.push(m.layers[l][k]));
+  async function pxPack() { // quantise every grid's numbers to a byte (grid by grid) and upload, 8192 x 8192 per texture
+    const G = PX.gl, gl = G.gl, T = 8192, PER = T * T, total = PXL.total, buf = new Uint8Array(Math.min(PER, Math.ceil(total / T) * T));
     PX.scales = [];
     let pos = 0, done = 0;
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
     const flush = () => {
       const t = gl.createTexture(), h = Math.ceil(pos / T); gl.bindTexture(gl.TEXTURE_2D, t);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      if (pos < T * h) buf.fill(128, pos, T * h);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, T, h, 0, gl.RED, gl.UNSIGNED_BYTE, buf.subarray(0, T * h)); G.tex.push(t); pos = 0;
     };
-    for (const g of grids) {
-      const n = 8192, st = Math.floor(g.length / n), a = new Float32Array(n); for (let i = 0; i < n; i++) a[i] = Math.abs(g[i * st]); a.sort();
+    for (const gr of PXL.grids) {
+      const g = gr.l < 0 ? gr.g.get() : gr.g.get(gr.l), n = Math.min(8192, g.length), st = Math.max(1, Math.floor(g.length / n)), a = new Float32Array(n); for (let i = 0; i < n; i++) a[i] = Math.abs(g[i * st]); a.sort();
       const sc = a[Math.floor(n * 0.999)] || 1, k = 127 / sc; PX.scales.push(sc);
       for (let i = 0; i < g.length; i++) { const v = Math.round(g[i] * k); buf[pos++] = v > 127 ? 255 : v < -127 ? 1 : v + 128; if (pos === PER) flush(); }
       done += g.length; $('#pGLStatus').textContent = `Packing the weights onto your graphics card: ${Math.round(done / total * 100)}%`; await tick();
@@ -1964,26 +2060,27 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
       gl.uniform4f(u.u_rect, it.x, it.y, it.w, it.h); gl.uniform1i(u.u_off, it.off); gl.uniform1i(u.u_cols, it.cols); gl.uniform1i(u.u_tr, it.tr); gl.uniform1i(u.u_w, it.w); gl.uniform1i(u.u_h, it.h);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     });
-    // labels and, close up, the exact numbers
+    // labels and, close up, the exact numbers as knobs
     const c = ov.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, W, H);
     const ink = css('--st-ink'), ink2 = css('--st-ink2'), bgs = css('--st-bg');
     const tag = (t, x, y, col, size) => { c.font = `600 ${size || 11}px "IBM Plex Mono", monospace`; const w = c.measureText(t).width; c.fillStyle = bgs; c.globalAlpha = 0.8; c.fillRect(x - 2, y - 10, w + 4, 13); c.globalAlpha = 1; c.fillStyle = col; c.fillText(t, x, y); };
     c.textBaseline = 'alphabetic';
-    if (PX.x < W && PXL.embW * PX.s + PX.x > 0 && PX.y + PXL.SR * PX.s > 0) tag(PX.s * PXL.embW > 150 ? `EMBEDDING TABLE · ${fmtN(PSH.V)} rows, in ${PXL.NS} strips` : 'EMBEDDING', Math.max(4, PX.x), Math.max(14, PX.y - 8), ink);
-    const seenL = new Set();
+    const seen = new Set();
     vis.forEach(it => {
       const x0 = it.x * PX.s + PX.x, y0 = it.y * PX.s + PX.y, sw = it.w * PX.s;
-      if (it.l >= 0 && !seenL.has(it.l) && it.key === 'q' && PXL.BW * PX.s > 40) { seenL.add(it.l); tag(`LAYER ${it.l + 1}`, x0, y0 - Math.max(6, 70 * PX.s), ink, PX.s > 0.15 ? 13 : 11); }
-      if (sw > 46) tag(it.key === 'E' ? `rows ${fmtN(it.row0)}–${fmtN(it.row0 + it.h - 1)}` : PX_NAME[it.key], x0 + 2, y0 + 13, ink2, 10);
+      if (it.l < 0 && it.row0 === 0 && !seen.has(it.g.key)) { seen.add(it.g.key); tag(sw * (it.strips || 1) > 120 ? `${it.g.label.toUpperCase()} · ${fmtN(it.g.rows)} rows` : it.g.label.split(' ')[0].toUpperCase(), Math.max(4, x0), Math.max(14, y0 - 8), ink); }
+      if (it.l >= 0 && it.g === SP.layer[0] && PXL.BW * PX.s > 40) tag(`LAYER ${it.l + 1}`, x0, y0 - Math.max(6, 70 * PX.s), ink, PX.s > 0.15 ? 13 : 11);
+      if (sw > 46 && it.l >= 0) tag(it.g.label + (it.tr ? ' (turned)' : ''), x0 + 2, y0 + 13, ink2, 10);
+      if (sw > 46 && it.l < 0 && it.strips > 1) tag(`rows ${fmtN(it.row0)}–${fmtN(it.row0 + it.h - 1)}`, x0 + 2, y0 + 13, ink2, 10);
     });
-    if (PX.s * dpr >= 34) { // close up, every number is a knob: the needle shows its setting, the text its exact value
+    if (PX.s * dpr >= 34) {
       const fs = Math.min(12, PX.s / 4); c.font = `500 ${fs}px "IBM Plex Mono", monospace`; c.textAlign = 'center'; c.textBaseline = 'middle'; let n = 0;
       const kr = PX.s * 0.26, wt = css('--wt');
       for (const it of vis) {
         const c0 = Math.max(0, Math.floor(-PX.x / PX.s - it.x)), c1 = Math.min(it.w - 1, Math.floor((W - PX.x) / PX.s - it.x)), r0 = Math.max(0, Math.floor(-PX.y / PX.s - it.y)), r1 = Math.min(it.h - 1, Math.floor((H - PX.y) / PX.s - it.y));
         for (let r = r0; r <= r1 && n < 1500; r++) for (let k = c0; k <= c1 && n < 1500; k++, n++) {
-          const v = pxValue(it, r, k), x = (it.x + k + 0.5) * PX.s + PX.x, y = (it.y + r + 0.5) * PX.s + PX.y, u = Math.max(-1, Math.min(1, v / PX.scales[it.l < 0 ? 0 : 1 + it.l * 7 + PX_ORDER.indexOf(it.key)]));
-          const ky = y - PX.s * 0.1, a = u * 0.75 * Math.PI - Math.PI / 2;
+          const v = pxValue(it, r, k), x = (it.x + k + 0.5) * PX.s + PX.x, y = (it.y + r + 0.5) * PX.s + PX.y, uu = Math.max(-1, Math.min(1, v / PX.scales[it.gi]));
+          const ky = y - PX.s * 0.1, a = uu * 0.75 * Math.PI - Math.PI / 2;
           c.fillStyle = bgs; c.globalAlpha = 0.85; c.beginPath(); c.arc(x, ky, kr, 0, 7); c.fill(); c.globalAlpha = 1;
           c.strokeStyle = wt; c.lineWidth = 1.2; c.beginPath(); c.arc(x, ky, kr, 0.75 * Math.PI, 2.25 * Math.PI); c.stroke();
           c.strokeStyle = ink; c.lineWidth = Math.max(1.2, PX.s / 30); c.lineCap = 'round'; c.beginPath(); c.moveTo(x, ky); c.lineTo(x + Math.cos(a) * kr * 0.9, ky + Math.sin(a) * kr * 0.9); c.stroke();
@@ -1995,8 +2092,8 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
     if (PX.hover) { const it = PX.hover.it; c.strokeStyle = ink; c.lineWidth = 1.5; c.strokeRect((it.x + PX.hover.c) * PX.s + PX.x, (it.y + PX.hover.r) * PX.s + PX.y, Math.max(2, PX.s), Math.max(2, PX.s)); }
   }
   function pxValue(it, r, k) { // the exact number, from the model's own Float32 weights
-    if (it.key === 'E') return S.llm.mats.E[(it.row0 + r) * PSH.D + k];
-    const m = S.llm.mats.layers[it.l][it.key];
+    const m = it.l < 0 ? it.g.get() : it.g.get(it.l);
+    if (it.l < 0) return m[(it.row0 + r) * it.cols + k];
     return it.tr ? m[k * it.cols + r] : m[r * it.cols + k];
   }
   function pxAt(e) {
@@ -2007,11 +2104,9 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
   function pxDescribe(h) {
     if (!h) return 'Scroll or pinch to zoom in until you can read single numbers; drag to move; double-click to fit.';
     const { it, r, c } = h, v = pxValue(it, r, c), vs = (v < 0 ? '−' : '') + Math.abs(v).toFixed(5);
-    if (it.key === 'E') { const row = it.row0 + r; return `Embedding table · token ${fmtN(row)} (${S.llm.tok.piece(row)}) · number ${c + 1} of ${PSH.D}: ${vs}`; }
-    const L = `Layer ${it.l + 1} · ${PX_NAME[it.key]}`;
-    if (it.key === 'gate' || it.key === 'up') return `${L} · neuron ${r} of ${fmtN(PSH.gate[0])}, knob ${c + 1} of ${PSH.D}: ${vs}`;
-    if (it.key === 'down') return `${L} · what neuron ${r} adds to number ${c + 1} of the ball: ${vs}`;
-    return `${L} · row ${r + 1} (makes number ${r + 1} of the ${it.key === 'o' ? 'ball update' : PX_NAME[it.key].split(': ')[1]}), knob ${c + 1} of ${PSH.D}: ${vs}`;
+    if (it.l < 0) { const row = it.row0 + r; return it.g.key === 'Pos' ? `Position table · position ${fmtN(row)} · number ${c + 1} of ${it.cols}: ${vs}` : `${it.g.label[0].toUpperCase() + it.g.label.slice(1)} · token ${fmtN(row)} (${S.llm.tok.piece(row)}) · number ${c + 1} of ${it.cols}: ${vs}`; }
+    const out = it.tr ? c : r, inp = it.tr ? r : c;
+    return `Layer ${it.l + 1} · ${it.g.label} · output ${it.tr ? r + 1 : out + 1}, knob ${it.tr ? c + 1 : inp + 1} of ${it.tr ? it.w : it.cols}: ${vs}`;
   }
   function pxZoom(f, mx, my) { const s2 = Math.min(80, Math.max(PX.fit * 0.8, PX.s * f)), k = s2 / PX.s; PX.x = mx - (mx - PX.x) * k; PX.y = my - (my - PX.y) * k; PX.s = s2; pxDraw(); }
   {
@@ -2032,7 +2127,7 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
     });
     [['#pzIn', () => pxZoom(2, cv.clientWidth / 2, cv.clientHeight / 2)], ['#pzOut', () => pxZoom(0.5, cv.clientWidth / 2, cv.clientHeight / 2)], ['#pzFit', pxFit]].forEach(([s, f]) => $(s).addEventListener('click', f));
   }
-  async function openParamsGL() { // real mode: returns false when WebGL2 is not available, so the to-scale overview is used
+  async function openParamsGL() { // returns false when WebGL2 is not available, so the to-scale overview is used
     try { if (!PX.gl && !pxInit()) return false; } catch (err) { PX.gl = null; return false; }
     $('#pGLWrap').hidden = false; $('#pCv').hidden = true; $('#pDetail').hidden = true;
     if (PX.key !== S.llm.meta.key) { // another model: free the old textures and pack this one's weights
@@ -2164,9 +2259,9 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
     if (tl.isActive()) { tl.pause(); setPlayLabel(); }
     const R = RM('real'), Tn = RM('tiny');
     $('#trLead').textContent = `This is a real training run, only tiny: a model with one grid of ${TV} × ${TV} = ${nf(TV * TV)} knobs learns from the short text built into this page (${nf(TR_N + 1)} letters). Each knob says how strongly to expect one letter after another (rows: this letter; columns: the next one; the warm squares are the chances the knobs give). The knobs start as random numbers. Each step the model reads the whole text, measures how surprised it was by every real next letter (the loss), and nudges every knob a little in the direction that would have made the real letter more likely: gradient descent. Press Train and watch the needles turn, the loss fall and the writing turn into almost-words. It only ever looks at one letter, so it can't do better than the dashed "best" line.`;
-    $('#trBig').textContent = `The models on this page were made by the same loop, with far more knobs and far more text. ${R.name}: ${nf(134515008)} knobs, first trained to predict the next token on 2 trillion tokens of web pages, educational text and code, then fine-tuned on example conversations and finally nudged towards answers people preferred (DPO); that is where it learned to follow a chat template and a system prompt. ${Tn.name}: 15 million knobs, trained for a few hours on four large GPUs on children's stories. Real models start from small random knobs too (spread 0.02 to 0.04 in their configs), and work out each nudge for every layer at once (backpropagation) from a batch of text at a time. Once training ends the knobs are frozen. Nothing you type changes them: a prompt, and a system prompt, only change the ball that flows past them.`;
+    $('#trBig').textContent = `The models on this page were made by the same loop, with far more knobs and far more text: Pythia-14M is the snapshots above. ${R.name}: ${nf(134515008)} knobs, first trained to predict the next token on 2 trillion tokens of web pages, educational text and code, then fine-tuned on example conversations and finally nudged towards answers people preferred (DPO); that is where it learned to follow a chat template and a system prompt. ${Tn.name}: 15 million knobs, trained for a few hours on four large GPUs on children's stories. Real models start from small random knobs too (spread 0.02 to 0.04 in their configs), and work out each nudge for every layer at once (backpropagation) from a batch of text at a time. Once training ends the knobs are frozen. Nothing you type changes them: a prompt, and a system prompt, only change the ball that flows past them.`;
     if (!TR.loss.length) trReset();
-    $('#train').showModal(); requestAnimationFrame(trDraw);
+    $('#train').showModal(); requestAnimationFrame(trDraw); ckDraw();
   }
 
   // ---- inside one layer: one token's ball going through every step, with the model's own numbers ----
@@ -2190,11 +2285,11 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
     cv.addEventListener('pointermove', e => { const i = Math.min(vals.length - 1, Math.floor(e.offsetX / cv.clientWidth * vals.length)); info.textContent = `${label}: number ${i + 1} of ${vals.length} = ${f4(vals[i])}`; });
     return cv;
   }
-  function lyMatVec(box, W, rows, cols, x, y, name, info, inName) { // y = W · x, drawn as the knob grid with the ball on top and the outputs on the right
+  function lyMatVec(box, W, rows, cols, x, y, name, info, inName, bias) { // y = W · x (+ bias), drawn as the knob grid with the ball on top and the outputs on the right
     const wrap = mk('div', 'lymv', null, box), cv = mk('canvas', 'pcv lymvcv', null, wrap), bar = mk('div', 'lymvbar', null, wrap);
     const go = mk('button', '', 'Multiply, row by row', bar); go.type = 'button';
     const chk = mk('span', 'note', null, bar);
-    let maxErr = 0; for (let r = 0; r < rows; r += Math.max(1, Math.floor(rows / 64))) { let s = 0; for (let c = 0; c < cols; c++) s += W[r * cols + c] * x[c]; maxErr = Math.max(maxErr, Math.abs(s - y[r])); }
+    let maxErr = 0; for (let r = 0; r < rows; r += Math.max(1, Math.floor(rows / 64))) { let s = bias ? bias[r] : 0; for (let c = 0; c < cols; c++) s += W[r * cols + c] * x[c]; maxErr = Math.max(maxErr, Math.abs(s - y[r])); }
     chk.textContent = `${name}: ${nf(rows)} rows × ${nf(cols)} knobs = ${nf(rows * cols)} knobs. ${maxErr < 1e-3 ? '✓ recomputed from the real weights, it matches the model\'s own numbers' : 'recomputed difference ' + maxErr.toExponential(1)}.`;
     const G2 = { r: -1 }, off = document.createElement('canvas');
     function layout() {
@@ -2230,12 +2325,94 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
     });
     cv.addEventListener('pointermove', e => {
       const L = G2.L; if (!L) return; const r = Math.max(0, Math.min(rows - 1, Math.floor((e.offsetY - L.gy) / L.gh * rows)));
-      let s = 0; for (let c2 = 0; c2 < cols; c2++) s += W[r * cols + c2] * x[c2];
-      info.textContent = `${name}, row ${r + 1}: ${f4(W[r * cols])} × ${f4(x[0])} + ${f4(W[r * cols + 1])} × ${f4(x[1])} + ${f4(W[r * cols + 2])} × ${f4(x[2])} + … (all ${nf(cols)} pairs) = ${f4(s)}; the model's number: ${f4(y[r])}`;
+      let s = bias ? bias[r] : 0; for (let c2 = 0; c2 < cols; c2++) s += W[r * cols + c2] * x[c2];
+      info.textContent = `${name}, row ${r + 1}: ${f4(W[r * cols])} × ${f4(x[0])} + ${f4(W[r * cols + 1])} × ${f4(x[1])} + ${f4(W[r * cols + 2])} × ${f4(x[2])} + … (all ${nf(cols)} pairs)${bias ? ' + bias ' + f4(bias[r]) : ''} = ${f4(s)}; the model's number: ${f4(y[r])}`;
       G2.r = r; draw();
     });
     cv.addEventListener('pointerleave', () => { G2.r = -1; if (G2.L) draw(); });
   }
+  // the attention heat map: every head over every earlier token (shared by the transformer designs)
+  function lyHeat(s1, ly, m, info) {
+    const T = LY.rec.pos + 1, H = ly.heads, hm = mk('canvas', 'pcv lyheat', null, s1);
+    requestAnimationFrame(() => {
+      const Wd = hm.clientWidth || 600, rowH = H > 9 ? 10 : 14, Hh = H * rowH + 40, dpr = Math.min(2, devicePixelRatio || 1); hm.width = Math.round(Wd * dpr); hm.height = Math.round(Hh * dpr); hm.style.height = Hh + 'px';
+      const c = hm.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0); c.fillStyle = css('--st-bg'); c.fillRect(0, 0, Wd, Hh);
+      const x0 = 56, cw = (Wd - x0 - 6) / T, sc = hexRgb(css('--attn'));
+      c.font = '10px "IBM Plex Mono", monospace'; c.fillStyle = css('--st-ink2');
+      for (let h = 0; h < H; h++) { c.fillText(`head ${h + 1}`, 4, 14 + h * rowH + rowH - 3); for (let j = 0; j < T; j++) { const w = ly.attn[h * T + j]; c.fillStyle = `rgba(${sc.join(',')},${Math.min(1, Math.sqrt(w))})`; c.fillRect(x0 + j * cw, 14 + h * rowH, Math.max(1, cw - 1), rowH - 2); } c.fillStyle = css('--st-ink2'); }
+      const avg = Array.from({ length: T }, (_, j) => { let s2 = 0; for (let h = 0; h < H; h++) s2 += ly.attn[h * T + j]; return s2 / H; });
+      avg.map((w, j) => [w, j]).sort((a, b) => b[0] - a[0]).slice(0, 6).forEach(([w, j]) => { c.fillStyle = css('--st-ink'); c.fillText(m.tok.piece(S.data.allIds[j]), Math.min(Wd - 60, x0 + j * cw), 14 + H * rowH + 14); });
+      c.fillStyle = css('--st-ink2'); c.fillText('earlier tokens →  (the most-read ones are named)', x0, 10);
+      hm.onpointermove = e => { const j = Math.floor((e.offsetX - x0) / cw), h = Math.floor((e.offsetY - 14) / rowH); if (j >= 0 && j < T && h >= 0 && h < H) info.textContent = `head ${h + 1} gives “${m.tok.piece(S.data.allIds[j])}” (token ${j + 1}) ${fmtPct(ly.attn[h * T + j])} of its attention`; };
+    });
+  }
+  // the other designs, step by step, with the same tools: strips for vectors, knob grids for knobs × ball
+  function lyRenderOther(note) {
+    const m = S.llm, A = m.arch, l = LY.l, ly = LY.rec.layers[l], v = ly.vec, P = m.mats.layers[l], D = m.D, F = m.F, word = S.data.all[LY.row], kind = m.kind;
+    $('#lyWhere').textContent = `${m.name} · layer ${l + 1} of ${m.L} · token “${word}”`;
+    $('#lyTitle').textContent = `Inside layer ${l + 1}: what the knobs do to the ball`;
+    const box = $('#lyBody'); box.innerHTML = '';
+    const info = mk('p', 'lyinfo mono', 'Point at a strip or a grid to read its numbers.', null);
+    let n = 0; const step = (title, text) => { const s2 = mk('section', 'lystep', null, box); mk('h3', 'eh3', `${++n} · ${title}`, s2); if (text) mk('p', 'note', text, s2); return s2; };
+    const arrive = extra => { const s1 = step('The ball arrives', `It came out of layer ${l} (or from the embedding table, for layer 1). Its length is ${ly.xinNorm.toFixed(2)}.` + (extra || '')); lyStrip(s1, v.xin, 'ball', info); };
+    const lnStep = (title, w, bb, out, intro) => { const s1 = step(title, intro || 'LayerNorm: subtract the ball\'s average, divide by its spread, then multiply each number by its own knob and add its own bias knob, so the layer always sees a ball of steady size.'); lyStrip(s1, w, 'scale knobs', info); if (bb) lyStrip(s1, bb, 'bias knobs', info); lyStrip(s1, out, 'normalised ball', info); };
+    const add = (title, parts, text) => { const s1 = step(title, text); const k = p98v(v.xout); parts.forEach(([a, lab]) => lyStrip(s1, a, lab, info, k)); };
+    if (kind === 'mamba') {
+      const I = A.I, N = A.N, R = A.R, KC = A.KC;
+      $('#lyLead').textContent = (note ? note + ' ' : '') + `The ball is the token's ${D} numbers. A Mamba layer has no attention and no separate feed-forward block: one block reads the ball, updates the layer's memory, reads it back, and adds one change onto the ball. The memory is ${nf(I)} channels × ${N} numbers, the same size whatever the length of the text. These are the model's real numbers for “${word}”.`;
+      arrive();
+      let s1 = step('Rescale it (RMS norm)', `Each number is divided by the ball's root-mean-square size and multiplied by its own knob.`);
+      lyStrip(s1, P.ln, 'norm knobs', info); lyStrip(s1, v.h1, 'rescaled ball', info);
+      s1 = step('Two halves = knobs × ball', `One grid of ${nf(2 * I)} × ${D} knobs makes two lists of ${nf(I)}: x, which goes through the memory, and z, which becomes a gate at the end.`);
+      lyMatVec(s1, P.inp, 2 * I, D, v.h1, Float32Array.from([...v.xs, ...v.z]), 'in knobs (x | z)', info);
+      s1 = step('A short look back (causal convolution)', `Each of the ${nf(I)} channels mixes its value with the same channel of the previous ${KC - 1} tokens, using ${KC} knobs of its own, then SiLU bends it. This is the only place Mamba sees neighbouring tokens directly.`);
+      lyStrip(s1, v.xs, 'x', info); lyStrip(s1, v.conv, 'after the look back', info); lyStrip(s1, v.u, 'after SiLU (u)', info);
+      s1 = step('Decide how to write and read (selection)', `From u, a grid of ${R + 2 * N} × ${nf(I)} knobs makes three things for this token: ${R} numbers that set the step size, B (${N} numbers: how to write into the memory) and C (${N} numbers: how to read it). Because they depend on the token, the model chooses what to keep and what to forget: this is the "selective" in selective state space.`);
+      lyMatVec(s1, P.xp, R + 2 * N, I, v.u, v.sel, 'selection knobs', info, 'u');
+      lyStrip(s1, v.B, 'B: write', info); lyStrip(s1, v.C, 'C: read', info);
+      s1 = step('Step size per channel', `The ${R} numbers go through one more grid (${nf(I)} × ${R}) and softplus, giving each channel a step size Δ: a big step means "replace the memory with this token", a small one "keep what is there".`);
+      lyStrip(s1, v.dt, 'step size Δ', info);
+      s1 = step('Update the memory, then read it', `For each channel and each of its ${N} memory numbers: memory = exp(A·Δ) × memory + Δ·B·u (A is a fixed negative knob per number, so the old memory fades), then the channel reads its memory with C and adds a skip of u times its own knob D. How much this token changed the memory: ${(ly.memWrite || 0).toFixed(3)}; the memory's size now: ${(ly.memNorm || 0).toFixed(2)}.`);
+      lyStrip(s1, v.scan, 'read out (+ skip)', info);
+      s1 = step('Gate, then out knobs × result', `Each channel is multiplied by SiLU(z), the gate from the second half; then a grid of ${D} × ${nf(I)} knobs turns the ${nf(I)} channels back into a change for the ball.`);
+      lyStrip(s1, v.gated, 'after the gate', info);
+      lyMatVec(s1, P.out, D, I, v.gated, v.out, 'out knobs', info, 'gated channels');
+      add('Add the change onto the ball', [[v.xin, 'ball'], [v.out, '+ change'], [v.xout, '= ball out']], `Change length ${ly.outNorm.toFixed(2)}; the ball leaves with length ${ly.norm.toFixed(2)}` + (ly.lens ? `. If the model stopped here, it would say: ${ly.lens.map(g => m.tok.piece(g.id) + ' ' + fmtPct(g.p)).join(', ')}.` : '.'));
+    } else {
+      const H = m.H, HD = m.HD, neox = kind === 'neox';
+      $('#lyLead').textContent = (note ? note + ' ' : '') + (neox
+        ? `The ball is the token's ${D} numbers. In GPT-NeoX a layer works out two changes side by side, attention (talk) and feed-forward (think), both from the same incoming ball, and adds both at once. These are the model's real numbers for “${word}”.`
+        : `The ball is the token's ${D} numbers. A GPT-2 layer works out two changes (talk, then think) and adds each onto the ball.` + (l === 0 ? ' In layer 1 the ball is the token\'s row plus its position row.' : '') + ` These are the model's real numbers for “${word}”.`);
+      arrive(kind === 'gpt2' && l === 0 ? ' It is the token\'s row from the embedding table plus a learned row for its position: that is how GPT-2 knows word order.' : '');
+      lnStep('Rescale it (LayerNorm)', P.ln1, P.ln1b, v.h1);
+      let s1 = step('Talk, part 1: query, key and value = knobs × ball', neox
+        ? `One fused grid of ${nf(3 * D)} × ${D} knobs (plus a bias each) makes all three at once. It is laid out head by head: for each of the ${H} heads, ${HD} query numbers, ${HD} key numbers, ${HD} value numbers.`
+        : `One fused grid of ${nf(3 * D)} × ${D} knobs (plus a bias each) makes all queries, then all keys, then all values: ${H} heads of ${HD} numbers each.`);
+      lyMatVec(s1, P.qkv, 3 * D, D, v.h1, v.qkv, 'query/key/value knobs', info, 'ball', P.qkvb);
+      if (neox) {
+        s1 = step('Turn part of the query and key by position (RoPE)', `Only the first ${A.rot} of each head's ${HD} numbers are rotated (rotary_pct ${(A.rot / HD).toFixed(2)}); the rest carry no position at all. Compare the two strips: only every head's first quarter changes.`);
+        lyStrip(s1, v.qPre, 'query before', info); lyStrip(s1, v.q, 'query after', info);
+      }
+      s1 = step(neox ? 'Talk, part 2: compare with every earlier token and blend' : 'Talk, part 2: compare with every earlier token and blend', `Each head compares its query with the key of every earlier token (kept in the KV cache), turns the scores into weights that add up to 100% (softmax), and blends those tokens' values.` + (kind === 'gpt2' ? ' There is no rotation: word order is already in the ball from the position table.' : ''));
+      lyHeat(s1, ly, m, info);
+      lyStrip(s1, v.mix, 'blended values', info);
+      s1 = step('Talk, part 3: output knobs × blend', `A ${D} × ${D} grid (plus a bias each) makes the attention's change.`);
+      lyMatVec(s1, P.o, D, D, v.mix, v.out, 'output knobs', info, 'blend', P.ob);
+      if (!neox) add('Add the talk change onto the ball', [[v.xin, 'ball'], [v.out, '+ change'], [v.x1, '= new ball']], `New length: ${ly.x1Norm.toFixed(2)}.`);
+      lnStep(neox ? 'Think, side by side: rescale the same incoming ball' : 'Think, part 1: rescale again', P.ln2, P.ln2b, v.h2, neox ? 'The feed-forward block does not wait for attention: it takes the same ball that came into the layer, with its own LayerNorm knobs.' : null);
+      s1 = step('Think: neurons = knobs × ball', `A grid of ${nf(F)} × ${D} knobs (plus a bias each): every row is one neuron, which then goes through GELU (${neox ? 'the exact one, with the error function' : 'GPT-2\'s tanh approximation'}), letting positive values through and squashing negative ones towards 0.`);
+      lyMatVec(s1, P.fc, F, D, v.h2, v.pre, 'neuron knobs', info, 'ball', P.fcb);
+      lyStrip(s1, v.act, `${nf(F)} neurons after GELU`, info);
+      const zb = mk('button', '', 'Work out one neuron by hand', s1); zb.type = 'button'; zb.addEventListener('click', () => { $('#layerDlg').close(); openZoom(l); });
+      s1 = step('Think: back to the ball\'s size', `A ${D} × ${nf(F)} grid (plus a bias each) turns the neurons back into a change.`);
+      lyMatVec(s1, P.proj, D, F, v.act, v.down, 'down knobs', info, 'neurons', P.projb);
+      add(neox ? 'Add both changes onto the ball at once' : 'Add the think change onto the ball', neox ? [[v.xin, 'ball'], [v.out, '+ talk'], [v.down, '+ think'], [v.xout, '= ball out']] : [[v.x1, 'ball'], [v.down, '+ change'], [v.xout, '= ball out']],
+        `The ball leaves with length ${ly.norm.toFixed(2)}` + (ly.lens ? `. If the model stopped here, it would say: ${ly.lens.map(g => m.tok.piece(g.id) + ' ' + fmtPct(g.p)).join(', ')}.` : '.'));
+    }
+    box.appendChild(info);
+    $('#lyPrev').disabled = l === 0; $('#lyNext').disabled = l === m.L - 1;
+  }
+
   function openLayer(l, row) {
     const D = S.data; if (!D || !D.real) return;
     if (tl.isActive()) { tl.pause(); setPlayLabel(); }
@@ -2246,6 +2423,7 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
     if (!$('#layerDlg').open) $('#layerDlg').showModal();
   }
   function lyRender(note) {
+    if (S.llm.kind !== 'llama') return lyRenderOther(note);
     const m = S.llm, l = LY.l, ly = LY.rec.layers[l], v = ly.vec, P = m.mats.layers[l], D = m.D, KV = m.KVH * m.HD, F = m.F, eps = m.cfg.rms_norm_eps, word = S.data.all[LY.row];
     $('#lyWhere').textContent = `${m.name} · layer ${l + 1} of ${m.L} · token “${word}”`;
     $('#lyTitle').textContent = `Inside layer ${l + 1}: what the knobs do to the ball`;
@@ -2294,6 +2472,56 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
     $('#lyPrev').disabled = l === 0; $('#lyNext').disabled = l === m.L - 1;
   }
 
+  // ---- a real model learning: Pythia-14M at its published training checkpoints ----
+  // EleutherAI published 154 checkpoints of this model's single training run (step 0 = random knobs; each step saw a
+  // batch of about 2 million tokens of the Pile). Each one is the same 28 MB file at a different point in training.
+  // For each checkpoint we load it, write a short continuation (greedy), measure its loss on a fixed sentence, and keep
+  // a sample of its knobs; then the weights are dropped again to free memory.
+  const CKPT = [[0, '56079904bb80b7f36d3b794089f146e7a4d6efae'], [16, 'b3819bb4ea5715cf5b9454428aa746cb6f61c953'], [128, '3a5eb43ebee7160010d65f7162fd09eb1ae543e2'], [512, '64c08eedb345bd7766b4283febb672eb04e993ba'],
+    [1000, '5b020995bfc7aee2931b0f35bd70cf7ee8b1db62'], [4000, 'b60dbd5b25fd86556d353656317f0f9bddd0116a'], [16000, '1832f3521343e1a8f388214152ac72226d7804d5'], [64000, '7bd2eaaf66022cb4ec8d1811704ba939bc4a53c5'], [143000, 'f1545025bb394553a7f4e547db0874886f05ef9c']];
+  const CK_PROMPT = 'Once upon a time, there was a little', CK_TEST = 'The capital of France is Paris. The sun rises in the east and sets in the west. Water is made of hydrogen and oxygen.';
+  const CK = { res: {}, busy: false };
+  async function ckRun(step, sha) {
+    const m = await LLM.load('pythia-14m', (got, total) => { if (got > 0) $('#ckStatus').textContent = `Downloading the step ${nf(step)} checkpoint: ${Math.round(got / 1e6)} of ${Math.round(total / 1e6)} MB`; }, sha);
+    $('#ckStatus').textContent = `Running the step ${nf(step)} checkpoint…`;
+    // loss: the average surprise (−log chance) at each real next token of a fixed sentence
+    const ids = m.tok.encode(CK_TEST); let st = m.newState(), res, loss = 0;
+    for (let i = 0; i < ids.length; i++) { res = await m.step(st, ids[i], false); if (i + 1 < ids.length) { const lg = res.logits; let mx = -Infinity; for (const v of lg) mx = Math.max(mx, v); let z = 0; for (const v of lg) z += Math.exp(v - mx); loss += mx + Math.log(z) - lg[ids[i + 1]]; } }
+    loss /= ids.length - 1;
+    const pIds = m.tok.encode(CK_PROMPT); st = m.newState();
+    for (let i = 0; i < pIds.length; i++) res = await m.step(st, pIds[i], false);
+    const top = LLM.sampleTopK(res.logits, 3, 1, () => 0).cands.map(c => `${m.tok.piece(c.id)} ${fmtPct(c.full)}`), gen = [];
+    for (let k = 0; k < 10; k++) { let b = 0; for (let i = 1; i < res.logits.length; i++) if (res.logits[i] > res.logits[b]) b = i; gen.push(b); if (k < 9) res = await m.step(st, b, false); }
+    const q = m.mats.layers[0].qkv, knobs = Array.from({ length: 24 }, (_, k) => q[k * 37]); // the same 24 knobs of layer 1's query/key/value grid every time
+    CK.res[step] = { loss, top, text: m.tok.decode(gen), knobs };
+  }
+  function ckDraw() {
+    const box = $('#ckRows'); box.innerHTML = '';
+    const sc = Math.max(1e-6, ...Object.values(CK.res).flatMap(r => r.knobs.map(Math.abs)));
+    CKPT.forEach(([step, sha]) => {
+      const r = CK.res[step], row = mk('div', 'ckrow', null, box);
+      mk('span', 'ckstep mono', `step ${nf(step)}`, row);
+      mk('span', 'note', step ? `≈${step * 2.1 >= 1000 ? (step * 2.097152 / 1000).toFixed(step >= 1e4 ? 0 : 1) + ' billion' : Math.round(step * 2.097152) + ' million'} tokens read` : 'random knobs, nothing read', row);
+      if (!r) { const b = mk('button', '', 'Load (28 MB)', row); b.type = 'button'; b.disabled = CK.busy; b.addEventListener('click', () => ckLoad([[step, sha]])); return; }
+      mk('span', 'ckloss mono', `loss ${r.loss.toFixed(2)}`, row);
+      const cv = mk('canvas', 'ckknobs', null, row);
+      requestAnimationFrame(() => { // the same 24 knobs at this checkpoint, as dials
+        const W = 24 * 13, H = 16, dpr = Math.min(2, devicePixelRatio || 1); cv.width = W * dpr; cv.height = H * dpr; cv.style.width = W + 'px'; cv.style.height = H + 'px';
+        const c = cv.getContext('2d'); c.scale(dpr, dpr);
+        r.knobs.forEach((v, k) => { const cx = 6.5 + k * 13, a = Math.max(-1, Math.min(1, v / sc)) * 0.75 * Math.PI - Math.PI / 2; c.strokeStyle = css('--wt'); c.lineWidth = 1; c.beginPath(); c.arc(cx, 8, 5, 0.75 * Math.PI, 2.25 * Math.PI); c.stroke(); c.strokeStyle = css('--ink'); c.lineWidth = 1.4; c.beginPath(); c.moveTo(cx, 8); c.lineTo(cx + Math.cos(a) * 4.5, 8 + Math.sin(a) * 4.5); c.stroke(); });
+      });
+      mk('span', 'cktext mono', `${CK_PROMPT}${r.text}`, row);
+      mk('span', 'note', `next: ${r.top.join(' · ')}`, row);
+    });
+  }
+  async function ckLoad(list) {
+    if (CK.busy) return; CK.busy = true; ckDraw();
+    try { for (const [step, sha] of list) if (!CK.res[step]) { await ckRun(step, sha); ckDraw(); } $('#ckStatus').textContent = ''; }
+    catch (err) { $('#ckStatus').textContent = 'Could not load a checkpoint: ' + err.message; }
+    CK.busy = false; ckDraw();
+  }
+  $('#ckAll').addEventListener('click', () => ckLoad(CKPT));
+
   // ---- pointing and clicking: token chips and strips are cells; in the layers the pointer picks lane, layer, station ----
   function pick(e) {
     const c = e.target.closest && e.target.closest('.cell');
@@ -2326,6 +2554,8 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
   $('#tourBtn').addEventListener('click', startTour);
   $('#trainBtn').addEventListener('click', openTrain); $('#pTrain').addEventListener('click', () => { $('#params').close(); openTrain(); });
   $('#trClose').addEventListener('click', () => $('#train').close());
+  $('#famBtn').addEventListener('click', () => { if (tl.isActive()) { tl.pause(); setPlayLabel(); } $('#family').showModal(); });
+  $('#faClose').addEventListener('click', () => $('#family').close());
   $('#lyClose').addEventListener('click', () => $('#layerDlg').close());
   $('#lyPrev').addEventListener('click', () => { LY.l--; lyRender(''); $('#layerDlg').scrollTop = 0; });
   $('#lyNext').addEventListener('click', () => { LY.l++; lyRender(''); $('#layerDlg').scrollTop = 0; });
@@ -2333,7 +2563,7 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
   $('#nClose').addEventListener('click', () => $('#narrDlg').close());
   $('#parBtn').addEventListener('click', openParams);
   $('#pClose').addEventListener('click', () => $('#params').close());
-  ['#narrDlg', '#params', '#train', '#layerDlg'].forEach(d => $(d).addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.close(); }));
+  ['#narrDlg', '#params', '#train', '#layerDlg', '#family'].forEach(d => $(d).addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.close(); }));
   $('#zClose').addEventListener('click', () => $('#zoom').close());
   $('#zoom').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.close(); });
 
@@ -2356,7 +2586,7 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
     const mode = b.dataset.mode;
     swapPrompt(mode);
     $('#sysRow').hidden = mode !== 'real';
-    if (mode === 'real' || mode === 'tiny') {
+    if (RKEY[mode]) {
       S.wantMode = mode;
       if (S.models && S.models[rkey(mode)]) { runReal(true, mode); return; }
       showLoad(mode);
@@ -2367,15 +2597,19 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
   function showLoad(mode) { // the download panel for a model that is not loaded yet (the tiny one starts by itself)
     const R = RM(mode);
     S.wantReal = true; $('#realLoad').hidden = false; $('#realGo').hidden = mode === 'tiny' || !!(S.loadings && S.loadings[R.key]); $('#realIntro').hidden = false; $('#prog').hidden = false; status('', 0);
-    $('#realIntro').textContent = mode === 'tiny'
-      ? `Loading TinyStories 15M, a real 6-layer model that only ever read children's stories: small enough to see every layer and every knob clearly. It downloads ${R.mb} MB from Hugging Face once and then runs in your browser.`
-      : `SmolLM2-135M-Instruct is a real 30-layer chat model that reads a system prompt before your message. It downloads ${R.mb} MB from Hugging Face once (your browser keeps a copy) and uses about 900 MB of memory, so a laptop or desktop works best.`;
+    $('#realIntro').textContent = ({
+      tiny: `Loading TinyStories 15M, a real 6-layer model (Llama design) that only ever read children's stories: small enough to see every layer and every knob clearly. It downloads ${R.mb} MB from Hugging Face once and then runs in your browser.`,
+      pythia: `Pythia-14M (EleutherAI) is a real 6-layer model of the GPT-NeoX design, where talk and think run side by side. Its whole training run is public (154 checkpoints), which the training view uses. It downloads ${R.mb} MB once.`,
+      gpt2: `DistilGPT-2 (Hugging Face, distilled from OpenAI's GPT-2) is a real 6-layer model of the GPT-2 design, which adds a learned position row to each token at the start. It downloads ${R.mb} MB once and uses about 700 MB of memory.`,
+      mamba: `Mamba-130M is a real 24-layer model with no attention at all: each layer keeps a fixed-size memory it reads and updates token by token. It downloads ${R.mb} MB once and uses about 1 GB of memory, so a laptop or desktop works best.`,
+      real: `SmolLM2-135M-Instruct is a real 30-layer chat model (Llama design) that reads a system prompt before your message. It downloads ${R.mb} MB from Hugging Face once (your browser keeps a copy) and uses about 900 MB of memory, so a laptop or desktop works best.`,
+    })[mode];
     $('#realGo').textContent = `Download and run (${R.mb} MB)`;
   }
   // each kind of model gets a prompt it can do something with, unless you typed your own
   const DEFAULT_PROMPT = { toy: 'the fighter blocked the fireball and', real: 'What is a fireball?', tiny: 'Once upon a time, there was a little' };
   function swapPrompt(mode) {
-    const kind = mode === 'real' || mode === 'tiny' ? mode : 'toy', cur = $('#prompt').value.trim();
+    const kind = mode === 'real' ? 'real' : 'tiny', cur = $('#prompt').value.trim();
     if (Object.values(DEFAULT_PROMPT).includes(cur) || !cur) $('#prompt').value = DEFAULT_PROMPT[kind];
   }
   ['#sys', '#sysB'].forEach(q => $(q).addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $('#promptForm').requestSubmit(); } }));

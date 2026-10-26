@@ -26,7 +26,9 @@ from safetensors.torch import load_file
 from openTSNE import TSNE
 
 src, out, key, name = Path(sys.argv[1]), Path(sys.argv[2]), sys.argv[3], sys.argv[4]
-E = load_file(str(src / "model.safetensors"))["model.embed_tokens.weight"].float()
+W = load_file(str(src / "model.safetensors"))
+EMB = ["model.embed_tokens.weight", "gpt_neox.embed_in.weight", "transformer.wte.weight", "backbone.embeddings.weight"]  # Llama, GPT-NeoX, GPT-2, Mamba
+E = W[next(k for k in EMB if k in W)].float()
 V = E.shape[0]
 tok = json.loads((src / "tokenizer.json").read_text(encoding="utf-8"))
 vocab = {i: s for s, i in tok["model"]["vocab"].items()}

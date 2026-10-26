@@ -361,7 +361,7 @@
           }
           b.y[c] = y + P.Dv[c] * u;
         }
-        if (full) Object.assign(ly.vec, { h1: b.h.slice(), xs: b.xz.slice(0, I), z: b.xz.slice(I), conv: b.c.slice(), u: b.u.slice(), B: Bv.slice(), C: Cv.slice(), dt: b.dt.slice(), scan: b.y.slice() });
+        if (full) Object.assign(ly.vec, { h1: b.h.slice(), xs: b.xz.slice(0, I), z: b.xz.slice(I), conv: b.c.slice(), u: b.u.slice(), sel: b.p.slice(), B: Bv.slice(), C: Cv.slice(), dt: b.dt.slice(), scan: b.y.slice() });
         for (let c = 0; c < I; c++) b.y[c] *= silu(b.xz[I + c]); // the gate
         matvec(P.out, D, I, b.y, b.o);
         for (let i = 0; i < D; i++) x[i] += b.o[i];
