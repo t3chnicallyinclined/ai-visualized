@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>LLM Plinko</title>
+<title>AI Visualized</title>
 <meta name="description" content="See how a large language model works: type a prompt and watch every step, from tokens through each layer's attention and feed-forward to the next word, one token at a time.">
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%2712%27 fill=%27%23cf356b%27/%3E%3C/svg%3E">
@@ -39,6 +39,7 @@ body { margin: 0; font: 15px/1.5 var(--body); }
   display: flex; flex-direction: column; gap: 14px; }
 header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 18px; }
 h1 { font: 800 clamp(28px, 4vw, 40px)/1 var(--display); margin: 0; letter-spacing: -0.02em; }
+h1 .vz { font-weight: 400; font-size: 0.62em; color: var(--muted); letter-spacing: 0; margin: 0 0.06em; }
 header p { margin: 0; color: var(--muted); max-width: 72ch; text-wrap: pretty; }
 header a { color: var(--ink); font-weight: 600; }
 .topbar { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; }
@@ -270,7 +271,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
 
 <div id="page">
   <header>
-    <h1>LLM Plinko</h1>
+    <h1 aria-label="AI Visualized">A<span class="vz" aria-hidden="true">(visualized)</span>I</h1>
     <p>Watch a real language model pick its next word, running in your browser: every number on this page is the model's own. Your prompt becomes numbers, falls through every layer of knobs, and lands in the token cloud, where the model's options light up and a dice roll picks one. <a href="kids.html">A version for kids and classrooms</a>.</p>
   </header>
 

@@ -1,4 +1,4 @@
-# LLM Plinko
+# AI Visualized
 
 **Watch a real language model write, one token at a time, with every number on screen.**
 
@@ -14,7 +14,7 @@ Every number on the page is the model's own, and everything that is a picture ra
 
 ## What you can do
 
-**The full version** (`index.html`) shows the whole loop on one board, read top to bottom like Plinko:
+**The full version** (`index.html`) shows the whole loop on one board, read top to bottom, like a ball falling through pegs:
 
 1. **Type**: your text (for the chat model, the system prompt and your message in its chat template).
 2. **Tokenize**: the model's own tokenizer cuts it into pieces, each with an ID.
