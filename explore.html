@@ -332,7 +332,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
 <div id="page">
   <header>
     <h1 aria-label="AI Visualized">A<span class="vz" aria-hidden="true">(visualized)</span>I</h1>
-    <p><b>It's autocomplete:</b> a language model guesses the next word, adds it, and guesses again. Here a real one runs in your browser and every number on the page is its own.<span class="hmore"> Your prompt becomes numbers, falls through every layer of knobs, and lands in the token cloud, where the model's options light up and a dice roll picks one.</span> <a href="kids.html">A version for kids and classrooms</a>.</p>
+    <p><b>It's autocomplete:</b> a language model guesses the next word, adds it, and guesses again. Here a real one runs in your browser, and every number about its work comes from its real weights (pictures and reference figures are labelled).<span class="hmore"> Your prompt becomes numbers, falls through every layer of knobs, and lands in the token cloud, where the model's options light up and a dice roll picks one.</span> <a href="kids.html">A version for kids and classrooms</a>.</p>
   </header>
 
   <a class="agentbar" href="agent.html"><span class="ab-new">New</span><span class="ab-txt">Watch an AI agent work <em>· or make it go rogue</em></span><span class="ab-go" aria-hidden="true">→</span></a>
@@ -342,7 +342,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
     <ol class="tiles">
       <li><span class="ic" aria-hidden="true">🔤</span><b>Your words go in as sounds</b><span>Each word is looked up and becomes its own list of numbers: its “sound”. Not how it is pronounced: a sound made from how the word is used.</span><em>On the board: tokens and the embed strips</em></li>
       <li><span class="ic" aria-hidden="true">🎛️</span><b>Volume knobs, set at the factory and glued</b><span>Rows of knobs turn parts of the sound up or down and mix them. Training set every knob; nothing you type turns them.</span><em>On the board: the dials in every layer</em></li>
-      <li><span class="ic" aria-hidden="true">👂</span><b>Before each row, it listens back</b><span>Each word listens to the earlier words and blends in the ones that matter. The only part that changes with what you type.</span><em>On the board: the pink arcs and the bars on the context tape</em></li>
+      <li><span class="ic" aria-hidden="true">👂</span><b>Before each row, it listens back</b><span>Each word listens to the earlier words and blends in the ones that matter. The only step whose mixing depends on what you type.</span><em>On the board: the pink arcs and the bars on the context tape</em></li>
       <li><span class="ic" aria-hidden="true">💡</span><b>A wall of lights, one per word</b><span>At the end, every word in the dictionary gets a light that glows by how well the final sound matches it.</span><em>On the board: the unembed, then the token cloud</em></li>
       <li><span class="ic" aria-hidden="true">🎲</span><b>A dice weighted by the brightest lights</b><span>Usually the brightest wins; sometimes a dimmer one does. The temperature slider sets how loaded the dice is.</span><em>On the board: choose</em></li>
       <li><span class="ic" aria-hidden="true">🔁</span><b>Add the word, and go again</b><span>The new word joins the line and the whole thing runs again for the next one. That is all it ever does.</span><em>On the board: repeat</em></li>
@@ -363,7 +363,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
     <h2 class="stepl"><span>1</span>Choose a model</h2>
     <div class="seg" role="group" aria-label="Model">
       <button type="button" data-mode="tiny" aria-pressed="true" title="Llama design: RMSNorm, rotation (RoPE), SwiGLU"><b>TinyStories</b><small>children's stories · 30 MB</small></button>
-      <button type="button" data-mode="pythia" aria-pressed="false" title="GPT-NeoX design: talk and think side by side; 154 training checkpoints"><b>Pythia</b><small>web text · 28 MB</small></button>
+      <button type="button" data-mode="pythia" aria-pressed="false" title="GPT-NeoX design: talk and think side by side; 154 training checkpoints"><b>Pythia</b><small>web, books, papers, code · 28 MB</small></button>
       <button type="button" data-mode="gpt2" aria-pressed="false" title="GPT-2 design: a position table added at the start"><b>DistilGPT-2</b><small>web text · 353 MB</small></button>
       <button type="button" data-mode="mamba" aria-pressed="false" title="Mamba: no attention; a fixed-size memory per layer"><b>Mamba</b><small>no attention · 517 MB</small></button>
       <button type="button" data-mode="real" aria-pressed="false" title="SmolLM2-135M-Instruct, Llama design, tuned to chat: reads a system prompt"><b>Chat model</b><small>reads a system prompt · 269 MB</small></button>
@@ -528,7 +528,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
     <tr><td>Tokens mix by</td><td>attention (8 heads)</td><td>attention</td><td>a Fourier transform: no knobs at all</td><td>attention</td><td>attention (SmolLM2: heads share keys and values)</td><td>a fixed-size memory per layer, written and read by each token</td></tr>
     <tr><td>Each token alone</td><td>feed-forward, ReLU</td><td>feed-forward, GELU</td><td>feed-forward</td><td>feed-forward, GELU, <b>side by side</b> with attention</td><td>feed-forward, SwiGLU (gate × up)</td><td>no separate block: a gate inside the memory block</td></tr>
     <tr><td>Rescaling</td><td>LayerNorm after each step</td><td>LayerNorm before each step</td><td>LayerNorm</td><td>LayerNorm before</td><td>RMSNorm before</td><td>RMSNorm before</td></tr>
-    <tr><td>Output table</td><td>the embedding table reused</td><td>the embedding table reused</td><td>(no next-token output)</td><td>a separate table</td><td>the embedding table reused</td><td>the embedding table reused</td></tr>
+    <tr><td>Output table</td><td>the embedding table reused</td><td>the embedding table reused</td><td>(no next-token output)</td><td>a separate table</td><td>either: Meta's LLaMA keeps a separate one; SmolLM2 and TinyStories reuse the embedding table</td><td>the embedding table reused</td></tr>
   </table>
   </div>
   <h3 class="eh3">Attention Is All You Need (2017)</h3>
@@ -603,7 +603,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
     <button type="button" role="tab" data-tab="table" aria-selected="true">The table</button>
     <button type="button" role="tab" data-tab="near" aria-selected="false">Nearest tokens</button>
     <button type="button" role="tab" data-tab="cmp" aria-selected="false">Compare two</button>
-    <button type="button" role="tab" data-tab="path" aria-selected="false">Thought path</button>
+    <button type="button" role="tab" data-tab="path" aria-selected="false">Lens path</button>
   </div>
   <div id="eBody"></div>
 </dialog>
@@ -716,10 +716,10 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
         : kind === 'neox' ? 'In GPT-NeoX a token talks and thinks side by side: attention (pink lines: who it reads) and the feed-forward block both read the same incoming ball, and both changes are added at once.'
         : `In each layer a token first talks (attention: the pink lines are the model's real attention; this is the only place it can read earlier tokens` + (chat ? ', including the system prompt' : '') + `) and then thinks alone (feed-forward: the amber burst is how much it really added).`) + ` After every layer the cloud reads the ball with the model's final reader and lights up every token by the chance it would give it. The little bar under each ball is its first 16 numbers: the whole prompt goes through every layer together, and every ball's numbers change as each + is added. Click any layer to look inside it.`],
       ['Unembed', `After the last layer comes one more norm, then the ball leaves the board and is compared with every row of the output table, ${kind === 'neox' ? 'which in GPT-NeoX is a second, separate table (not the embedding table)' : 'which here is the embedding table reused'}: one score for each of the ${nf(R.V)} tokens. A token scores high when the ball points the same way as its row.` + (chat ? ' The context decides which way the ball points, so the right context lights up the tokens that fit it.' : '')],
-      ['Choose', 'Softmax turns the top five scores into chances, temperature sets how loaded the dice are, and a weighted dice roll picks one: watch the dice hop between the candidates in the cloud.'],
+      ['Choose', 'Softmax turns the top five scores into chances, temperature sets how loaded the dice are, and a weighted dice roll picks one: in the cloud the dice hops between the candidates (the first hops are animation; where it lands is the real pick).'],
       ['Detokenize', 'The tokenizer runs backwards: the winning ID becomes its piece of text and is added to the output. It also becomes a new lane.'],
       ['Stream back', 'Each new piece goes to the reply at the top the moment it is chosen. In a chat app it would travel back over the internet; here it never leaves your computer.'],
-      ['Repeat', (kind === 'mamba' ? 'Only the new lane moves now. Each layer just reads and updates its memory, which stays the same size however long the text gets (no cache of keys and values),' : 'Only the new lane moves now. Each layer reads the keys and values it kept for earlier lanes (teal ticks) instead of redoing them,') + ` but all ${R.mb} MB of weights (every knob) are read again for every new token. The loop runs until the model writes an end token or reaches a length limit.`],
+      ['Repeat', (kind === 'mamba' ? 'Only the new lane moves now. Each layer just reads and updates its memory, which stays the same size however long the text gets (no cache of keys and values),' : 'Only the new lane moves now. Each layer reads the keys and values it kept for earlier lanes (teal ticks) instead of redoing them,') + ` but every layer's knobs and the output table are read again for every new token. The loop runs until the model writes an end token or reaches a length limit.`],
     ];
   };
   const DONE = ['Done', 'Six new tokens, six passes. A real model keeps going until it writes an end-of-text token or hits a length limit. Press Replay, or type a new prompt.'];
@@ -1069,10 +1069,10 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
     $('#hwSum').textContent = 'Memory and speed in your browser';
     $('#modeNote').textContent = NOTE_REAL();
     {
-      const D = S.data, m = S.llm, gbps = m.weightBytes / 1e9 / (D.ms / 1000);
+      const D = S.data, m = S.llm, readB = (m.mats.layers.reduce((a, ly) => a + Object.values(ly).reduce((b, t) => b + ((t && t.length) || 0), 0), 0) + m.mats.Eout.length) * 4, gbps = readB / 1e9 / (D.ms / 1000);
       $('#rSpeed').textContent = Math.round(D.ms) + ' ms/token';
       $('#rModel').textContent = m.name; $('#rW').textContent = m.meta.mb + ' MB'; $('#rDims').textContent = `${m.L} · ${m.D}`;
-      $('#rNote').textContent = (m.kind === 'mamba' ? `No cache of keys and values: each layer keeps a fixed memory, ${(m.stateBytes / 1024).toFixed(0)} KB in all, however long the text gets.` : `Each layer keeps its own keys and values: ${(m.kvBytesPerToken / 1024).toFixed(1)} KB per token across all ${m.L} layers, all in the same memory.`) + ` Every new token reads all ${m.meta.mb} MB of weights again. Your browser did that in ${Math.round(D.ms)} ms, about ${gbps.toFixed(1)} GB/s; a 3090 GPU reads up to 936 GB/s.`;
+      $('#rNote').textContent = (m.kind === 'mamba' ? `No cache of keys and values: each layer keeps a fixed memory, ${(m.stateBytes / 1024).toFixed(0)} KB in all, however long the text gets.` : `Each layer keeps its own keys and values: ${(m.kvBytesPerToken / 1024).toFixed(1)} KB per token across all ${m.L} layers as 16-bit numbers (this page keeps them as 32-bit, twice that).`) + ` Every new token reads every layer's knobs and the output table again: about ${Math.round(readB / 1e6)} MB as the 32-bit numbers this page uses. Your browser did that in ${Math.round(D.ms)} ms, about ${gbps.toFixed(1)} GB/s; a 3090 GPU reads up to 936 GB/s.`;
     }
   }
 
@@ -1373,7 +1373,7 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
     const E = m.mats.E, D = m.D, ra = ia[0] * D, rb = ib[0] * D; let s2 = 0, na = 0, nb = 0;
     for (let c = 0; c < D; c++) { const x = E[ra + c], y = E[rb + c]; s2 += x * y; na += x * x; nb += y * y; }
     const cs = s2 / Math.sqrt(na * nb), word = cs > 0.45 ? 'close: the machine treats them alike' : cs > 0.25 ? 'somewhat alike' : 'far apart: to the machine they sound different';
-    out.innerHTML = `${m.name}: “${a.replace(/[&<>]/g, '')}” and “${b.replace(/[&<>]/g, '')}” → <b>${cs.toFixed(2)}</b>, ${word}. (Rows of ${D} numbers each.)`;
+    out.innerHTML = `${m.name}: “${a.replace(/[&<>]/g, '')}” and “${b.replace(/[&<>]/g, '')}” → <b>${cs.toFixed(2)}</b>, ${word}. (Rows of ${D} numbers each; “close” from 0.45 and “somewhat” from 0.25 are this page's cut-offs.)`;
   }
   $('#hearGo').addEventListener('click', hear);
   [$('#hearA'), $('#hearB')].forEach(i => i.addEventListener('keydown', e => { if (e.key === 'Enter') hear(); }));
@@ -1711,7 +1711,7 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
   const toyByWord = new Map(); // a toy word -> its token on the map, preferring the space-led piece (" the" over "the")
   CLOUD.ids.forEach((id, i) => { const b = bare(CLOUD.w[i]), had = toyByWord.get(b); if (had == null || (CLOUD.w[i].startsWith('·') && !CLOUD.w[toyIdx.get(had)].startsWith('·'))) toyByWord.set(b, id); });
   const toyMapId = w => { const id = toyByWord.get(bare(w)); return id == null || !onMap(id) ? -1 : id; };
-  const KINDS = ['whole word', 'word piece', 'number', 'punctuation or space', 'code or symbol', 'other script'];
+  const KINDS = ['word start', 'word piece', 'number', 'punctuation or space', 'code or symbol', 'other script'];
   const KIND_COL = ['#d8dbe8', '#8ea2dc', '#d6b88c', '#8ccfc4', '#b5a5e2', '#d79db3'];
   // the map's own colours: hue = direction from the centre, strength = distance from it. Balls use the same colours.
   function idColour(id) {
@@ -2015,7 +2015,7 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
     const tb = btn('3D', 'Lay the map down: height becomes the chance', b => { const on = b.getAttribute('aria-pressed') !== 'true'; b.setAttribute('aria-pressed', on); view.setTilt(on); });
     tb.setAttribute('aria-pressed', view.tilt > 0);
     const cb = btn('Colour: map', 'Colour the dots by map region or by kind of token', b => { view.colour = view.colour === 'map' ? 'kind' : 'map'; b.textContent = view.colour === 'map' ? 'Colour: map' : 'Colour: kind'; view.render(); });
-    cb.title = 'Map: each region has its own colour (the balls on the board use the same colours). Kind: whole words, word pieces, numbers, punctuation, code, other scripts.';
+    cb.title = 'Map: each region has its own colour (the balls on the board use the same colours). Kind: word starts (a space in front), word pieces, numbers, punctuation, code, other scripts.';
     return q;
   }
   // the cloud on the stage, the board's destination (on phones it sits on top, sticky, so it stays in view while the layers run)
@@ -2026,7 +2026,7 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
   cloudControls($('#cBar'), cardView);
   cardView.describe();
   new ResizeObserver(() => cardView.render()).observe($('#cloudCv'));
-  const C_NOTE_REAL = () => `Each dot is one of the model's tokens (${CM ? nf(CM.tokens) : ''} of its ${nf(S.llm.V)}; byte fragments and special tokens are left out), placed by t-SNE over its real embedding row so similar tokens sit together. Nearby means similar; far apart only means "not similar". A flat map can't keep every neighbour: on average ${CM ? Math.round(CM.recall10 * 10) : 2} of a token's 10 nearest tokens in the real 576 numbers are among its 10 nearest dots. ` +
+  const C_NOTE_REAL = () => `Each dot is one of the model's tokens (${CM ? nf(CM.tokens) : ''} of its ${nf(S.llm.V)}; byte fragments and special tokens are left out), placed by t-SNE over its real embedding row so similar tokens sit together. Nearby means similar; far apart only means "not similar". A flat map can't keep every neighbour: on average ${CM ? Math.round(CM.recall10 * 10) : 2} of a token's 10 nearest tokens in the real ${S.llm ? S.llm.D : 576} numbers are among its 10 nearest dots. ` +
     'The light after each layer is the logit lens: the model\'s final norm and output table applied to the ball as it is after that layer, giving every token a chance (a full softmax; brightness on a log scale from one in a million to 100%). Early layers aren\'t built to be read this way, so their readings are noisy. In 3D, height is the chance itself. ' +
     'The dashed line hops between the single most likely token after each layer, and the ball on the board takes that token\'s map colour. A token can also score high partly because its row is long, not only because it points the same way. The dots are the vocabulary\'s coordinates, not stored knowledge: that lives in the parameters, and this map is a picture of just one of their grids (press "What are the parameters?").';
   function syncCloud(time) {
@@ -2073,7 +2073,7 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
       sparkNote.textContent = `The chance the ball gave “${labelOf(id)}” (log scale): about ${fmtP(ps[0])} after layer 1, ${fmtP(ps[LL >> 1])} after layer ${(LL >> 1) + 1}, ${fmtP(ps[LL - 1])} after layer ${LL}.`;
     }
     requestAnimationFrame(() => { apply(); view.describe(); });
-    mk('p', 'note', 'What this is and is not: the dots are the vocabulary\'s coordinates, not stored knowledge. The model\'s knowledge lives in its weights, spread across every layer; its memory of this conversation is the KV cache. The path is the thinking; where it ends is the prediction.', box);
+    mk('p', 'note', 'What this is and is not: the dots are the vocabulary\'s coordinates, not stored knowledge. The model\'s knowledge lives in its weights, spread across every layer; its memory of this conversation is the KV cache. The path is the logit-lens readout layer by layer; where it ends is the prediction.', box);
   }
 
   // ---- the parameters: every weight grid of the model, drawn to scale (area = how many numbers it holds) ----
@@ -2521,7 +2521,7 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
     if (tl.isActive()) { tl.pause(); setPlayLabel(); }
     const R = RM('real'), Tn = RM('tiny');
     $('#trLead').textContent = `This is a real training run, only tiny: a model with one grid of ${TV} × ${TV} = ${nf(TV * TV)} knobs learns from the short text built into this page (${nf(TR_N + 1)} letters). Each knob says how strongly to expect one letter after another (rows: this letter; columns: the next one; the warm squares are the chances the knobs give). The knobs start as random numbers. Each step the model reads the whole text, measures how surprised it was by every real next letter (the loss), and nudges every knob a little in the direction that would have made the real letter more likely: gradient descent. Press Train and watch the needles turn, the loss fall and the writing turn into almost-words. It only ever looks at one letter, so it can't do better than the dashed "best" line.`;
-    $('#trBig').textContent = `The models on this page were made by the same loop, with far more knobs and far more text: Pythia-14M is the snapshots above. ${R.name}: ${nf(134515008)} knobs, first trained to predict the next token on 2 trillion tokens of web pages, educational text and code, then fine-tuned on example conversations and finally nudged towards answers people preferred (DPO); that is where it learned to follow a chat template and a system prompt. ${Tn.name}: 15 million knobs, trained for a few hours on four large GPUs on children's stories. Real models start from small random knobs too (spread 0.02 to 0.04 in their configs), and work out each nudge for every layer at once (backpropagation) from a batch of text at a time. Once training ends the knobs are frozen. Nothing you type changes them: a prompt, and a system prompt, only change the ball that flows past them.`;
+    $('#trBig').textContent = `The models on this page were made by the same loop, with far more knobs and far more text: Pythia-14M is the snapshots above. ${R.name}: ${nf(134515008)} knobs, first trained to predict the next token on 2 trillion tokens of web pages, educational text and code, then fine-tuned on example conversations and finally nudged towards answers people preferred (DPO); that is where it learned to follow a chat template and a system prompt. ${Tn.name}: 15 million knobs, trained for a few hours on four large GPUs on children's stories. Real models start from small random knobs too (a small spread set in each config, for example 0.02), and work out each nudge for every layer at once (backpropagation) from a batch of text at a time. Once training ends the knobs are frozen. Nothing you type changes them: a prompt, and a system prompt, only change the ball that flows past them.`;
     if (!TR.loss.length) trReset();
     $('#train').showModal(); requestAnimationFrame(trDraw); ckDraw();
   }

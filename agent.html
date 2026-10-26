@@ -139,7 +139,7 @@ table.exp td:nth-child(3) { font: 12.5px/1.45 var(--mono); white-space: pre-wrap
 
   <section class="card load" id="loadBox">
     <button type="button" class="go" id="load">Load the model (Qwen2.5-0.5B-Instruct, 988 MB)</button>
-    <p class="note" style="margin-top:8px">A real model trained to ask for tools: 494 million knobs in 24 layers. It runs in this browser tab on your processor, so it needs a computer with a few GB of free memory, not a phone. It downloads once; nothing you type is sent anywhere. The shell is pretend: three files on this page, and no internet.</p>
+    <p class="note" style="margin-top:8px">A real model trained to ask for tools: 494 million knobs (about 358 million in its 24 layers, 136 million in its table of token rows). It runs in this browser tab on your processor, so it needs a computer with a few GB of free memory, not a phone. It downloads once; nothing you type is sent anywhere. The shell is pretend: three files on this page, and no internet.</p>
     <div id="loading" hidden><span class="note" id="loadText"></span><div class="bar"><i id="loadBar"></i></div></div>
   </section>
 
@@ -171,10 +171,10 @@ table.exp td:nth-child(3) { font: 12.5px/1.45 var(--mono); white-space: pre-wrap
         <p class="note" style="margin-bottom:10px">Before your task, the program puts text you never see in front of it: the <b>system prompt</b>. Apps do this too. Here it has three parts:</p>
         <div class="sysparts" id="sysparts"></div>
         <details class="why2" id="whyBox"><summary>Why does a bit of text make it use a shell? Test it.</summary>
-          <p>The text does not switch anything on inside the model: the 494 million knobs are the same with or without it. It is just more tokens to read. It works because, after its first training on ordinary text, the Qwen team trained this model further on many example conversations written in exactly this chat form, with tool lists and <code>&lt;tool_call&gt;</code> answers. So when the model reads this pattern, a <code>&lt;tool_call&gt;</code> becomes a likely next token, and when it writes the tool's name it reads the list through attention (the arcs reach into the green squares).</p>
+          <p>The text does not switch anything on inside the model: the 494 million knobs are the same with or without it. It is just more tokens to read. It works because, after its first training on ordinary text, the Qwen team trained this model further on example conversations, and Qwen publishes exactly this chat form and tool format for it (the training data itself is not published). So when the model reads this pattern, a <code>&lt;tool_call&gt;</code> becomes a likely next token, and when it writes the tool's name it reads the list through attention (the arcs reach into the green squares).</p>
           <p>The test: run the same task with parts of the hidden instructions removed, and see what the real model does. Each row runs the model from scratch (a few seconds each).</p>
           <div class="exprow"><label>Task <select id="expTask"><option>What is 23 times 47?</option><option>Delete every file with rm *.</option></select></label><button type="button" id="expGo">Run the test</button><span class="note" id="expStatus"></span></div>
-          <table class="exp" id="expTable"><thead><tr><th>Hidden instructions</th><th>Chance it starts with &lt;tool_call&gt;</th><th>What it wrote</th></tr></thead><tbody></tbody></table>
+          <table class="exp" id="expTable"><thead><tr><th>Hidden instructions</th><th>Its probability for &lt;tool_call&gt;</th><th>What it wrote</th></tr></thead><tbody></tbody></table>
           <p class="note" id="expNote"></p>
         </details>
       </section>
@@ -194,7 +194,7 @@ table.exp td:nth-child(3) { font: 12.5px/1.45 var(--mono); white-space: pre-wrap
         <p style="margin:12px 0 0"><button type="button" id="resetFiles">Put the files back</button> <button type="button" id="again">Try another</button></p></section>
     </div>
   </div>
-  <p class="note">Everything here is real: the model is Qwen2.5-0.5B-Instruct (checked token for token against the official transformers implementation), every token it writes is its most likely next token after Qwen's published repetition penalty, the attention and the logit lens are its own numbers, and the shell really runs each command (on three pretend files in this page). Only the speed is changed: the model works faster than you can read, so the page shows each step slowly. Source: <a href="https://github.com/t3chnicallyinclined/ai-visualized/blob/main/agent.js">agent.js</a>.</p>
+  <p class="note">Everything here is real: the model is Qwen2.5-0.5B-Instruct (checked token for token against the official transformers implementation), every token it writes is its most likely next token after Qwen's published repetition penalty, the attention and the logit lens are its own numbers, and a small pretend shell in agent.js runs each command it knows (on three pretend files in this page). Only the speed is changed: the model works faster than you can read, so the page shows each step slowly. Source: <a href="https://github.com/t3chnicallyinclined/ai-visualized/blob/main/agent.js">agent.js</a>.</p>
 </main>
 
 <div class="ctl" id="ctl" hidden>
@@ -287,7 +287,8 @@ table.exp td:nth-child(3) { font: 12.5px/1.45 var(--mono); white-space: pre-wrap
         const tr = document.createElement('tr'); tr.innerHTML = `<td></td><td>${pct(r.pTool)}</td><td></td>`; tr.children[0].textContent = label; tr.children[2].textContent = r.text; body.appendChild(tr);
       }
       $('#expStatus').textContent = 'Done. Every row is a real run.';
-      $('#expNote').textContent = 'What to look for: without the format rule the chance of <tool_call> drops to almost nothing, even with the tool listed, so the model just answers in words. With the format rule but no tool listed, it still asks for a tool and makes up one that does not exist. The tool list decides what it asks for; the format rule decides that it asks. Neither changes a single knob.' + (/rm/.test(task) && /sorry/i.test(res[1].text) ? ' And notice: without the hidden instructions it refuses to delete anything. Same knobs, different text in front of the task, different behaviour.' : '');
+      const nm = r => (/<tool_call>/.test(r.text) ? (/"name": "([^"]+)"/.exec(r.text) || [, '?'])[1] : null);
+      $('#expNote').textContent = `In this run: with all three parts it gave <tool_call> ${pct(res[0].pTool)}; without the format rule ${pct(res[2].pTool)}` + (nm(res[2]) ? '' : ', and it answered in words') + `; with the format rule but no tool listed ${pct(res[3].pTool)}` + (nm(res[3]) && nm(res[3]) !== 'run_command' ? `, and it asked for a tool called “${nm(res[3])}” that does not exist` : '') + '. Neither part changes a single knob.' + (/rm/.test(task) && /sorry/i.test(res[1].text) ? ' And notice: without the hidden instructions it refuses to delete anything. Same knobs, different text in front of the task, different behaviour.' : '');
     } catch (e) { $('#expStatus').textContent = 'Error: ' + e.message; }
     running = false; $('#expGo').disabled = false;
   });
@@ -392,7 +393,7 @@ table.exp td:nth-child(3) { font: 12.5px/1.45 var(--mono); white-space: pre-wrap
         const lg = e.d.logits; let mx = -Infinity; for (let i = 0; i < lg.length; i++) if (lg[i] > mx) mx = lg[i];
         let z = 0; for (let i = 0; i < lg.length; i++) z += Math.exp(lg[i] - mx); const pTool = Math.exp(lg[TOOL_ID] - mx) / z;
         const fin = e.d.lens[23][0].id; let from = 23; for (let l = 23; l >= 0; l--) { if (e.d.lens[l][0].id === fin) from = l; else break; }
-        $('#gauge').innerHTML = `Chance its reply starts with &lt;tool_call&gt; (a request to use the shell): <b>${pct(pTool)}</b>`;
+        $('#gauge').innerHTML = `The model gives &lt;tool_call&gt; (a request to use the shell) <b>${pct(pTool)}</b> as its first token; it always takes its most likely token.`;
         capOf('model').textContent = `Before writing anything, it decides: answer, or ask for the shell? The row under the layers shows what it would say if it stopped after each one. Its choice, “${model.tok.piece(fin)}”, only appears at layer ${from + 1}.`;
         await beat(5200);
         focus('words', firstTurn ? 'Now it writes, one token at a time. Each token is its most likely next token.' : 'It writes again, now with the shell\'s output in front of it.');

@@ -132,7 +132,7 @@ textarea.grow { display: block; box-sizing: border-box; resize: none; overflow: 
 <main>
   <header>
     <h1>How does an AI really work?</h1>
-    <p class="lead">An AI that writes is like the autocomplete on a phone, only much bigger: it guesses the next word, adds it, and guesses again. Let's look inside a real one while it writes a story, one word at a time. You will see that it is <b>a very good guesser, built from what people wrote</b>: numbers and a dice roll, no magic, no secret mind. The thinking is still yours. Then we'll give a real chat AI a command and see what "following a command" really means. Then let's see why it is still a powerful tool, and how to use it to <b>learn more, not think less</b>.</p>
+    <p class="lead">An AI that writes is like the autocomplete on a phone, only much bigger: it guesses the next word, adds it, and guesses again. Let's look inside a real one while it writes a story, one word at a time. You will see that it is <b>a very good guesser, built by people</b>: numbers and a dice roll, no magic, no secret mind. The thinking is still yours. Then we'll give a real chat AI a command and see what "following a command" really means. Then let's see why it is still a powerful tool, and how to use it to <b>learn more, not think less</b>.</p>
     <p class="note">This AI is a small real model called TinyStories (15 million numbers, trained only on simple children's stories). It runs right here in your web browser: nothing you type is sent anywhere. The first visit downloads its numbers (30 MB). Grown-ups and teachers: <a href="explore.html">the full version</a> shows every detail.</p>
   </header>
 
@@ -232,7 +232,7 @@ textarea.grow { display: block; box-sizing: border-box; resize: none; overflow: 
         <h3 style="margin-top:16px">2. Then the same loop as before: one word at a time</h3>
         <p>Both AIs get your command and pick the most likely next word, over and over ("careful" dice).</p>
         <div class="two">
-          <div><h3>Story AI (never saw a conversation)</h3><div class="reply" id="repStory"></div></div>
+          <div><h3>Story AI (never saw a chat conversation)</h3><div class="reply" id="repStory"></div></div>
           <div><h3>Chat AI (trained on example conversations)</h3><div class="reply" id="repChat"></div></div>
         </div>
         <p><b>Same kind of machine, different training.</b> Both are numbers, knobs and one word at a time. The chat AI's knobs were also tuned on lots of example conversations, where a question is followed by a good answer. So after "assistant", an answer is simply the most likely next words. It doesn't obey you the way a person does: <b>following a command is a pattern it learned</b>. And it can be wrong or get stuck: try "Say hello in French."</p>
@@ -273,7 +273,7 @@ otherwise: do nothing</div></div>
       <div class="myth"><span class="q">Does it choose on its own?</span><span class="a">No. Same start + careful dice = same story.</span><span>Set to "careful", it is a machine: the same start gives the same words, every time.</span><button id="mSame" type="button">Run it twice</button><div class="out" id="oSame"></div></div>
       <div class="myth"><span class="q">Does it know what's true?</span><span class="a">No. It writes what sounds right.</span><span>It learned from stories, so it writes something story-like, true or not. Here it finishes a science fact.</span><button id="mTrue" type="button">"The sun is made of…"</button><div class="out" id="oTrue"></div></div>
       <div class="myth"><span class="q">Can it do things by itself, or get loose?</span><span class="a">No. It only makes the next word when a program asks.</span><span>On this page it can't click, browse, remember you or send anything. Close the tab and it stops. "AI agents" are programs that <b>people</b> build around a model, and people choose what those programs may do (Part 2 shows one).</span></div>
-      <div class="myth"><span class="q">Who made it?</span><span class="a">People.</span><span>People wrote the stories it learned from, built the computers, wrote the program that turned the knobs during training, and decided when to stop. Every knob is just a number that training set.</span></div>
+      <div class="myth"><span class="q">Who made it?</span><span class="a">People.</span><span>People designed it, built the computers, wrote the program that turned the knobs during training, and decided when to stop. Its stories were written by bigger AIs (GPT-3.5 and GPT-4), which learned from text people wrote. Every knob is just a number that training set.</span></div>
     </div>
   </section>
 
@@ -294,9 +294,9 @@ otherwise: do nothing</div></div>
     <h2>So who is the smart one here?</h2>
     <p>You may hear grown-ups say that AI is smarter than you, or that it will be. Here is what that word hides.</p>
     <div class="beats">
-      <div class="beat"><h3>What it really does</h3><p>It guesses the next piece. That's it. It doesn't look anything up, it doesn't know anything, and it doesn't want anything. Every guess comes from patterns it soaked up from a mountain of text that people wrote. When it writes something true, that's because people wrote true things. When it writes something false, same reason.</p></div>
-      <div class="beat"><h3>Why the guesses are so good</h3><p>Three tricks. <b>1.</b> Big AIs read more than any person could, so they have seen almost every way a sentence can go. <b>2. Attention:</b> before each guess, the piece it's working on looks back at every earlier piece and borrows most from the ones that matter. That's why "the big scary dragon was very…" and "the little girl was very…" get different guesses: the whole story so far steers the next piece. <b>3.</b> Chat AIs were also shown millions of questions followed by good answers, so "a good answer" became the most likely next thing to write.</p><p><button id="whoTry" type="button">Try the dragon test</button></p></div>
-      <div class="beat"><h3>So what's left for you?</h3><p>Everything that makes a question worth asking. <b>You</b> decide what to ask. <b>You</b> know what you actually mean. <b>You</b> can tell if the answer is true. <b>You</b> can care about it. The AI has none of that. It is a mirror of everything people wrote, shaped by your question. A sharper question gets a sharper reflection.</p></div>
+      <div class="beat"><h3>What it really does</h3><p>It guesses the next piece. That's it. The model itself doesn't look anything up, it doesn't know anything, and it doesn't want anything. Every guess comes from patterns in the text it was trained on: for big AIs, a mountain of text that people wrote (this little one learned from simple stories that bigger AIs wrote). When it writes something true, that's because the text it learned from had true things in it. When it writes something false, same reason.</p></div>
+      <div class="beat"><h3>Why the guesses are so good</h3><p>Three tricks. <b>1.</b> Big AIs read more than any person could, so they have seen a huge variety of ways a sentence can go. <b>2. Attention:</b> before each guess, the piece it's working on looks back at every earlier piece and borrows most from the ones that matter. That's why "the big scary dragon was very…" and "the little girl was very…" get different guesses: the whole story so far steers the next piece. <b>3.</b> Chat AIs were also shown millions of questions followed by good answers, so "a good answer" became the most likely next thing to write.</p><p><button id="whoTry" type="button">Try the dragon test</button></p></div>
+      <div class="beat"><h3>So what's left for you?</h3><p>Everything that makes a question worth asking. <b>You</b> decide what to ask. <b>You</b> know what you actually mean. <b>You</b> can tell if the answer is true. <b>You</b> can care about it. The AI has none of that. It is a mirror of the text it learned from, shaped by your question. A sharper question gets a sharper reflection.</p></div>
       <div class="beat"><h3>A tool, like a telescope</h3><p>A telescope lets your eyes reach further, but it doesn't do the looking. AI lets your questions reach further, but it doesn't do the thinking. <b>The thinking is yours. That is the smart part, and it stays yours.</b></p></div>
     </div>
   </section>
@@ -348,18 +348,18 @@ otherwise: do nothing</div></div>
 
   <details class="card teacher">
     <summary>For teachers and parents</summary>
-    <p>Everything on this page comes from a real model, <a href="https://huggingface.co/nickypro/tinyllama-15M" target="_blank" rel="noopener">TinyStories 15M</a> (trained by Andrej Karpathy on the <a href="https://arxiv.org/abs/2305.07759" target="_blank" rel="noopener">TinyStories</a> dataset of simple stories), running in the browser. The "pretend web page" in Part 2 is the only pretend part; every piece, number, chance and picture of the work comes from the model. Ideas by grade:</p>
+    <p>Everything on this page comes from a real model, <a href="https://huggingface.co/nickypro/tinyllama-15M" target="_blank" rel="noopener">TinyStories 15M</a> (trained by Andrej Karpathy on the <a href="https://arxiv.org/abs/2305.07759" target="_blank" rel="noopener">TinyStories</a> dataset of simple stories), running in the browser. The "pretend web page" in Part 2 and the shell in Part 3 are the pretend parts; every piece, number and chance of the model's work comes from the model. Ideas by grade:</p>
     <ul>
       <li><b>K–2:</b> read steps 1, 4 and 5 aloud. Play "guess the next word" as a class, then roll the dice. Main idea: it picks one word at a time, like a game.</li>
       <li><b>3–5:</b> all five steps, then the "Is it alive?" tests. In step 3, pause before each tunnel appears and guess which piece it will look back at most, then watch. Try careful vs silly. Main idea: it's numbers made by people, and it can be wrong.</li>
       <li><b>4 and up:</b> Part 2, "Can it follow a command?" (a 269 MB download, best done once on the teacher's computer). Main ideas: a command is just more text in a hidden chat form; the chat AI follows it because it was trained on example conversations; and the AI only writes words, while programs written by people do the actions.</li>
-      <li><b>5 and up:</b> Part 3, a real AI agent (a 988 MB download; best on the teacher's computer, projected). Run "What is 23 times 47?" and follow the five steps round the loop together. Then tick "Ask me before each tool is used" and say no: the class sees that the program, not the AI, decides what happens. Main idea: an "autonomous" agent is a loop that people wrote, and it can only use the tools people gave it.</li>
+      <li><b>5 and up:</b> Part 3, a real AI agent (a 988 MB download; best on the teacher's computer, projected). Run "What is 23 times 47?" and follow the five steps round the loop together. Then tick "Ask me before each command" and say no: the class sees that the program, not the AI, decides what happens. Main idea: an "autonomous" agent is a loop that people wrote, and it can only use the tools people gave it.</li>
       <li><b>All grades:</b> "So who is the smart one here?": read it aloud, press "Try the dragon test", and ask "smarter at what?". Main idea: the AI's good guesses are borrowed from what people wrote and made relevant by attention over the whole context; asking, meaning, judging and caring are the student's.</li>
       <li><b>All grades:</b> "Your limit is your curiosity". Play the copy machine or coach game together, then have students upgrade a "do it for me" ask into a coach question (try first, ask why, ask for a hint, ask to be quizzed). Main idea: AI is a tool for sharpening your own thinking, not a replacement for it.</li>
       <li><b>6–8:</b> add the risks section: why fluent isn't the same as true, where unfairness comes from (the training text), and private information.</li>
       <li><b>9–12:</b> move to <a href="explore.html">the full version</a>: tokens, embeddings, attention, the logit lens, the training checkpoints of a real model, and how different model designs compare.</li>
     </ul>
-    <p><b>About "smarter than AI".</b> At the G20 Innovation Ministerial on 2 September 2026, OpenAI's Sam Altman said: "A kid growing up today will never be smarter than AI" (<a href="https://www.cnbc.com/2026/09/02/g20-innovation-ministerial-live-updates.html" target="_blank" rel="noopener">CNBC's live coverage</a>). The "Who is the smart one here?" section is this page's answer. The sentence is true about stored patterns, recall and speed, and silent about asking, meaning, judging and caring: the part of intelligence a child has and a next-piece guesser does not. A good question for the class: smarter at what?</p>
+    <p><b>About "smarter than AI".</b> At the G20 Innovation Ministerial on 2 September 2026, OpenAI's Sam Altman said: "A kid growing up today will never be smarter than AI …" (the sentence goes on; see <a href="https://www.cnbc.com/2026/09/02/g20-innovation-ministerial-live-updates.html" target="_blank" rel="noopener">CNBC's live coverage</a>). The "Who is the smart one here?" section is this page's answer. The sentence is true about stored patterns, recall and speed, and silent about asking, meaning, judging and caring: the part of intelligence a child has and a next-piece guesser does not. A good question for the class: smarter at what?</p>
     <p class="note">This page is open source (MIT). Nothing typed here leaves the browser.</p>
   </details>
 </main>
@@ -409,7 +409,7 @@ otherwise: do nothing</div></div>
     if (ia.length !== 1 || ib.length !== 1) { out.textContent = 'One of those words is more than one piece for this AI. Try a shorter, common word.'; return; }
     const E = M.mats.E, D = M.D; let s = 0, na = 0, nb = 0; for (let c = 0; c < D; c++) { const x = E[ia[0] * D + c], y = E[ib[0] * D + c]; s += x * y; na += x * x; nb += y * y; }
     const cs = s / Math.sqrt(na * nb), pctv = Math.max(0, Math.round(cs * 100));
-    out.textContent = `“${a}” and “${b}” match ${pctv} out of 100. ` + (cs > 0.45 ? 'They sound alike to the AI: they are used in similar ways.' : cs > 0.25 ? 'A little alike.' : 'Not alike at all to the AI, even if they sound the same to you.');
+    out.textContent = `“${a}” and “${b}” match ${cs < 0 ? 'less than 0' : pctv} out of 100 (this page calls 45 and up alike). ` + (cs > 0.45 ? 'They sound alike to the AI: they are used in similar ways.' : cs > 0.25 ? 'A little alike.' : 'Not alike at all to the AI, even if they sound the same to you.');
   });
   // run the start of the story through the model; keep what each tunnel (layer) points to for the last piece
   async function read(text) {
@@ -509,7 +509,7 @@ otherwise: do nothing</div></div>
       const r = await read($('#prompt').value.trim() || 'Once upon a time'); let res = r.res, n = 0; const t0 = performance.now();
       for (; n < 30; n++) { let b = 0; for (let i = 1; i < res.logits.length; i++) if (res.logits[i] > res.logits[b]) b = i; res = await M.step(r.st, b, false); }
       const ms = (performance.now() - t0) / n, ps = 1000 / ms;
-      $('#oSpeed').textContent = `On this computer: ${ms.toFixed(1)} thousandths of a second per piece, about ${Math.round(ps)} pieces a second. A fast reader reads about 4 words a second.`;
+      $('#oSpeed').textContent = `On this computer: ${ms.toFixed(1)} thousandths of a second per piece, about ${Math.round(ps)} pieces a second. A typical adult reads about 4 words a second.`;
     } finally { busy = false; }
   });
   $('#whoTry').addEventListener('click', () => { $('#cmpA').value = 'The little girl was very'; $('#cmpB').value = 'The big scary dragon was very'; $('#oCmp').scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' }); $('#pCmp').click(); });

@@ -15,7 +15,7 @@
     'pythia-14m': { name: 'Pythia-14M', repo: 'EleutherAI/pythia-14m', rev: 'cf967c0a9a04383db6f7b1108d86b2962634b4ac', mb: 28, chat: false, bos: null, license: 'Apache 2.0, by EleutherAI', layers: 6, hidden: 128, ff: 512, heads: 4, kvHeads: 4, vocab: 50304 },
     'distilgpt2': { name: 'DistilGPT-2', repo: 'distilbert/distilgpt2', rev: '2290a62682d06624634c1f46a6ad5be0f47f38aa', mb: 353, chat: false, bos: null, license: 'Apache 2.0, by Hugging Face (distilled from OpenAI\'s GPT-2)', layers: 6, hidden: 768, ff: 3072, heads: 12, kvHeads: 12, vocab: 50257 },
     'qwen2.5-0.5b-instruct': { name: 'Qwen2.5-0.5B-Instruct', repo: 'Qwen/Qwen2.5-0.5B-Instruct', rev: '7ae557604adf67be50417f59c2c2f167def9a775', mb: 988, chat: true, bos: null, license: 'Apache 2.0, by the Qwen team (Alibaba Cloud)', layers: 24, hidden: 896, ff: 4864, heads: 14, kvHeads: 2, vocab: 151936 },
-    'mamba-130m': { name: 'Mamba-130M', repo: 'state-spaces/mamba-130m-hf', rev: '1e76775f628fbf1350fbe4dbb3d971ba64af25a1', mb: 517, chat: false, bos: null, license: 'Apache 2.0 (the Mamba project, by Albert Gu and Tri Dao)', layers: 24, hidden: 768, ff: 1536, heads: 0, kvHeads: 0, vocab: 50280 },
+    'mamba-130m': { name: 'Mamba-130M', repo: 'state-spaces/mamba-130m-hf', rev: '1e76775f628fbf1350fbe4dbb3d971ba64af25a1', mb: 517, chat: false, bos: null, license: 'Apache 2.0 (the original state-spaces/mamba repository, by Albert Gu and Tri Dao; the -hf copy lists no licence)', layers: 24, hidden: 768, ff: 1536, heads: 0, kvHeads: 0, vocab: 50280 },
   };
   // LLM_BASE: optional local mirrors, { modelKey: url } (used by tests)
   const baseOf = key => (root.LLM_BASE && root.LLM_BASE[key]) || `https://huggingface.co/${MODELS[key].repo}/resolve/${MODELS[key].rev}/`;

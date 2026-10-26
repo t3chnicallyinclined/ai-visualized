@@ -154,7 +154,7 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
           <div class="box"><h3>The knobs</h3><div class="knobs" id="knobs"></div><p class="note" id="knobNote"></p></div>
           <div class="box"><h3>Its sound, before and after this layer</h3><div class="rows" id="beforeAfter"></div><p class="note" id="baNote"></p></div>
         </div>
-        <p class="pic"><b>The picture:</b> rows of volume knobs, set at the factory and glued. Before each row, the newest word listens back to the earlier words (pink) and blends in what matters. That listening is the only part that changes with what you type.</p></section>
+        <p class="pic"><b>The picture:</b> rows of volume knobs, set at the factory and glued. Before each row, the newest word listens back to the earlier words (pink) and blends in what matters. That listening is the only step whose mixing depends on what you type.</p></section>
       <section class="sec" id="s-all"><h2><i>4</i>Through every layer</h2><p class="cap"></p><div class="layers" id="layers"></div>
         <p class="pic"><b>The picture:</b> the same thing, row after row of knobs. On the right: what it would say if it stopped after that layer (the “logit lens”). Early layers are not built to be read this way, so their guesses look odd.</p></section>
       <section class="sec" id="s-lights"><h2><i>5</i>The wall of lights</h2><p class="cap"></p><div class="lights" id="lights"></div><p class="note" id="lightsNote" style="margin-top:8px"></p>
@@ -311,7 +311,7 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
     await beat(4200);
 
     // 6 the dice
-    focus('dice', `The dice: the model keeps the top 5, and the temperature (${T}) decides how loaded the dice is. These are the chances it rolls with.`);
+    focus('dice', `The dice: this page keeps the 5 brightest lights, and the temperature (${T}) decides how loaded the dice is. These are the chances it rolls with.`);
     const { cands, pick } = LLM.sampleTopK(lg, 5, T, Math.random);
     cands.forEach((c, i) => { const d = document.createElement('div'); d.className = 'light'; d.style.setProperty('--g', Math.min(1, c.p * 1.2 + 0.05).toFixed(2)); d.innerHTML = `<i></i><span></span><span class="b"><em style="width:${(c.p * 100).toFixed(1)}%"></em></span><span>${pct(c.p)}</span>`; d.children[1].textContent = piece(c.id); $('#chances').appendChild(d); });
     await beat(2000);
