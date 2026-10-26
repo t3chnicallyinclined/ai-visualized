@@ -105,6 +105,10 @@ button:disabled { opacity: 0.5; cursor: default; }
   --ag-sys: var(--green); --ag-user: var(--orange); --ag-tool: var(--blue); --ag-ok: var(--green); --ag-font: var(--body); font-size: 16px; margin: 10px 0; }
 .teacher summary { font: 700 20px var(--head); cursor: pointer; }
 .teacher li { margin-bottom: 6px; }
+@media (max-width: 540px) {
+  .step { grid-template-columns: 1fr; gap: 8px; } .num { width: 40px; height: 40px; font-size: 20px; }
+  .g { grid-template-columns: 5.5em minmax(0, 1fr) 3.2em; gap: 8px; font-size: 17px; } .numrow { grid-template-columns: 4.5em minmax(0, 1fr); }
+}
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
 </head>
@@ -129,7 +133,7 @@ button:disabled { opacity: 0.5; cursor: default; }
     <div class="num c1">1</div>
     <div>
       <h2>Chop it into pieces</h2>
-      <p>The AI can't read letters. First it chops your words into pieces it knows, called <b>tokens</b>. Each piece has a number, like a page number in a giant dictionary of 32,000 pieces. (The dot means "starts with a space".)</p>
+      <p>The AI can't read letters. First it chops your words into pieces it knows, called <b>tokens</b>. Most pieces are whole words; long or rare words get split. Each piece has a number, like a page number in a giant dictionary of <b data-n="vocab">32,000</b> pieces. (The dot means "starts with a space". The first piece, <code>&lt;s&gt;</code>, is a special "start of story" marker the AI always gets first.)</p>
       <div class="chips" id="chips"></div>
     </div>
   </section>
@@ -138,7 +142,7 @@ button:disabled { opacity: 0.5; cursor: default; }
     <div class="num c2">2</div>
     <div>
       <h2>Turn each piece into a list of numbers</h2>
-      <p>Each piece looks up its own list of 288 numbers, which the computer learned before. Here are the first 32 for each piece, as colours (blue = below zero, orange = above). Pieces used in similar ways get similar lists.</p>
+      <p>Each piece looks up its own list of <b data-n="dim">288</b> numbers, which were set while the AI was being made. Here are the first 32 for each piece, as colours (blue = below zero, orange = above). Pieces used in similar ways get similar lists.</p>
       <div class="rows" id="rows"></div>
     </div>
   </section>
@@ -146,10 +150,10 @@ button:disabled { opacity: 0.5; cursor: default; }
   <section class="card step" id="s3" hidden>
     <div class="num c3">3</div>
     <div>
-      <h2>Down through 6 tunnels of knobs</h2>
-      <p>Now the lists go down through 6 tunnels. Each tunnel is full of <b>knobs</b> (the little dials): 15 million of them in all, set while the AI was being made, and they <b>never move</b> while it writes. In each tunnel the numbers get multiplied by the knobs and mixed with the other pieces. After each tunnel we can peek at what word the numbers point to now.</p>
+      <h2>Down through <span data-n="layers">6</span> tunnels of knobs</h2>
+      <p>Now the lists go down through <span data-n="layers">6</span> tunnels. This part is called a <b>transformer</b>. Each tunnel is full of <b>knobs</b> (the little dials): about <b data-n="layerKnobs">6 million</b> in the tunnels, set while the AI was being made, and they <b>never move</b> while it writes. (The AI's other <span data-n="tableKnobs">9 million</span> knobs are the dictionary lists from step 2, used again at the bottom.) In every tunnel each piece does two things: it <b>looks back</b> at the earlier pieces and borrows from them (called <i>attention</i>), then it <b>works on its own numbers</b> (called <i>feed-forward</i>). Both are multiply-by-a-knob-and-add, millions of times. After each tunnel we can peek at what piece the numbers point to now.</p>
       <svg class="colony" id="colony" viewBox="0 0 800 520" role="img" aria-label="An ant carries the last piece down through six tunnels of knobs; after each tunnel a bubble shows the word it points to now"></svg>
-      <p class="note">The ants are pretend: they are just a picture of the work. The knobs' positions and the guesses in the bubbles are the AI's real numbers.</p>
+      <p class="note">The ants are pretend: they are just a picture of the work. We follow the last piece; the earlier pieces went down too, and the last one looks back at what they left behind. The knobs' positions (a sample from each tunnel) and the guesses in the bubbles are the AI's real numbers.</p>
     </div>
   </section>
 
@@ -157,14 +161,14 @@ button:disabled { opacity: 0.5; cursor: default; }
     <div class="num c4">4</div>
     <div>
       <h2>Score every word, then roll the dice</h2>
-      <p>At the bottom, the AI gives every one of its 32,000 pieces a score. Here are the top five as chances. Then it rolls a dice with those chances to pick one. That's why it doesn't always pick the top word!</p>
+      <p>At the bottom, the AI gives every one of its <span data-n="vocab">32,000</span> pieces a score. Here are its top five. On this page the dice only rolls among these five, and the bars show each one's chance at the current slider setting: move the slider and watch the bars change. That's why it doesn't always pick the top piece!</p>
       <div class="guesses" id="guesses"></div>
       <div class="dicebox">
         <div class="die" id="die" aria-hidden="true">🎲</div>
         <button id="roll" type="button">Roll the dice</button>
         <label class="slider">careful <input id="temp" type="range" min="0" max="1.4" step="0.1" value="0.8" aria-label="How silly the dice is"> silly</label>
       </div>
-      <p class="note">"Careful" makes the top word win almost every time. "Silly" lets surprising words win more often.</p>
+      <p class="note">"Careful" (all the way left) always picks the top piece. "Silly" flattens the chances, so surprising pieces win more often. Grown-ups call this slider the <i>temperature</i>.</p>
     </div>
   </section>
 
@@ -172,9 +176,10 @@ button:disabled { opacity: 0.5; cursor: default; }
     <div class="num c5">5</div>
     <div>
       <h2>Again, and again, and again</h2>
-      <p>The picked word is added to the story, and the whole thing runs again for the next word. That's all it does: one word at a time.</p>
+      <p>The picked piece is added to the story, and the whole thing runs again for the next one. That's all it does: one piece at a time.</p>
       <div class="story" id="story"></div>
-      <p style="margin-top:10px"><button id="more" type="button">Write 20 more words</button></p>
+      <p style="margin-top:10px"><button id="more" type="button">Write 20 more pieces</button></p>
+      <p class="note" id="full" hidden>That's as long a story as this AI learned to write (it was trained on <span data-n="ctx">256</span> pieces at a time), so we stop here. Start a new one above!</p>
     </div>
   </section>
 
@@ -237,7 +242,7 @@ otherwise: do nothing</div></div>
     <h2>Is it alive? Let's test it!</h2>
     <p>Press each button: the real AI on this page does the test.</p>
     <div class="myths">
-      <div class="myth"><span class="q">Does it think like a person?</span><span class="a">No. It's arithmetic.</span><span>It has 15,191,712 knobs. Making each word means multiplying the numbers by millions of knobs and adding them up. No feelings, no wishes, no secret plan.</span><button id="mCount" type="button">Count the work</button><div class="out" id="oCount"></div></div>
+      <div class="myth"><span class="q">Does it think like a person?</span><span class="a">No. It's arithmetic.</span><span>It has <span data-n="knobs">15,191,712</span> knobs. Making each piece means multiplying the numbers by millions of knobs and adding them up. No feelings, no wishes, no secret plan.</span><button id="mCount" type="button">Count the work</button><div class="out" id="oCount"></div></div>
       <div class="myth"><span class="q">Does it choose on its own?</span><span class="a">No. Same start + careful dice = same story.</span><span>Set to "careful", it is a machine: the same start gives the same words, every time.</span><button id="mSame" type="button">Run it twice</button><div class="out" id="oSame"></div></div>
       <div class="myth"><span class="q">Does it know what's true?</span><span class="a">No. It writes what sounds right.</span><span>It learned from stories, so it writes something story-like, true or not. Here it finishes a science fact.</span><button id="mTrue" type="button">"The sun is made of…"</button><div class="out" id="oTrue"></div></div>
       <div class="myth"><span class="q">Can it do things by itself, or get loose?</span><span class="a">No. It only makes the next word when a program asks.</span><span>On this page it can't click, browse, remember you or send anything. Close the tab and it stops. "AI agents" are programs that <b>people</b> build around a model, and people choose what those programs may do (Part 2 shows one).</span></div>
@@ -305,7 +310,7 @@ otherwise: do nothing</div></div>
 
   <details class="card teacher">
     <summary>For teachers and parents</summary>
-    <p>Everything on this page comes from a real model, <a href="https://huggingface.co/nickypro/tinyllama-15M" target="_blank" rel="noopener">TinyStories 15M</a> (trained by Andrej Karpathy on the <a href="https://arxiv.org/abs/2305.07759" target="_blank" rel="noopener">TinyStories</a> dataset of simple stories), running in the browser. The ants are the only pretend part. Ideas by grade:</p>
+    <p>Everything on this page comes from a real model, <a href="https://huggingface.co/nickypro/tinyllama-15M" target="_blank" rel="noopener">TinyStories 15M</a> (trained by Andrej Karpathy on the <a href="https://arxiv.org/abs/2305.07759" target="_blank" rel="noopener">TinyStories</a> dataset of simple stories), running in the browser. The ants and the "pretend web page" in Part 2 are the only pretend parts; every piece, number and chance comes from the model. Ideas by grade:</p>
     <ul>
       <li><b>K–2:</b> read steps 1, 4 and 5 aloud. Play "guess the next word" as a class, then roll the dice. Main idea: it picks one word at a time, like a game.</li>
       <li><b>3–5:</b> all five steps, then the "Is it alive?" tests. Try careful vs silly. Main idea: it's numbers made by people, and it can be wrong.</li>
@@ -326,16 +331,24 @@ otherwise: do nothing</div></div>
   const $ = s => document.querySelector(s);
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const wait = ms => new Promise(r => setTimeout(r, reduce ? 0 : ms));
-  const pct = p => (p >= 0.995 ? '100%' : p < 0.01 ? '<1%' : Math.round(p * 100) + '%');
+  const pct = p => (p >= 0.995 ? '100%' : p < 0.0005 ? '0%' : p < 0.01 ? '<1%' : Math.round(p * 100) + '%');
   const COLORS = ['#e2733b', '#3d7be0', '#7b5cd6', '#2f9e6b', '#d6457a', '#c78a12', '#1f8ea3'];
-  let M = null, busy = false, last = null, agentMounted = false;
+  let M = null, busy = false, last = null, agentMounted = false, CTX = 256, storyFull = false;
+  // every number in the text comes from the loaded model, not from this file
+  function fillFacts(m) {
+    const layerKnobs = m.mats.layers.reduce((a, ly) => a + Object.values(ly).reduce((b, t) => b + ((t && t.length) || 0), 0), 0);
+    const knobs = m.weightBytes / 2, mil = n => (n >= 1e6 ? Math.round(n / 1e6) + ' million' : Math.round(n / 1e3) + ' thousand');
+    CTX = (m.cfg && m.cfg.max_position_embeddings) || 256;
+    const F = { vocab: m.V.toLocaleString('en-US'), dim: m.D, layers: m.L, knobs: knobs.toLocaleString('en-US'), layerKnobs: mil(layerKnobs), tableKnobs: mil(knobs - layerKnobs), ctx: CTX };
+    document.querySelectorAll('[data-n]').forEach(e => { if (F[e.dataset.n] != null) e.textContent = F[e.dataset.n]; });
+  }
   const show = id => { const e = $(id); e.hidden = false; if (!reduce) e.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
 
   // load the real model (30 MB)
   LLM.load('tiny-stories', (got, total) => {
     if (got < 0) { $('#loadText').textContent = 'Unpacking the numbers…'; return; }
     $('#loadText').textContent = `Downloading the model's numbers: ${Math.round(got / 1e6)} of ${Math.round(total / 1e6)} MB`; $('#loadBar').style.width = (got / total * 100) + '%';
-  }).then(m => { M = m; $('#load').hidden = true; $('#startRow').hidden = false; })
+  }).then(m => { M = m; fillFacts(m); $('#load').hidden = true; $('#startRow').hidden = false; })
     .catch(err => { $('#loadText').textContent = 'Could not download the model: ' + err.message + '. Check the internet connection and reload.'; });
 
   // run the start of the story through the model; keep what each tunnel (layer) points to for the last piece
@@ -352,13 +365,14 @@ otherwise: do nothing</div></div>
   const ANT = '<g class="ant"><ellipse cx="0" cy="0" rx="9" ry="7" fill="#3a2a1c"/><ellipse cx="-13" cy="0" rx="7" ry="6" fill="#3a2a1c"/><ellipse cx="13" cy="0" rx="11" ry="8" fill="#3a2a1c"/><g stroke="#3a2a1c" stroke-width="2.4" stroke-linecap="round"><path d="M-3 5 l-6 9 M3 5 l4 10 M9 5 l8 9 M-3 -5 l-6 -9 M3 -5 l4 -10 M9 -5 l8 -9"/><path d="M-18 -3 q-6 -10 -2 -14 M-18 3 q-8 -4 -10 -12"/></g></g>';
   async function colony(rec, word) { // six tunnels; the ant carries the last piece down; real dials and real guesses
     const svg = $('#colony'), L = M.L, top = 40, th = 72, ns = 'http://www.w3.org/2000/svg';
+    svg.setAttribute('viewBox', `0 0 800 ${top + L * th}`);
     let html = '';
     for (let l = 0; l < L; l++) {
       const y = top + l * th;
       html += `<rect x="40" y="${y}" width="720" height="${th - 16}" rx="28" fill="rgba(60,40,20,.35)"/><text x="58" y="${y + 20}" font-family="Fredoka" font-weight="600" font-size="15" fill="#fff8ef">tunnel ${l + 1}</text>`;
-      const q = M.mats.layers[l].q, g = M.mats.layers[l].gate; let sc = 0; for (let k = 0; k < 400; k++) sc = Math.max(sc, Math.abs(q[k * 31]), Math.abs(g[k * 31]));
+      const q = M.mats.layers[l].q, g = M.mats.layers[l].gate; let sc = 0; for (let k = 0; k < 400; k++) sc = Math.max(sc, Math.abs(q[(k * 31) % q.length]), Math.abs(g[(k * 31) % g.length]));
       for (let k = 0; k < 26; k++) { // 26 real knobs from this tunnel, as dials
-        const v = (k % 2 ? g : q)[k * 997 % q.length] / sc, cx = 170 + k * 20, cy = y + th / 2 - 8, a = Math.max(-1, Math.min(1, v * 2.5)) * 0.75 * Math.PI - Math.PI / 2;
+        const v = (k % 2 ? g : q)[(k * 997) % (k % 2 ? g : q).length] / (sc || 1), cx = 170 + k * 20, cy = y + th / 2 - 8, a = Math.max(-1, Math.min(1, v * 2.5)) * 0.75 * Math.PI - Math.PI / 2;
         html += `<circle cx="${cx}" cy="${cy}" r="7" fill="#fff3e2" stroke="#7b5cd6" stroke-width="1.5"/><line x1="${cx}" y1="${cy}" x2="${cx + Math.cos(a) * 6}" y2="${cy + Math.sin(a) * 6}" stroke="#2b2236" stroke-width="2" stroke-linecap="round"/>`;
       }
     }
@@ -376,14 +390,16 @@ otherwise: do nothing</div></div>
       await wait(350);
     }
   }
-  function guesses(logits, pickIdx) {
-    const { cands } = LLM.sampleTopK(logits, 5, 1, () => 0), box = $('#guesses'); box.innerHTML = '';
-    cands.forEach((c, i) => { const row = document.createElement('div'); row.className = 'g' + (i === pickIdx ? ' win' : ''); row.innerHTML = `<span></span><span class="b"><i style="width:0"></i></span><span>${pct(c.full)}</span>`; row.firstChild.textContent = M.tok.piece(c.id); box.appendChild(row); requestAnimationFrame(() => { row.querySelector('i').style.width = (c.full * 100) + '%'; }); });
+  function guesses(logits, pickIdx) { // the top five, with the chance the dice gives each at the current slider setting
+    const { cands } = LLM.sampleTopK(logits, 5, +$('#temp').value, () => 0), box = $('#guesses'); box.innerHTML = '';
+    cands.forEach((c, i) => { const row = document.createElement('div'); row.className = 'g' + (i === pickIdx ? ' win' : ''); row.innerHTML = `<span></span><span class="b"><i style="width:0"></i></span><span>${pct(c.p)}</span>`; row.firstChild.textContent = M.tok.piece(c.id); box.appendChild(row); requestAnimationFrame(() => { row.querySelector('i').style.width = (c.p * 100) + '%'; }); });
     return cands;
   }
+  $('#temp').addEventListener('input', () => { if (last && !busy) guesses(last.res.logits, -1); });
 
   $('#go').addEventListener('click', async () => {
     if (!M || busy) return; busy = true; $('#go').disabled = true;
+    storyFull = false; $('#full').hidden = true; $('#roll').disabled = false; $('#more').disabled = false;
     const text = $('#prompt').value.trim() || 'Once upon a time';
     try {
       const r = await read(text); last = { text, ...r, gen: '' };
@@ -406,6 +422,7 @@ otherwise: do nothing</div></div>
   });
   // one dice roll: add the picked word to the story and run the model again for the next one
   async function rollOnce(animate) {
+    if (last.st.pos >= CTX) { storyFull = true; $('#full').hidden = false; $('#roll').disabled = true; $('#more').disabled = true; return null; } // the model only learned stories up to CTX pieces
     const T = +$('#temp').value, { cands, pick } = LLM.sampleTopK(last.res.logits, 5, T, Math.random);
     if (animate) { $('#die').classList.remove('roll'); void $('#die').offsetWidth; $('#die').classList.add('roll'); await wait(700); guesses(last.res.logits, pick); $('#die').textContent = pick + 1; }
     const id = cands[pick].id, piece = M.tok.decode([id], true);
@@ -416,14 +433,14 @@ otherwise: do nothing</div></div>
   $('#roll').addEventListener('click', async () => { if (!last || busy) return; busy = true; try { await rollOnce(true); } finally { busy = false; } });
   $('#more').addEventListener('click', async () => {
     if (!last || busy) return; busy = true; $('#more').disabled = true;
-    try { for (let k = 0; k < 20; k++) { const id = await rollOnce(false); if (id === 2) break; await wait(90); } guesses(last.res.logits, -1); } finally { busy = false; $('#more').disabled = false; }
+    try { for (let k = 0; k < 20; k++) { const id = await rollOnce(false); if (id == null || id === 2) break; await wait(90); } guesses(last.res.logits, -1); } finally { busy = false; $('#more').disabled = storyFull; }
   });
 
   // the tests
   async function greedy(text, n) { const r = await read(text); let res = r.res; const out = []; for (let k = 0; k < n; k++) { let b = 0; for (let i = 1; i < res.logits.length; i++) if (res.logits[i] > res.logits[b]) b = i; if (b === 2) break; out.push(b); res = await M.step(r.st, b, false); } return M.tok.decode(out, true); }
   $('#mCount').addEventListener('click', () => {
     if (!M) return; const n = M.weightBytes / 2; // every knob is used once per word: one multiply-and-add each (the scoring of every word reuses the dictionary's numbers)
-    $('#oCount').textContent = `This AI: ${n.toLocaleString('en-US')} knobs. To pick ONE next word it does about ${(n / 1e6).toFixed(0)} million multiply-and-adds (one for every knob). Your computer just did that for every word above, in a few thousandths of a second each.`;
+    $('#oCount').textContent = `This AI: ${n.toLocaleString('en-US')} knobs. To pick ONE next piece it does about ${(n / 1e6).toFixed(0)} million multiply-and-adds (roughly one for every knob, plus a little more for looking back at earlier pieces). Your computer just did that for every piece above.`;
   });
   $('#mSame').addEventListener('click', async () => {
     if (!M || busy) return; busy = true;
@@ -431,7 +448,7 @@ otherwise: do nothing</div></div>
   });
   $('#mTrue').addEventListener('click', async () => {
     if (!M || busy) return; busy = true;
-    try { const a = await greedy('The sun is made of', 12); $('#oTrue').textContent = `The sun is made of${a}\n(The real answer: mostly hydrogen and helium gas. It wrote what sounded like a story.)`; } finally { busy = false; }
+    try { const a = await greedy('The sun is made of', 12); $('#oTrue').textContent = `The sun is made of${a}\n(Real answer: mostly hydrogen and helium gas. Did it match? It didn't look anything up: it wrote whatever sounded most like its stories.)`; } finally { busy = false; }
   });
   // why it's powerful: real speed and real guesses from the model on this page
   $('#pSpeed').addEventListener('click', async () => {
