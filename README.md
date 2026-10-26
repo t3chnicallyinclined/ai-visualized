@@ -25,13 +25,13 @@ Both add onto the ball rather than replacing it. Point at any lane in any layer 
 A strip at the top of the stage shows the whole process, in order, and lights up each step as it runs (click one to jump to it):
 
 1. **Type**: your text (for the chat model: the system prompt and your message in its chat template) appears at the top of the board.
-3. **Tokenize**: the text is cut into pieces the model knows, and each piece is looked up in the vocabulary to get its ID.
-4. **Embed**: each ID picks one row of a big learned table; that row of numbers is the ball. It carries no word order.
-5. **Layers**: every lane goes through every layer: talk, then think. Word order gets in during talk, where each query and key is rotated by its position (RoPE).
-6. **Unembed**: one more norm, then the ball is compared with every row of an output table, giving one score per token (both models reuse their embedding table here).
-7. **Choose**: softmax over the top five, temperature, and a weighted dice roll.
-8. **Detokenize**: the winning ID turns back into text and is added to the output.
-10. **Repeat**: the new token becomes a new lane and goes through alone, reading the KV cache, until an end-of-text token or a length limit.
+2. **Tokenize**: the text is cut into pieces the model knows, and each piece is looked up in the vocabulary to get its ID.
+3. **Embed**: each ID picks one row of a big learned table; that row of numbers is the ball. It carries no word order.
+4. **Layers**: every lane goes through every layer: talk, then think. Word order gets in during talk, where each query and key is rotated by its position (RoPE).
+5. **Unembed**: one more norm, then the ball is compared with every row of an output table, giving one score per token (both models reuse their embedding table here).
+6. **Choose**: softmax over the top five, temperature, and a weighted dice roll.
+7. **Detokenize**: the winning ID turns back into text and is added to the output.
+8. **Repeat**: the new token becomes a new lane and goes through alone, reading the KV cache, until an end-of-text token or a length limit.
 
 ### The embedding explorer
 
