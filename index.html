@@ -296,7 +296,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
       </svg>
     </div>
     <section class="cloudp" id="cloudCard" aria-label="Token cloud">
-      <div class="chead"><h2 id="cTitle">Token cloud</h2><span class="badge" id="cBadge" hidden></span><button type="button" class="ctools" id="cTools" aria-expanded="false">Tools</button></div>
+      <div class="chead"><h2 id="cTitle">Token cloud</h2><button type="button" class="ctools" id="cTools" aria-expanded="false">Tools</button></div>
       <div id="cBar"></div>
       <canvas id="cloudCv" class="cloudcv" aria-label="Token cloud: every token of the model's vocabulary as a dot, placed so similar tokens sit together; the ball's readings light it up"></canvas>
       <div class="ribbon" id="gStrip" aria-hidden="true"></div>
@@ -349,22 +349,6 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
           <dt>Your speed</dt><dd id="rSpeed">–</dd>
         </dl>
         <p class="note" id="rNote"></p>
-      </div>
-      <div class="card" id="gpuCard">
-        <p class="eyebrow">Example GPU: RTX 3090 · 24 GB VRAM</p>
-        <div class="vram" aria-hidden="true"><span id="segW"></span><span id="segKV"></span></div>
-        <div class="legend"><span><i style="background:var(--wt)"></i>Weights</span><span><i style="background:var(--kv)"></i>KV cache</span><span><i style="background:var(--band);border:1px solid var(--line)"></i>Free</span></div>
-        <dl>
-          <dt>Model</dt><dd id="mName"></dd>
-          <dt>Weights in VRAM (4-bit)</dt><dd id="mW"></dd>
-          <dt>Tokens in KV cache</dt><dd id="kvTok">0</dd>
-          <dt>KV cache size</dt><dd id="kvSize">0 MB</dd>
-          <dt>Linear-attention memory</dt><dd id="mMem"></dd>
-          <dt>Weights read so far</dt><dd id="read">0 GB</dd>
-          <dt>Tokens written</dt><dd id="gen">0 of 6</dd>
-        </dl>
-        <p class="note" id="ceil"></p>
-        <p class="note" id="kv32"></p>
       </div>
     </div>
   </details>
@@ -476,7 +460,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
   function hash(s) { let h = 2166136261 >>> 0; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; } return h >>> 0; }
   function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 
-  // ---- toy next-word model: a bigram table over a short built-in text ----
+  // ---- a short built-in text: the training view's tiny model learns from it ----
   const CORPUS = `the ball drops through the board and hits every peg on the way down. the model reads your prompt and guesses the next token.
   the next token is picked by a roll of the dice. the fighter blocked the fireball and then he countered with a super.
   the player pressed the button and the character jumped over the fireball. the gpu reads every weight from memory for every new token.
@@ -484,64 +468,11 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
   the game is a fighting game with rollback netcode. the match starts when both players press start. a token is a small piece of a word.
   the cache keeps the work for every earlier token. the dice decide which slot wins. the answer comes out one word at a time.
   he blocked the super and then he jumped. the fighter countered with a fireball and the match was over.`;
-  const WORDS = CORPUS.toLowerCase().match(/[a-z']+|[.,]/g);
-  const BIG = {}, UNI = {};
-  WORDS.forEach((w, i) => {
-    UNI[w] = (UNI[w] || 0) + 1;
-    if (i + 1 < WORDS.length) { const f = BIG[w] || (BIG[w] = {}); f[WORDS[i + 1]] = (f[WORDS[i + 1]] || 0) + 1; }
-  });
-  const UNI_TOP = Object.entries(UNI).sort((a, b) => b[1] - a[1]);
-  function candidates(last, T) {
-    const f = BIG[last] || {};
-    let list = Object.entries(f);
-    for (const [w, c] of UNI_TOP) { if (list.length >= 5) break; if (!f[w]) list.push([w, 0.06 * c]); }
-    list.sort((a, b) => b[1] - a[1]); list = list.slice(0, 5);
-    const logit = list.map(([, c]) => Math.log(c));
-    let p;
-    if (T < 0.05) p = logit.map((_, i) => (i === 0 ? 1 : 0));
-    else { const e = logit.map(l => Math.exp((l - logit[0]) / T)); const s = e.reduce((a, b) => a + b, 0); p = e.map(x => x / s); }
-    return list.map(([w], i) => ({ w, p: p[i], s: logit[i] }));
-  }
-  function sample(c, r, T) {
-    if (T < 0.05) return 0;
-    let u = r(), acc = 0;
-    for (let i = 0; i < c.length; i++) { acc += c[i].p; if (u <= acc) return i; }
-    return c.length - 1;
-  }
-  function tokenize(text) {
-    const parts = text.trim().match(/[A-Za-z']+|\d+|[^\sA-Za-z\d]/g) || [];
-    const out = [];
-    for (const p of parts) {
-      if (p.length > 7 && /[A-Za-z]/.test(p)) { const cut = Math.ceil(p.length / 2); out.push(p.slice(0, cut), p.slice(cut)); }
-      else out.push(p);
-    }
-    return out;
-  }
-  function lastWord(text) { const m = text.toLowerCase().match(/[a-z']+|[.,]/g); return m ? m[m.length - 1] : 'the'; }
   const short = w => (w.length > 6 ? w.slice(0, 5) + '…' : w);
   const shortW = w => (w.length > 9 ? w.slice(0, 8) + '…' : w);
   const fmtPct = p => (p >= 0.995 ? '100%' : p < 0.005 ? '<1%' : Math.round(p * 100) + '%');
-  const getPrompt = () => ($('#prompt').value.trim() || 'the fighter blocked the fireball and').slice(0, 120);
+  const getPrompt = () => ($('#prompt').value.trim() || 'Once upon a time').slice(0, 120);
   const getT = () => parseFloat($('#temp').value);
-
-  // Toy data: what the board needs, from the word table.
-  function toyData(prompt, T) {
-    let toks = tokenize(prompt); if (!toks.length) toks = ['?'];
-    if (toks.length > 9) toks = toks.slice(-9);
-    const nP = toks.length, r = rng(hash(prompt + '|' + T));
-    let last = lastWord(prompt);
-    const steps = [];
-    for (let k = 0; k < 6; k++) { const c = candidates(last, T); const pick = sample(c, r, T); steps.push({ c, pick }); last = c[pick].w; }
-    const all = toks.concat(steps.map(s => s.c[s.pick].w));
-    // where each token sits in the original text (toy splits drop the spaces, so find each piece in turn)
-    const segsAll = []; let cur = 0;
-    for (const piece of tokenize(prompt)) { const at = prompt.toLowerCase().indexOf(piece.toLowerCase(), cur); const end = at < 0 ? cur : at + piece.length; segsAll.push(prompt.slice(cur, end)); cur = end; }
-    const segs = segsAll.length ? segsAll.slice(-nP) : ['?'];
-    return { real: false, nP, all, offset: 0, prompt, T, prev: lastWord(prompt), steps, segs, cut: segsAll.length > nP,
-      ids: all.map(w => hash(w.toLowerCase()) % 248320),
-      bars: all.map(w => Array.from({ length: 12 }, (_, b) => (hash(w + '#' + b) % 24 - 11) / 11)),
-      gen: steps.map(s => ' ' + s.c[s.pick].w) };
-  }
 
   // Real data. The chat model reads its chat template: the system prompt, then your message, then "assistant", where
   // it starts writing; the tiny model gets a start-of-text token first. Then 6 tokens are written. Every token is a lane,
@@ -600,28 +531,11 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
   }
 
   // ---- models and the steps inside one layer ----
-  // Qwen3.6 figures from the models' published config.json; weights = the 4-bit Q4_K_M GGUF file size.
-  const MODELS = {
-    dense: { label: 'Qwen3.6-27B · dense', layers: 64, full: 16, hidden: 5120, weights: 16.8, active: 16.8, kvMB: 0.0625, memMB: 151, rep: 'about 35–40',
-      dims: { d: 5120, ff: '17,408 neurons', heads: '24 query heads share 4 key/value heads', hd: 256, linHeads: '16 key heads and 48 value heads' } },
-    moe: { label: 'Qwen3.6-35B-A3B · MoE', layers: 40, full: 10, hidden: 2048, weights: 22.1, active: 1.9, kvMB: 0.0195, memMB: 63, rep: 'about 110–135',
-      dims: { d: 2048, ff: '512 neurons per expert', heads: '16 query heads share 2 key/value heads', hd: 256, linHeads: '16 key heads and 32 value heads' } },
+  const MODELS = { // the board's layer count and the inspector's wording, per real model
     real: { label: 'SmolLM2-135M-Instruct', layers: 30, dims: { d: 576, ff: '1,536 neurons', heads: '9 query heads share 3 key/value heads', hd: 64 } },
     tiny: { label: 'TinyStories 15M', layers: 6, dims: { d: 288, ff: '768 neurons', heads: '6 heads, each with its own key and value', hd: 48 } },
   };
   const PIPE = ['Type', 'Send', 'Tokenize', 'Embed', 'Layers', 'Unembed', 'Choose', 'Detokenize', 'Stream back', 'Repeat'];
-  const STAGES = [
-    ['Type', 'You type a message in an app on your phone or computer (left). At this point it is just a string of characters.'],
-    ['Send', 'The app wraps your message in a chat template (role markers, often a hidden instruction) and sends it as bytes over an encrypted HTTPS connection to a server with a big GPU, where the model lives. This page leaves the template out so the tokens stay readable.'],
-    ['Tokenize', 'On the server, the text is cut into pieces the model knows (tokens), and each piece is looked up in the vocabulary to get its ID number. Qwen3.6\'s vocabulary has about 250,000 pieces; in toy mode the cuts and IDs are made up.'],
-    ['Embed', 'Each ID picks one row of a huge learned table (the embedding table, top left). That row is a list of a few thousand numbers: the ball. The numbers mean nothing one by one, but tokens used in similar ways get similar rows. The embedding says nothing about word order; that comes later.'],
-    ['Layers', 'All the lanes move through every layer at the same time. In each layer a token first talks (attention: pink lines to earlier tokens in the full-attention layers, every 4th; the other layers read and write one fixed memory, blue). Word order gets in here, by rotating each query and key by its position. Then each token thinks alone (feed-forward: the amber burst). Point at any lane in any layer to see the exact steps.'],
-    ['Unembed', 'After the last layer comes one more norm, then the ball leaves the board and is compared with every row of an output table: one score for each of about 250,000 tokens. In toy mode the scores come from a small word table, and the cloud on the right only marks the toy\'s five candidates.'],
-    ['Choose', 'Softmax turns the top five scores into chances, temperature sets how loaded the dice are, and a weighted dice roll picks one: watch the dice hop between the candidates in the cloud.'],
-    ['Detokenize', 'The winning ID is turned back into its piece of text and added to the output. It also becomes a new lane.'],
-    ['Stream back', 'The new piece of text is sent back to your device straight away, before the next one exists. That is why chat replies appear word by word.'],
-    ['Repeat', 'Only the new lane moves now. In full-attention layers it reads the keys and values earlier lanes left behind (teal ticks) instead of redoing them; linear layers read their memory. Every active weight is read from memory again: one full pass per token. The loop runs until the model writes an end-of-text token or reaches a length limit.'],
-  ];
   const STAGES_REAL = () => {
     const R = RM(), chat = R.chat;
     return [
@@ -996,7 +910,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
 
   // ---- panels ----
   function setStage(st) {
-    const list = isReal() ? STAGES_REAL() : STAGES;
+    const list = STAGES_REAL();
     const [title, text] = list[st] || DONE;
     if (!S.hover) {
       $('#capStep').textContent = st < list.length ? 'Step ' + (st + 1) + ' of ' + list.length : 'Finished';
@@ -1005,28 +919,16 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
     }
     pipeBtns.forEach((b, i) => { b.className = i === st ? 'on' : i < st || st === PIPE.length ? 'done' : ''; if (i === 4) b.textContent = MODELS[S.mode].layers + ' layers'; });
   }
-  const NOTE_TOY = 'Toy model. The board shows how a real LLM is wired (Qwen3.6\'s layer plan), but the next-token scores come from a tiny word table built into this page, not a real model. The token splits, ID numbers and attention are made up too. The token cloud is the real map of SmolLM2-135M\'s vocabulary (2,000 common tokens of it in toy mode), used here only to show where the toy\'s words sit. Memory and speed figures are rough.';
   const NOTE_REAL = () => `Real model: ${RM().name} (${RM().license}), running in your browser from its published weights with 32-bit maths. Attention lines, bursts, guesses, ball colours, the cloud's light and the scores come from its actual numbers; the knobs' needles are real weights. The dice only choose among the top five.`;
   function renderModel() {
-    const real = isReal();
-    $('#gpuCard').hidden = real; $('#realCard').hidden = !real;
-    $('#hwSum').textContent = real ? 'Memory and speed in your browser' : 'Memory and speed on a GPU (rough)';
-    $('#modeNote').textContent = real ? NOTE_REAL() : NOTE_TOY;
-    if (real) {
+    $('#hwSum').textContent = 'Memory and speed in your browser';
+    $('#modeNote').textContent = NOTE_REAL();
+    {
       const D = S.data, m = S.llm, gbps = m.weightBytes / 1e9 / (D.ms / 1000);
       $('#rSpeed').textContent = Math.round(D.ms) + ' ms/token';
       $('#rModel').textContent = m.name; $('#rW').textContent = m.meta.mb + ' MB'; $('#rDims').textContent = `${m.L} · ${m.D}`;
       $('#rNote').textContent = `Each layer keeps its own keys and values: ${(m.kvBytesPerToken / 1024).toFixed(1)} KB per token across all ${m.L} layers, all in the same memory. Every new token reads all ${m.meta.mb} MB of weights again. Your browser did that in ${Math.round(D.ms)} ms, about ${gbps.toFixed(1)} GB/s; a 3090 GPU reads up to 936 GB/s.`;
-      return;
     }
-    const M = MODELS[S.mode];
-    $('#mName').textContent = M.label;
-    $('#mW').textContent = M.weights.toFixed(1) + ' GB';
-    $('#segW').style.width = (M.weights / 24 * 100) + '%';
-    $('#mMem').textContent = M.memMB + ' MB, fixed';
-    $('#ceil').textContent = `Writing speed: each new token reads about ${M.active} GB of active weights. 936 GB/s ÷ ${M.active} GB ≈ ${Math.round(936 / M.active)} tokens/s at most. Guides report ${M.rep} on a 3090` +
-      (S.mode === 'moe' ? ', well under the ceiling: jumping between many small experts costs time too.' : '. Speculative decoding can beat the ceiling by checking several guessed tokens in one read.');
-    $('#kv32').textContent = `Only the ${M.full} full-attention layers keep a KV cache, and it grows with every token: about ${(32000 * M.kvMB / 1024).toFixed(1)} GB at 32,000 tokens. The other ${M.layers - M.full} layers keep one fixed memory of about ${M.memMB} MB, however long the text gets. Each layer has its own cache or memory; they all live in the same GPU memory.`;
   }
 
   // ---- the inspector: what the current (or pointed-at) station does, broken into its exact sub-steps ----
@@ -1199,16 +1101,7 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
       $('#rKvSize').textContent = (o.kv * S.llm.kvBytesPerToken / 1024).toFixed(1) + ' KB';
       syncGuess(time);
       syncCloud(time);
-    } else {
-      const M = MODELS[S.mode], mb = o.kv * M.kvMB;
-      $('#kvTok').textContent = o.kv;
-      $('#kvSize').textContent = mb.toFixed(2) + ' MB';
-      $('#read').textContent = o.read.toFixed(1) + ' GB';
-      $('#segKV').style.width = (mb / 1024 / 24 * 100) + '%';
-      $('#gStrip').hidden = true; $('#gLine').textContent = '';
-      syncCloud(time);
     }
-    $('#gen').textContent = o.gen + ' of 6';
     syncInspector(time, st);
     syncLayers(time);
     syncBar();
@@ -1292,11 +1185,6 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
       $('#realGo').hidden = false;
     }
   }
-  function runToy(play) {
-    S.data = toyData(getPrompt(), getT()); S.hover = null;
-    if (play) { build(); tl.play(0); setPlayLabel(); } else settle();
-  }
-
   // ---- zoom: one feed-forward neuron worked out, and the softmax ----
   // Toy values are kept in integer tenths so the printed sums are exact.
   const minus = s => s.replace('-', '−');
@@ -1348,23 +1236,6 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
       $('#zAfter').textContent = `It has a second set of ${m.D} weights ("up"), giving ${fx(u, 4)}. Its output is SiLU(${fx(g, 3)}) × ${fx(u, 3)} = ${fx(a, 4)}, where SiLU squeezes negative values toward 0. The next busiest are ` +
         order.slice(1, 4).map(i => '#' + i + ' (' + fx(acts[i], 2) + ')').join(', ') + `. All ${nf(m.F)} outputs then go through the "down" weights back into the ball's ${m.D} numbers.`;
       $('#zNote').textContent = `Real numbers from ${m.name}, computed in your browser from its published weights. The scores are the model\'s real output for the first new token, so the chances match the scores on the board.`;
-    } else {
-      const moe = S.mode === 'moe';
-      $('#zWhere').textContent = lname + (moe ? ' · one expert\'s neuron' : ' · one feed-forward neuron');
-      $('#zTitle').textContent = 'One neuron: multiply, then add';
-      const r = rng(hash('neuron|' + S.mode + '|' + l));
-      const ball = Z.vals.slice(0, 4).map(v => Math.round(v * 10));
-      const wts = ball.map(() => Math.round(r() * 20) - 10);
-      const prods = ball.map((b, i) => b * wts[i]);
-      const sum = prods.reduce((a, b) => a + b, 0);
-      const M = MODELS[S.mode];
-      $('#zLead').textContent = `The ball for “${Z.word}” is a list of ${M.hidden.toLocaleString('en-US')} numbers in this model. Here are 4 of them, taken from the strip drawn for it (by this layer the real numbers would have changed). A neuron holds 4 numbers of its own, called weights, which were fixed when the model was trained. Multiply each pair:`;
-      fillTable($('#zDot'), ['', 'ball', '× weight', '= product'], ball.map((b, i) => ['#' + (i + 1), f1(b), f1(wts[i]), f2(prods[i])]));
-      $('#zSum').textContent = 'add them: ' + prods.map((p, i) => (i ? (p < 0 ? ' − ' : ' + ') + f2(Math.abs(p)) : f2(p))).join('') + ' = ' + f2(sum);
-      $('#zAfter').textContent = `That one number, ${f2(sum)}, is this neuron's output. It is called a dot product: it is large when the ball's numbers line up with the neuron's weights. Real models then bend it (negative results get squeezed toward 0). ` + (moe
-        ? 'Each expert in this model has 512 neurons (about 3,000 dot products counting gate, up and down). The router sends each token to 8 of the 256 experts plus 1 shared one, and only their weights are read from memory.'
-        : 'A layer of this model has about 40,000 dot products like this (17,408 neurons, each with gate, up and down weights), about 270 million weights per layer. The GPU works them all at once, and every weight is read from memory for every token.');
-      $('#zNote').textContent = 'Small made-up numbers, real arithmetic. The ball\'s numbers are the strip drawn for it on the board and the neuron\'s weights are invented. The scores come from this page\'s toy word table. Change the temperature and zoom in again to watch them move.';
     }
     zoomSoftmax(Z, real);
     $('#zoom').showModal();
@@ -1826,18 +1697,13 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
   const C_NOTE_REAL = () => `Each dot is one of the model's tokens (${CM ? nf(CM.tokens) : ''} of its ${nf(S.llm.V)}; byte fragments and special tokens are left out), placed by t-SNE over its real embedding row so similar tokens sit together. Nearby means similar; far apart only means "not similar". A flat map can't keep every neighbour: on average ${CM ? Math.round(CM.recall10 * 10) : 2} of a token's 10 nearest tokens in the real 576 numbers are among its 10 nearest dots. ` +
     'The light after each layer is the logit lens: the model\'s final norm and output table applied to the ball as it is after that layer, giving every token a chance (a full softmax; brightness on a log scale from one in a million to 100%). Early layers aren\'t built to be read this way, so their readings are noisy. In 3D, height is the chance itself. ' +
     'The dashed line hops between the single most likely token after each layer, and the ball on the board takes that token\'s map colour. A token can also score high partly because its row is long, not only because it points the same way. The dots are the vocabulary\'s coordinates, not stored knowledge: that lives in the parameters, and this map is a picture of just one of their grids (press "What are the parameters?").';
-  const C_NOTE_TOY = 'The map is the real one from SmolLM2-135M-Instruct (2,000 common tokens of it shown here), not from the toy. Toy mode reads nothing from a model, so there is no light and no path: the cloud only marks the prompt\'s tokens and the toy word table\'s five candidates, where they exist on the map. Pick a real model to see the ball\'s real readings light up its whole vocabulary.';
   function syncCloud(time) {
     const D = S.data, real = D.real;
-    $('#cBadge').hidden = real; $('#cBadge').textContent = 'toy scores';
-    const note = real ? C_NOTE_REAL() : C_NOTE_TOY; if ($('#cNote').textContent !== note) $('#cNote').textContent = note;
+    if (!real) return;
+    const note = C_NOTE_REAL(); if ($('#cNote').textContent !== note) $('#cNote').textContent = note;
     if (S.cloudReset) { S.cloudReset = false; cardView.hits = []; cardView.sel = -1; cardView.nb = []; cardView.describe(); }
     let p = -1; PASSES.forEach((ps, i) => { if (ps.t0 <= time) p = i; });
-    const toyLit = n => D.all.slice(0, n).map(toyMapId).filter(id => id >= 0);
-    if (p < 0) {
-      $('#cTitle').textContent = real ? `Token cloud: all ${nf(S.llm.V)} tokens` : 'Token cloud: where the prompt\'s tokens sit';
-      cardView.setState(real ? null : { lit: toyLit(D.nP) }); return;
-    }
+    if (p < 0) { $('#cTitle').textContent = `Token cloud: all ${nf(S.llm.V)} tokens`; cardView.setState(null); return; }
     const pass = PASSES[p], scoring = pass.t1 != null && time >= pass.t1 - 0.45, ch = CHOOSE[p], word = D.all[pass.focus];
     const choosing = ch && time >= ch.tc, hop = ch ? Math.floor((time - ch.t0 - 0.15) / 0.26) : -1;
     const die = ch && time >= ch.t0 && time < ch.t1 ? ch.hops[Math.max(0, Math.min(ch.hops.length - 1, hop))] : null, picked = ch && time >= ch.t1 ? D.steps[p].pick : -1;
@@ -1846,9 +1712,6 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
       if (scoring) upto = S.llm.L - 1;
       cardView.setState({ rec: D.recs[p], rec2: p === 0 ? D.cmpRec : null, upto, path: true, cands: choosing ? D.steps[p].c.map(cd => ({ ...cd })) : null, die, picked });
       $('#cTitle').textContent = choosing ? `The chances for the token after “${word}”` : scoring ? `Final scores for the token after “${word}”` : upto < 0 ? `“${word}” enters the model` : `After layer ${upto + 1} of ${S.llm.L}: what the ball for “${word}” points at`;
-    } else {
-      cardView.setState({ lit: toyLit(D.nP + p), cands: choosing ? D.steps[p].c.map(cd => ({ ...cd, id: toyMapId(cd.w) })) : null, die, picked });
-      $('#cTitle').textContent = choosing ? `Toy candidates for the token after “${word}”` : 'Token cloud: where the prompt\'s tokens sit';
     }
   }
 
@@ -2509,7 +2372,7 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
 
   $('#promptForm').addEventListener('submit', e => {
     e.preventDefault();
-    if (isReal()) runReal(true); else runToy(true);
+    runReal(true);
     if (matchMedia('(max-width: 1180px)').matches) $('.stage').scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
   $('#play').addEventListener('click', () => {
@@ -2531,10 +2394,7 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
       if (S.models && S.models[rkey(mode)]) { runReal(true, mode); return; }
       showLoad(mode);
       document.querySelectorAll('.seg button').forEach(x => x.setAttribute('aria-pressed', x === b));
-      return;
     }
-    S.wantReal = false; S.wantMode = null; $('#realLoad').hidden = true;
-    setMode(mode); drawStatic(); runToy(false);
   }));
   $('#realGo').addEventListener('click', () => runReal(true, S.wantMode));
   function showLoad(mode) { // the download panel for a model that is not loaded yet (the tiny one starts by itself)
@@ -2554,7 +2414,7 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
   ['#sys', '#sysB'].forEach(q => $(q).addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $('#promptForm').requestSubmit(); } }));
   $('#cmpOn').addEventListener('change', () => { if (S.mode === 'real') runReal(false); });
   $('#temp').addEventListener('input', e => { $('#tempVal').textContent = parseFloat(e.target.value).toFixed(1); });
-  $('#temp').addEventListener('change', () => { if (isReal()) runReal(false); else runToy(false); });
+  $('#temp').addEventListener('change', () => runReal(false));
   window.__plinko = { px: PX, get data() { return S.data; }, get mode() { return S.mode; }, get caps() { return CAPS; }, get choose() { return CHOOSE; }, cloud: cardView }; // for testing and the curious
 
   // start: load the tiny real model (30 MB), run the prompt, then (first visit) the guided tour plays one token step by step
