@@ -76,22 +76,26 @@ header a { color: var(--ink); font-weight: 600; }
 .hero .hrogue { background: transparent; color: #ff9bb9; border: 2px dashed #ff7aa2; }
 .hero small { display: block; color: #8f96bf; font-size: 12.5px; margin-top: 8px; }
 @media (max-width: 760px) { .hero { grid-template-columns: 1fr; padding: 18px 16px; } .hero .hbtns { flex-direction: row; flex-wrap: wrap; } .hero button { flex: 1 1 200px; white-space: normal; } }
-.topbar { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; }
-form { display: flex; gap: 10px; flex: 1 1 440px; min-width: 0; }
-#prompt { flex: 1 1 200px; min-width: 0; font: 500 17px var(--mono); padding: 12px 16px; border-radius: 10px;
-  border: 1.5px solid var(--line); background: var(--panel); color: var(--ink); }
+.setup { display: flex; flex-direction: column; gap: 8px; }
+.stepl { display: flex; align-items: center; gap: 8px; margin: 6px 0 0; font: 700 15px/1.2 var(--display); }
+.stepl span { width: 22px; height: 22px; border-radius: 50%; background: var(--ink); color: var(--bg); display: grid; place-items: center; font: 700 12px var(--mono); flex: none; }
+form { display: flex; gap: 10px; min-width: 0; align-items: stretch; }
+#prompt { flex: 1 1 200px; min-width: 0; font: 500 16px/1.4 var(--mono); padding: 10px 14px; border-radius: 10px; resize: none; overflow: hidden;
+  border: 1.5px solid var(--line); background: var(--panel); color: var(--ink); box-sizing: border-box; }
+@media (max-width: 700px) { form { flex-direction: column; gap: 8px; } #prompt { font-size: 15px; flex: none; } #drop { width: 100%; } .realload .note, #realStatus { font-size: 13px; } }
 #prompt:focus-visible, button:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 button { font: 600 14px var(--body); border-radius: 9px; border: 1.5px solid var(--line); background: var(--panel); color: var(--ink);
   padding: 9px 14px; cursor: pointer; }
 button:hover { border-color: var(--ink); }
 #drop { background: var(--accent); border-color: var(--accent); color: var(--onacc); padding: 12px 22px; font-size: 15px; }
 .seg { display: flex; gap: 6px; flex-wrap: wrap; }
-.seg button { font-size: 13px; padding: 8px 12px; }
+.seg button { padding: 7px 12px; text-align: left; display: flex; flex-direction: column; gap: 1px; line-height: 1.2; }
+.seg button b { font: 600 14px var(--body); } .seg button small { font: 400 12px var(--body); opacity: .8; }
 .speed button[aria-pressed="true"], .seg button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--bg); }
 .sysrow { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 4px 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; }
 .sysrow label { font-size: 13px; } .sysrow label span { font-weight: 400; color: var(--muted); }
 .sysrow label[for="sys"] { grid-column: 1; grid-row: 1; } #sys { grid-column: 1; grid-row: 2; } .cmpl { grid-column: 2; grid-row: 1; } #sysB { grid-column: 2; grid-row: 2; }
-.sysrow input[type="text"] { min-width: 0; font: 500 14px var(--mono); padding: 8px 10px; border-radius: 8px; border: 1.5px solid var(--line); background: var(--bg); color: var(--ink); }
+.sysrow textarea { min-width: 0; resize: vertical; box-sizing: border-box; width: 100%; font: 500 14px var(--mono); padding: 8px 10px; border-radius: 8px; border: 1.5px solid var(--line); background: var(--bg); color: var(--ink); }
 #sysB { border-color: #8fc9ff; } .cmpl input { accent-color: #8fc9ff; vertical-align: -2px; }
 @media (max-width: 700px) { .sysrow { grid-template-columns: minmax(0, 1fr); } .sysrow > * { grid-column: 1 !important; grid-row: auto !important; } }
 .realload { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
@@ -187,7 +191,7 @@ svg#board { width: 100%; height: auto; display: block; }
   .nb-play { width: 38px; height: 38px; } .nb-text { display: none; } .nb-title { font-size: 14.5px; }
   .nb-btns { grid-column: auto; } .nb-btns button { padding: 5px 10px; }
   .nbar:has(#nbTour:not([hidden])) .nb-btns { grid-column: 1 / -1; justify-content: flex-end; flex-wrap: wrap; }
-  .seg { flex-wrap: nowrap; overflow-x: auto; } .seg button { white-space: nowrap; }
+  .seg { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: thin; padding-bottom: 2px; } .seg button { white-space: nowrap; flex: none; }
 }
 dialog.dlg { width: min(640px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); box-sizing: border-box; overflow: auto;
   border: 1px solid var(--line); border-radius: 14px; background: var(--panel); color: var(--ink); padding: 20px; }
@@ -355,31 +359,35 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
     </div>
   </details>
 
-  <div class="sysrow" id="sysRow" hidden>
-    <label for="sys">System prompt <span>hidden in most chat apps; the model reads it before your message</span></label>
-    <input id="sys" type="text" maxlength="200" value="You are a helpful AI assistant named SmolLM, trained by Hugging Face">
-    <label for="sysB" class="cmpl"><input type="checkbox" id="cmpOn" checked> Compare with a second system prompt <span>(its light shows in blue in the cloud)</span></label>
-    <input id="sysB" type="text" maxlength="200" value="Talk like a pirate. Always start with Arr.">
-  </div>
-  <div class="topbar">
-    <form id="promptForm" autocomplete="off">
-      <input id="prompt" type="text" maxlength="120" value="Once upon a time, there was a little" aria-label="Prompt">
-      <button id="drop" type="submit">Drop it</button>
-    </form>
+  <section class="setup" aria-label="Set up">
+    <h2 class="stepl"><span>1</span>Choose a model</h2>
     <div class="seg" role="group" aria-label="Model">
-      <button type="button" data-mode="tiny" aria-pressed="true" title="Llama design: RMSNorm, rotation (RoPE), SwiGLU">TinyStories 15M · Llama · 30 MB</button>
-      <button type="button" data-mode="pythia" aria-pressed="false" title="GPT-NeoX design: talk and think side by side; 154 training checkpoints">Pythia-14M · GPT-NeoX · 28 MB</button>
-      <button type="button" data-mode="gpt2" aria-pressed="false" title="GPT-2 design: a position table added at the start">DistilGPT-2 · GPT-2 · 353 MB</button>
-      <button type="button" data-mode="mamba" aria-pressed="false" title="Mamba: no attention; a fixed-size memory per layer">Mamba-130M · no attention · 517 MB</button>
-      <button type="button" data-mode="real" aria-pressed="false" title="Llama design, tuned to chat: reads a system prompt">Chat: SmolLM2-135M-Instruct · 269 MB</button>
+      <button type="button" data-mode="tiny" aria-pressed="true" title="Llama design: RMSNorm, rotation (RoPE), SwiGLU"><b>TinyStories</b><small>children's stories · 30 MB</small></button>
+      <button type="button" data-mode="pythia" aria-pressed="false" title="GPT-NeoX design: talk and think side by side; 154 training checkpoints"><b>Pythia</b><small>web text · 28 MB</small></button>
+      <button type="button" data-mode="gpt2" aria-pressed="false" title="GPT-2 design: a position table added at the start"><b>DistilGPT-2</b><small>web text · 353 MB</small></button>
+      <button type="button" data-mode="mamba" aria-pressed="false" title="Mamba: no attention; a fixed-size memory per layer"><b>Mamba</b><small>no attention · 517 MB</small></button>
+      <button type="button" data-mode="real" aria-pressed="false" title="SmolLM2-135M-Instruct, Llama design, tuned to chat: reads a system prompt"><b>Chat model</b><small>reads a system prompt · 269 MB</small></button>
     </div>
-  </div>
   <div class="realload" id="realLoad" hidden>
     <p class="note" id="realIntro">Runs a real small language model in your browser and shows its actual numbers. It downloads 269 MB from Hugging Face once (your browser keeps a copy) and uses about 900 MB of memory, so a laptop or desktop works best.</p>
     <button id="realGo" type="button">Download and run</button>
     <div class="prog" id="prog" aria-hidden="true"><span id="progBar"></span></div>
     <p class="note" id="realStatus" aria-live="polite"></p>
   </div>
+
+  <div class="sysrow" id="sysRow" hidden>
+    <label for="sys">System prompt <span>hidden in most chat apps; the model reads it before your message</span></label>
+    <textarea id="sys" rows="2" maxlength="200">You are a helpful AI assistant named SmolLM, trained by Hugging Face</textarea>
+    <label for="sysB" class="cmpl"><input type="checkbox" id="cmpOn" checked> Compare with a second system prompt <span>(its light shows in blue in the cloud)</span></label>
+    <textarea id="sysB" rows="2" maxlength="200">Talk like a pirate. Always start with Arr.</textarea>
+  </div>
+    <h2 class="stepl"><span>2</span><b id="step2">Write the start of a sentence</b></h2>
+    <form id="promptForm" autocomplete="off">
+      <textarea id="prompt" rows="1" maxlength="120" aria-label="The start of a sentence for the model to continue">Once upon a time, there was a little</textarea>
+      <button id="drop" type="submit">Drop it ▶</button>
+    </form>
+    <h2 class="stepl"><span>3</span>Watch it pick the next words</h2>
+  </section>
 
   <div class="stage">
     <ol class="pipe" id="pipe" aria-label="The steps, in order"></ol>
@@ -2823,6 +2831,10 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
   $('#zClose').addEventListener('click', () => $('#zoom').close());
   $('#zoom').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.close(); });
 
+  const fitPrompt = () => { const t = $('#prompt'); t.style.height = 'auto'; t.style.height = (t.scrollHeight + t.offsetHeight - t.clientHeight) + 'px'; };
+  $('#prompt').addEventListener('input', () => { if (/\n/.test($('#prompt').value)) $('#prompt').value = $('#prompt').value.replace(/\n+/g, ' '); fitPrompt(); });
+  $('#prompt').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('#promptForm').requestSubmit(); } });
+  addEventListener('resize', fitPrompt); requestAnimationFrame(fitPrompt); if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitPrompt);
   $('#promptForm').addEventListener('submit', e => {
     e.preventDefault();
     runReal(true);
@@ -2866,7 +2878,8 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
   const DEFAULT_PROMPT = { toy: 'the fighter blocked the fireball and', real: 'What is a fireball?', tiny: 'Once upon a time, there was a little' };
   function swapPrompt(mode) {
     const kind = mode === 'real' ? 'real' : 'tiny', cur = $('#prompt').value.trim();
-    if (Object.values(DEFAULT_PROMPT).includes(cur) || !cur) $('#prompt').value = DEFAULT_PROMPT[kind];
+    $('#step2').textContent = kind === 'real' ? 'Write your message' : 'Write the start of a sentence';
+    if (Object.values(DEFAULT_PROMPT).includes(cur) || !cur) { $('#prompt').value = DEFAULT_PROMPT[kind]; requestAnimationFrame(fitPrompt); }
   }
   ['#sys', '#sysB'].forEach(q => $(q).addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $('#promptForm').requestSubmit(); } }));
   $('#cmpOn').addEventListener('change', () => { if (S.mode === 'real') runReal(false); });
