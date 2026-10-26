@@ -2,7 +2,7 @@
 
 **Watch a real language model write, one token at a time, with every number on screen.**
 
-**Try it:** [the full version](https://t3chnicallyinclined.github.io/ai-visualized/) · [an AI agent, step by step](https://t3chnicallyinclined.github.io/ai-visualized/agent.html) · [the kids and classroom version](https://t3chnicallyinclined.github.io/ai-visualized/kids.html)
+**Try it:** [the guided walk-through](https://t3chnicallyinclined.github.io/ai-visualized/) · [the Explorer](https://t3chnicallyinclined.github.io/ai-visualized/explore.html) · [an AI agent, step by step](https://t3chnicallyinclined.github.io/ai-visualized/agent.html) · [the kids and classroom version](https://t3chnicallyinclined.github.io/ai-visualized/kids.html)
 
 No install, no account, no server: plain HTML and JavaScript you can read. Real models run in your browser; nothing you type leaves it. The first visit downloads a 30 MB model.
 
@@ -14,7 +14,9 @@ Every number on the page is the model's own, and everything that is a picture ra
 
 ## What you can do
 
-**The full version** (`index.html`) shows the whole loop on one board, read top to bottom, like a ball falling through pegs:
+**The guided walk-through** (`index.html`) is where to start: one run of a real model, slowed down and lit one step at a time (your words become pieces, each piece gets its list of numbers, one layer up close, every layer, the wall of lights, the weighted dice, and again word by word), with real numbers at every step.
+
+**The Explorer** (`explore.html`) shows the whole loop on one board, read top to bottom, like a ball falling through pegs:
 
 1. **Type**: your text (for the chat model, the system prompt and your message in its chat template).
 2. **Tokenize**: the model's own tokenizer cuts it into pieces, each with an ID.
@@ -57,11 +59,11 @@ Things that are pictures, not measurements, say so where they appear: the token 
 
 ## Run it locally
 
-Serve the folder with any static file server (for example `npx serve .`) and open the URL it prints. Opening `index.html` straight from disk also works for the page itself; the models download from Hugging Face.
+Serve the folder with any static file server (for example `npx serve .`) and open the URL it prints. Opening the pages straight from disk also works for the page itself; the models download from Hugging Face.
 
 ## Contributing
 
-Issues and pull requests are welcome. There is no build step: `index.html` is the full version (with [GSAP](https://gsap.com) from a CDN for the board's timeline), `kids.html` the kids version, `llm.js` the model engine (no libraries), `agent.js` the agent loop, its pretend shell and its drawings, `agent.html` the step-by-step agent page, `cloud-*.js` the token maps, and `prep/cloud_layout.py` makes them. Keep it that way so anyone can open the files and read the source.
+Issues and pull requests are welcome. There is no build step: `index.html` is the guided walk-through, `explore.html` the Explorer (with [GSAP](https://gsap.com) from a CDN for the board's timeline), `kids.html` the kids version, `llm.js` the model engine (no libraries), `agent.js` the agent loop, its pretend shell and its drawings, `agent.html` the step-by-step agent page, `cloud-*.js` the token maps, and `prep/cloud_layout.py` makes them. Keep it that way so anyone can open the files and read the source.
 
 ## License
 
