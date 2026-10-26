@@ -111,7 +111,8 @@ button:hover { border-color: var(--ink); }
 /* the stage: dark in both themes, so light on it always means the model's real activity */
 .stage { --band: var(--st-2); --line: var(--st-rail); --ink: var(--st-ink); --muted: var(--st-ink2); --panel: var(--st-panel); --bg: var(--st-bg);
   background: var(--st-bg); color: var(--st-ink); border: 1px solid var(--st-rail); border-radius: 16px; padding: 12px;
-  display: grid; grid-template-columns: 390px minmax(0, 1fr); gap: 12px; align-items: start; }
+  display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+.smain { display: grid; grid-template-columns: 390px minmax(0, 1fr); gap: 12px; align-items: start; min-width: 0; }
 .cloudp { order: 1; } .boardcol { order: 2; } .nbar { order: 3; }
 .boardcol { min-width: 0; display: flex; flex-direction: column; gap: 10px; }
 .ctxp { background: var(--st-2); border: 1px solid var(--st-rail); border-radius: 10px; padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; }
@@ -127,7 +128,7 @@ button:hover { border-color: var(--ink); }
 .lensrow div b { display: block; font-weight: 500; color: var(--st-ink2); overflow: hidden; text-overflow: ellipsis; white-space: pre; }
 .lensrow div.future { opacity: 0.22; } .lensrow div.cur { outline: 1.5px solid var(--st-ink); outline-offset: 1px; }
 .lensrow div.match { background: rgb(255 92 138 / 0.22); border-color: var(--attn); color: var(--st-ink); } .lensrow div.match b { color: var(--st-ink); }
-@media (max-width: 1180px) { .stage { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 1180px) { .smain { grid-template-columns: minmax(0, 1fr); } }
 .boardscroll { overflow-x: auto; min-width: 0; }
 svg#board { width: 100%; height: auto; display: block; }
 @media (min-width: 1181px) { .cloudp { position: sticky; top: 8px; } }
@@ -270,6 +271,8 @@ dt { color: var(--muted); } dd { margin: 0; text-align: right; font-family: var(
 .knob.read circle { stroke-opacity: 0.8; } .knob.now circle { fill: #3b3170; stroke-opacity: 1; filter: drop-shadow(0 0 4px var(--wt)); } .knob.now line { stroke: var(--st-ink); }
 .leg.knob { fill: var(--st-bg); stroke: var(--wt); stroke-width: 1.4; }
 .kvt { fill: var(--kv); } .burst { fill: none; stroke: var(--ffn); stroke-width: 2; }
+.stn { font: 600 10.5px var(--mono); fill: var(--st-ink); paint-order: stroke; stroke: var(--st-bg); stroke-width: 3px; stroke-linejoin: round; pointer-events: none; }
+.leg.wait { fill: none; stroke: var(--score); stroke-width: 1.2; stroke-dasharray: 2 2; } .wait { fill: none; stroke: var(--score); stroke-opacity: 0.45; stroke-dasharray: 3 3; pointer-events: none; }
 .leg.att { fill: var(--attn); } .leg.lin { fill: var(--lin); } .leg.kvt { fill: var(--kv); } .leg.ff { fill: none; stroke: var(--ffn); stroke-width: 1.6; }
 .burst, .lane, .lcol, .lstripe { pointer-events: none; }
 .ptext { font: 500 12px var(--mono); fill: var(--st-ink); white-space: pre; } .ptext.r-sys { fill: var(--sysc); } .ptext.r-tpl, .ptext.r-early { fill: var(--st-ink3); } .phl { fill: var(--st-ink); fill-opacity: 0.16; } .cut { stroke: var(--score); stroke-width: 1.5; }
@@ -391,6 +394,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
 
   <div class="stage">
     <ol class="pipe" id="pipe" aria-label="The steps, in order"></ol>
+    <div class="smain"><!-- the board and the cloud: the sticky cloud stays inside this box, so it never slides over the narrator bar -->
     <div class="boardcol">
     <section class="ctxp" id="ctxp" aria-label="The context and the logit lens for the current token" hidden>
       <div class="ctxhead"><span id="ctxTitle">The context</span><span id="ctxNote"></span></div>
@@ -419,6 +423,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
       <p class="note" id="cInfo"></p>
       <details class="cnote"><summary>What am I looking at?</summary><p class="note" id="cNote"></p></details>
     </section>
+    </div>
     <div class="nbar" id="nbar">
       <button class="nb-play" id="nbPlay" type="button" aria-label="Play">▶</button>
       <div class="nb-main" id="nbMain" role="button" tabindex="0" aria-live="polite" aria-label="What is happening now: open for the full explanation">
@@ -711,7 +716,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
       ['Send', 'In a chat app this is where your message would travel over the internet to a server. Here nothing is sent: the model was downloaded once and runs right in this browser tab, on your computer\'s processor.' + (chat ? ' The app first wraps everything in the model\'s chat template: the system prompt, then your message, each between <|im_start|> and <|im_end|> markers, then "assistant", where the model starts writing.' : ' A start-of-text token (<s>) goes in front, as in training.')],
       ['Tokenize', `The model's own tokenizer cuts the text into pieces it learned from data (${nf(R.V)} of them) and looks each one up to get its ID. A dot (·) means the piece starts with a space.` + (chat ? ' The system prompt and the template markers are tokens like any other; long stretches share one band lane on the board (sys, tpl).' : '')],
       ['Embed', `Each ID picks one row of the model's embedding table (the small grid left of the lanes): ${nf(R.V)} rows, one per token, each ${R.D} numbers learned in training. That row is the ball.` + (kind === 'gpt2' ? ' GPT-2 then adds a second learned row from a position table (one row per position, 1,024 of them), so word order is in the ball from the start: that is the "+p" under each strip.' : kind === 'mamba' ? ' The embedding says nothing about word order; in Mamba, order comes from reading the tokens one after another through each layer\'s memory.' : ' The embedding says nothing about word order; that comes later, inside attention.')],
-      ['Layers', `All the lanes move through all ${R.L} layers. Each layer is a bank of knobs (its weights, the dials), set once in training and never moved while it runs: the ball is multiplied through them. ` + (kind === 'mamba'
+      ['Layers', `All the lanes move through all ${R.L} layers. Each layer is a bank of knobs (its weights, the dials), set once in training and never moved while it runs: every ball is multiplied through all of them. The dials drawn are an even sample of the real weights (a layer has far more than fit here), so they don't line up with the lanes. ` + (kind === 'mamba'
         ? 'Mamba has no attention: each layer keeps one fixed-size memory. Each token writes into it and reads from it (the line to the memory box), so a token only learns about earlier ones through that memory, which fades and refills as the text goes on. A gate and the output grid then make the change added onto the ball.'
         : kind === 'neox' ? 'In GPT-NeoX a token talks and thinks side by side: attention (pink lines: who it reads) and the feed-forward block both read the same incoming ball, and both changes are added at once.'
         : `In each layer a token first talks (attention: the pink lines are the model's real attention; this is the only place it can read earlier tokens` + (chat ? ', including the system prompt' : '') + `) and then thinks alone (feed-forward: the amber burst is how much it really added).`) + ` After every layer the cloud reads the ball with the model's final reader and lights up every token by the chance it would give it. The little bar under each ball is its first 16 numbers: the whole prompt goes through every layer together, and every ball's numbers change as each + is added. Click any layer to look inside it.`],
@@ -719,7 +724,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
       ['Choose', 'Softmax turns the top five scores into chances, temperature sets how loaded the dice are, and a weighted dice roll picks one: in the cloud the dice hops between the candidates (the first hops are animation; where it lands is the real pick).'],
       ['Detokenize', 'The tokenizer runs backwards: the winning ID becomes its piece of text and is added to the output. It also becomes a new lane.'],
       ['Stream back', 'Each new piece goes to the reply at the top the moment it is chosen. In a chat app it would travel back over the internet; here it never leaves your computer.'],
-      ['Repeat', (kind === 'mamba' ? 'Only the new lane moves now. Each layer just reads and updates its memory, which stays the same size however long the text gets (no cache of keys and values),' : 'Only the new lane moves now. Each layer reads the keys and values it kept for earlier lanes (teal ticks) instead of redoing them,') + ` but every layer's knobs and the output table are read again for every new token. The loop runs until the model writes an end token or reaches a length limit.`],
+      ['Repeat', (kind === 'mamba' ? 'Only the new lane moves now. Each layer just reads and updates its memory, which stays the same size however long the text gets (no cache of keys and values),' : 'Only the new lane moves now. Each layer reads the keys and values it kept for earlier lanes (the teal dashes) instead of redoing them,') + ` but every layer's knobs and the output table are read again for every new token. The loop runs until the model writes an end token or reaches a length limit.`],
     ];
   };
   const DONE = ['Done', 'Six new tokens, six passes. A real model keeps going until it writes an end-of-text token or hits a length limit. Press Replay, or type a new prompt.'];
@@ -792,14 +797,18 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
     el('text', { x: 8, y: 16, class: 'secname' }, g, `${G.L} layers, top to bottom. Each: ${hk === 'mamba' ? 'one memory block (no attention)' : hk === 'neox' ? 'talk and think side by side' : 'talk, then think'}`);
     if (VBW > 620) el('text', { x: VBW - 8, y: 16, 'text-anchor': 'end', class: 'lbl' }, g, 'THE MODEL: IN THIS BROWSER TAB');
     const legKind = S.llm && isReal() ? S.llm.kind : 'llama';
-    const leg = [['knob', 'dials = that layer\'s volume knobs (real weights, sampled): set in training and glued, the same for every token'], ...(legKind === 'mamba' ? [['lin', 'memory: written and read by every token']] : [['att', 'talk: attention'], ['kvt', 'KV cache']]), ['ff', legKind === 'mamba' ? 'the change it makes' : 'think: feed-forward'], ['plus', '+ = added onto the ball']];
+    const leg = [['knob', 'dials = a sample of that layer\'s knobs (real weights), set in training and glued; every token goes through all of them'], ...(legKind === 'mamba' ? [['lin', 'memory: written and read by every token']] : [['att', 'talk: attention (who a token reads)'], ['kvt', 'teal dash = KV cache: a token\'s key and value, kept in that layer so later tokens can read it']]), ['ff', legKind === 'mamba' ? 'the change it makes' : 'think: feed-forward'], ['plus', '+ = added onto the ball'], ['wait', 'dashed lane = a token not written yet']];
     let lx = 8, ly = 26;
     leg.forEach(([cls, txt]) => {
-      const w = txt.length * 6.3; // 10.5px IBM Plex Mono: every character is 6.3 wide
+      txt = cls === 'plus' ? txt.slice(4) : txt;
+      // 10.5px IBM Plex Mono: every character is 6.3 wide; an entry longer than the board wraps onto its own lines
+      const per = Math.floor((VBW - 27) / 6.3), lines = [];
+      let cur = ''; for (const wd of txt.split(' ')) { if (cur && (cur + ' ' + wd).length > per) { lines.push(cur); cur = wd; } else cur = cur ? cur + ' ' + wd : wd; } lines.push(cur);
+      const w = Math.max(...lines.map(s2 => s2.length)) * 6.3;
       if (lx + 11 + w > VBW - 8 && lx > 8) { lx = 8; ly += 15; }
       if (cls === 'plus') el('text', { x: lx, y: ly + 9, class: 'plus' }, g, '+'); else el('rect', { x: lx, y: ly, width: 8, height: 8, rx: cls === 'knob' ? 1 : 2, class: 'leg ' + cls }, g);
-      el('text', { x: lx + 11, y: ly + 8, class: 'tiny' }, g, cls === 'plus' ? txt.slice(4) : txt);
-      lx += 11 + w + 14;
+      lines.forEach((s2, k) => el('text', { x: lx + 11, y: ly + 8 + k * 14, class: 'tiny' }, g, s2));
+      if (lines.length > 1) { ly += (lines.length - 1) * 14 + 15; lx = 8; } else lx += 11 + w + 14;
     });
     G.devTop = ly + 10; G.promptY = ly + 34; G.wireX = GUT + 18;
     el('text', { x: GUT - 6, y: G.promptY + 4, 'text-anchor': 'end', class: 'tiny' }, g, 'prompt');
@@ -826,8 +835,9 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
       // Mamba: the layer's memory, one fixed-size box (it never grows with the text)
       if (G.kind === 'mamba') G.mem.push(el('rect', { x: G.x1 - 30, y: y + G.LH * 0.2, width: 24, height: G.LH * 0.6, rx: 3, class: 'mem', 'fill-opacity': 0.2 }, g));
     }
-    if (G.LH >= 40 && !G.one) { el('text', { x: G.x0 + 6, y: G.talkY(0) - 4, class: 'tiny', style: 'font-size:9.5px' }, g, 'talk'); el('text', { x: G.x0 + 6, y: G.thinkY(0) - 4, class: 'tiny', style: 'font-size:9.5px' }, g, 'think'); }
-    if (G.kind === 'neox') el('text', { x: G.x0 + 6, y: G.Y0 + 10, class: 'tiny', style: 'font-size:9.5px' }, g, 'talk + think, side by side');
+    // the two stations, named in the first layer (the same in every layer); drawn after every band so the knobs never cover them
+    if (G.LH >= 40 && !G.one) { el('text', { x: G.x0 + 6, y: G.talkY(0) - 5, class: 'stn' }, g, 'talk: tokens read each other'); el('text', { x: G.x0 + 6, y: G.thinkY(0) - 5, class: 'stn' }, g, 'think: each token alone'); }
+    if (G.kind === 'neox') el('text', { x: G.x0 + 6, y: G.Y0 + 11, class: 'stn' }, g, 'talk + think, side by side');
     if (G.kind === 'mamba') el('text', { x: G.x1 - 32, y: G.Y0 - 4, 'text-anchor': 'end', class: 'tiny', style: 'font-size:9.5px' }, g, 'memory (fixed size) →');
     // the exit: after the last layer the ball leaves the board for the output table, drawn as the token cloud
     G.gateY = G.Y0 + G.L * G.LH + 8;
@@ -855,8 +865,16 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
     const dyn = $('#dyn'); dyn.innerHTML = ''; $('#sel').innerHTML = '';
     const { nP, all, steps } = D, NG = 6, N = nP + NG, L = G.L, X = G.laneX;
     const base = all.map((w, i) => idColour(D.ids[i])), color = i => rgbStr(base[i]);
-    const gRows = el('g', {}, dyn), gArcs = el('g', {}, dyn), gScore = el('g', {}, dyn), gBalls = el('g', {}, dyn);
-    const rows = [], ball = [], burst = [], ticks = [];
+    const gWait = el('g', {}, dyn), gRows = el('g', {}, dyn), gArcs = el('g', {}, dyn), gScore = el('g', {}, dyn), gBalls = el('g', {}, dyn);
+    const rows = [], ball = [], burst = [], ticks = [], wait = [];
+    // the lanes for the tokens still to be written: dashed and empty until each one is chosen
+    for (let i = nP; i < N; i++) {
+      const x = X(i), wg = el('g', {}, gWait);
+      el('line', { x1: x, x2: x, y1: G.Y0, y2: G.gateY, class: 'wait' }, wg);
+      el('rect', { x: x - G.chipW / 2, y: G.tokY - G.chipH / 2, width: G.chipW, height: G.chipH, rx: 5, class: 'wait' }, wg);
+      el('text', { x, y: G.tokY + 4, 'text-anchor': 'middle', class: 'tiny' }, wg, '?');
+      wait[i] = wg;
+    }
     for (let i = 0; i < N; i++) {
       const x = X(i), rg = el('g', { style: 'opacity:0' }, gRows), rk = D.rows ? D.rows[i] : null, isBand = rk && rk.pos.length > 1;
       el('line', { x1: x, x2: x, y1: G.Y0, y2: G.gateY, class: 'lane' }, rg);
@@ -993,6 +1011,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
       tl.to(fly, { attr: { x: X(row), y: G.tokY + 4 }, duration: 1.0, ease: 'power2.inOut' }, t + 0.35);
       tl.to([fly, idTxt], { opacity: 0, duration: 0.15 }, t + 1.35);
       tl.to(rows[row].g, { opacity: 1, duration: 0.25 }, t + 1.25);
+      tl.to(wait[row], { opacity: 0, duration: 0.25 }, t + 1.25);
       tl.to(outW[k], { attr: { 'fill-opacity': 1 }, duration: 0.2 }, t + 1.3);
       t += 1.5;
       mark(8, t); // stream back: no time here (the reply is the output line, already updated)
