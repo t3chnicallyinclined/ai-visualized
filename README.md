@@ -2,7 +2,7 @@
 
 **Watch a real language model write, one token at a time, with every number on screen.**
 
-**Try it:** [the full version](https://t3chnicallyinclined.github.io/llm-plinko/) · [the kids and classroom version](https://t3chnicallyinclined.github.io/llm-plinko/kids.html)
+**Try it:** [the full version](https://t3chnicallyinclined.github.io/ai-visualized/) · [the kids and classroom version](https://t3chnicallyinclined.github.io/ai-visualized/kids.html)
 
 No install, no account, no server: plain HTML and JavaScript you can read. Real models run in your browser; nothing you type leaves it. The first visit downloads a 30 MB model.
 
