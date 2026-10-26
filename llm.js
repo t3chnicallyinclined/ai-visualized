@@ -1,5 +1,6 @@
 /* llm.js: real small language models running in plain JavaScript, no libraries.
-   Four designs: Llama (SmolLM2-135M-Instruct, a chat model; TinyStories 15M), GPT-NeoX (Pythia-14M, with its
+   Four designs: Llama (SmolLM2-135M-Instruct, a chat model; TinyStories 15M; Qwen2.5-0.5B-Instruct, which adds biases
+   to the attention's q/k/v and was trained to call tools), GPT-NeoX (Pythia-14M, with its
    training checkpoints), GPT-2 (DistilGPT-2) and Mamba (Mamba-130M, no attention at all). The weights are the
    published numbers (bf16, f16 or f32), widened to 32-bit floats, so the maths matches the reference implementation. Alongside the normal output it records what the page shows:
    each layer's attention weights, its most active feed-forward neurons, the token's numbers after the
@@ -13,6 +14,7 @@
     'tiny-stories': { name: 'TinyStories 15M', repo: 'nickypro/tinyllama-15M', rev: 'a97e01fa7d54c088df9dc1b53d581a863ce08cd6', mb: 30, chat: false, bos: 1, license: 'MIT, by Andrej Karpathy (llama2.c), converted by nickypro', layers: 6, hidden: 288, ff: 768, heads: 6, kvHeads: 6, vocab: 32000 },
     'pythia-14m': { name: 'Pythia-14M', repo: 'EleutherAI/pythia-14m', rev: 'cf967c0a9a04383db6f7b1108d86b2962634b4ac', mb: 28, chat: false, bos: null, license: 'Apache 2.0, by EleutherAI', layers: 6, hidden: 128, ff: 512, heads: 4, kvHeads: 4, vocab: 50304 },
     'distilgpt2': { name: 'DistilGPT-2', repo: 'distilbert/distilgpt2', rev: '2290a62682d06624634c1f46a6ad5be0f47f38aa', mb: 353, chat: false, bos: null, license: 'Apache 2.0, by Hugging Face (distilled from OpenAI\'s GPT-2)', layers: 6, hidden: 768, ff: 3072, heads: 12, kvHeads: 12, vocab: 50257 },
+    'qwen2.5-0.5b-instruct': { name: 'Qwen2.5-0.5B-Instruct', repo: 'Qwen/Qwen2.5-0.5B-Instruct', rev: '7ae557604adf67be50417f59c2c2f167def9a775', mb: 988, chat: true, bos: null, license: 'Apache 2.0, by the Qwen team (Alibaba Cloud)', layers: 24, hidden: 896, ff: 4864, heads: 14, kvHeads: 2, vocab: 151936 },
     'mamba-130m': { name: 'Mamba-130M', repo: 'state-spaces/mamba-130m-hf', rev: '1e76775f628fbf1350fbe4dbb3d971ba64af25a1', mb: 517, chat: false, bos: null, license: 'Apache 2.0 (the Mamba project, by Albert Gu and Tri Dao)', layers: 24, hidden: 768, ff: 1536, heads: 0, kvHeads: 0, vocab: 50280 },
   };
   // LLM_BASE: optional local mirrors, { modelKey: url } (used by tests)
@@ -32,11 +34,20 @@
   }
   const SPLIT = /'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+/gu;
 
+  // A tokenizer that names its own split pattern (Qwen2) uses it; JavaScript has no (?i:...) group, so its
+  // case-insensitive contractions are spelled out. Everything else uses the GPT-2 split.
+  function splitOf(pt) {
+    const all = pt ? (pt.pretokenizers || [pt]) : [], sp = all.find(p => p.type === 'Split' && p.pattern && p.pattern.Regex);
+    if (!sp) return SPLIT;
+    const ci = w => Array.from(w, c => /[a-z]/.test(c) ? `[${c}${c.toUpperCase()}]` : c).join('');
+    return new RegExp(sp.pattern.Regex.replace(/\(\?i:([^)]*)\)/, (_, alts) => '(?:' + alts.split('|').map(ci).join('|') + ')'), 'gu');
+  }
+
   // SentencePiece-style BPE (Llama): spaces become "▁", one goes in front, unknown characters fall back to bytes
   const isSentencePiece = tj => !!tj.model.byte_fallback;
   function makeTokenizer(tj) {
     const vocab = tj.model.vocab, inv = [], sp = isSentencePiece(tj);
-    const pre = JSON.stringify(tj.pre_tokenizer || {}), digits = /"Digits"[^}]*"individual_digits":\s*true/.test(pre), nfc = JSON.stringify(tj.normalizer || '').includes('"NFC"');
+    const pre = JSON.stringify(tj.pre_tokenizer || {}), split = splitOf(tj.pre_tokenizer), digits = /"Digits"[^}]*"individual_digits":\s*true/.test(pre), nfc = JSON.stringify(tj.normalizer || '').includes('"NFC"');
     for (const k in vocab) inv[vocab[k]] = k;
     for (const a of tj.added_tokens) inv[a.id] = a.content;
     const ranks = new Map();
@@ -79,7 +90,7 @@
         }
         // pre-tokenizer: (for some models) every digit is its own piece; then the GPT-2 split, applied inside each piece
         const pieces = digits ? chunk.split(/(\p{N})/u).filter(s => s.length) : [chunk];
-        for (const piece of pieces) for (const m of piece.match(SPLIT) || []) {
+        for (const piece of pieces) for (const m of piece.match(split) || []) {
           const mapped = Array.from(utf8.encode(m), b => enc[b]).join('');
           for (const p of bpe(mapped)) ids.push(vocab[p]);
         }
@@ -98,17 +109,41 @@
   }
 
   // ---------- weights: safetensors file, bf16 -> f32 ----------
+  // ---------- the fast path: knobs x numbers in WebAssembly SIMD (source: prep/matvec.wat) ----------
+  // Each model's knobs are placed in one WebAssembly memory; matvec below uses the module when the knobs live there and
+  // falls back to plain JavaScript otherwise (no WebAssembly SIMD, not enough memory, or knobs made later, like GPT-2's
+  // transposed tables). The sums are the same; the order of the additions differs, so results can differ in the last digits.
+  const WASM = 'AGFzbQEAAAABFwJgBX9/f39/AGALf39/f39/f39/f38AAg8BA2VudgNtZW0CAQGAgAQDAwIAAQcUAgZtYXR2ZWMAAAdtYXRtYXQ0AAEKtwUCuQICBH8EeyAAIQcCQANAIAUgAU8NAf0MAAAAAAAAAAAAAAAAAAAAACEJ/QwAAAAAAAAAAAAAAAAAAAAAIQr9DAAAAAAAAAAAAAAAAAAAAAAhC/0MAAAAAAAAAAAAAAAAAAAAACEMQQAhBiACQQJ0IQgDQCAJIAcgBmr9AAQAIAMgBmr9AAQA/eYB/eQBIQkgCiAHIAZq/QAEECADIAZq/QAEEP3mAf3kASEKIAsgByAGav0ABCAgAyAGav0ABCD95gH95AEhCyAMIAcgBmr9AAQwIAMgBmr9AAQw/eYB/eQBIQwgBkHAAGohBiAGIAhJDQALIAkgCv3kASALIAz95AH95AEhCSAEIAVBAnRqIAn9HwAgCf0fAZIgCf0fAiAJ/R8DkpI4AgAgByAIaiEHIAVBAWohBQwACwsL+QIEBH8BewF/BHsgACENIAJBAnQhDgJAA0AgCyABTw0B/QwAAAAAAAAAAAAAAAAAAAAAIRH9DAAAAAAAAAAAAAAAAAAAAAAhEv0MAAAAAAAAAAAAAAAAAAAAACET/QwAAAAAAAAAAAAAAAAAAAAAIRRBACEMA0AgDSAMav0ABAAhDyARIA8gAyAMav0ABAD95gH95AEhESASIA8gBCAMav0ABAD95gH95AEhEiATIA8gBSAMav0ABAD95gH95AEhEyAUIA8gBiAMav0ABAD95gH95AEhFCAMQRBqIQwgDCAOSQ0ACyALQQJ0IRAgByAQaiAR/R8AIBH9HwGSIBH9HwIgEf0fA5KSOAIAIAggEGogEv0fACAS/R8BkiAS/R8CIBL9HwOSkjgCACAJIBBqIBP9HwAgE/0fAZIgE/0fAiAT/R8DkpI4AgAgCiAQaiAU/R8AIBT9HwGSIBT9HwIgFP0fA5KSOAIAIA0gDmohDSALQQFqIQsMAAsLCw==';
+  const KERN = new Map(); // memory buffer -> { k: exports, f: Float32Array over the memory, scratch: byte offset, size }
+  const SCRATCH = 8 << 20; // room for the vectors being multiplied (x, and the outputs, for up to four tokens)
+  function kernelArena(floats) { // a memory big enough for `floats` 32-bit numbers plus scratch, or null
+    try {
+      if (typeof WebAssembly === 'undefined') return null;
+      const bytes = floats * 4 + SCRATCH + 64 * 1024, pages = Math.ceil(bytes / 65536);
+      if (pages > 65536) return null;
+      const mem = new WebAssembly.Memory({ initial: pages, maximum: pages });
+      const bin = Uint8Array.from(atob(WASM), c => c.charCodeAt(0));
+      const k = new WebAssembly.Instance(new WebAssembly.Module(bin), { env: { mem } }).exports;
+      const arena = { k, f: new Float32Array(mem.buffer), scratch: pages * 65536 - SCRATCH, next: 0, buffer: mem.buffer };
+      KERN.set(mem.buffer, arena);
+      return arena;
+    } catch (e) { return null; }
+  }
+  const alloc = (arena, n) => { if (!arena) return new Float32Array(n); const off = arena.next; arena.next += Math.ceil(n / 4) * 16; return new Float32Array(arena.buffer, off, n); };
+
   function parseSafetensors(buf) {
     const n = Number(new DataView(buf).getBigUint64(0, true));
     const header = JSON.parse(new TextDecoder().decode(new Uint8Array(buf, 8, n)));
     const base = 8 + n, W = {};
+    let floats = 0; for (const name in header) if (name !== '__metadata__') { const [a, b] = header[name].data_offsets; floats += Math.ceil((b - a) / (header[name].dtype === 'F32' ? 4 : 2) / 4) * 4; }
+    const arena = kernelArena(floats);
     for (const name in header) {
       if (name === '__metadata__' || /\.attn\.(masked_)?bias$/.test(name)) continue; // GPT-2 keeps its causal mask in the file
       const { dtype, shape, data_offsets: [a, b] } = header[name];
-      if (dtype === 'F32') { W[name] = { data: (base + a) % 4 === 0 ? new Float32Array(buf, base + a, (b - a) / 4) : new Float32Array(buf.slice(base + a, base + b)), shape }; continue; }
+      if (dtype === 'F32') { const out = alloc(arena, (b - a) / 4); out.set((base + a) % 4 === 0 ? new Float32Array(buf, base + a, (b - a) / 4) : new Float32Array(buf.slice(base + a, base + b))); W[name] = { data: out, shape }; continue; }
       if (dtype !== 'BF16' && dtype !== 'F16') throw new Error('expected BF16, F16 or F32 weights, got ' + dtype);
       const count = (b - a) / 2, src = (base + a) % 2 === 0 ? new Uint16Array(buf, base + a, count) : new Uint16Array(buf.slice(base + a, base + b));
-      const out = new Float32Array(count), o32 = new Uint32Array(out.buffer);
+      const out = alloc(arena, count), o32 = new Uint32Array(out.buffer, out.byteOffset, count);
       if (dtype === 'BF16') for (let i = 0; i < count; i++) o32[i] = src[i] << 16; // bf16 is the top half of an f32: exact
       else for (let i = 0; i < count; i++) { // f16 -> f32, exact (sign, 5-bit exponent, 10-bit fraction)
         const h = src[i], sgn = (h & 0x8000) << 16, e = (h >> 10) & 31, f = h & 1023;
@@ -121,6 +156,11 @@
 
   // ---------- maths ----------
   function matvec(W, rows, cols, x, out) {
+    const K = cols % 16 === 0 && KERN.get(W.buffer);
+    if (K) { // copy x into the scratch area, multiply there, copy the result out
+      const xp = K.scratch, op = xp + cols * 4; K.f.set(x.length === cols ? x : x.subarray(0, cols), xp >> 2);
+      K.k.matvec(W.byteOffset, rows, cols, xp, op); out.set(K.f.subarray(op >> 2, (op >> 2) + rows)); return out;
+    }
     for (let r = 0; r < rows; r++) {
       let s0 = 0, s1 = 0, s2 = 0, s3 = 0, o = r * cols, c = 0;
       for (; c + 3 < cols; c += 4) { s0 += W[o + c] * x[c]; s1 += W[o + c + 1] * x[c + 1]; s2 += W[o + c + 2] * x[c + 2]; s3 += W[o + c + 3] * x[c + 3]; }
@@ -128,6 +168,30 @@
       out[r] = s0 + s1 + s2 + s3;
     }
     return out;
+  }
+  // The same products for several tokens at once (reading a prompt): each knob is fetched once and used for four
+  // tokens. The additions happen in a different order than matvec, so results can differ in the last digits.
+  function matmat(W, rows, cols, xs, outs) {
+    const T = xs.length, K = cols % 16 === 0 && KERN.get(W.buffer);
+    if (K) {
+      for (let t = 0; t < T; t += 4) {
+        const n = Math.min(4, T - t), xp = K.scratch, op = xp + 4 * cols * 4;
+        for (let j = 0; j < 4; j++) K.f.set(xs[t + Math.min(j, n - 1)], (xp >> 2) + j * cols);
+        K.k.matmat4(W.byteOffset, rows, cols, xp, xp + cols * 4, xp + 2 * cols * 4, xp + 3 * cols * 4, op, op + rows * 4, op + 2 * rows * 4, op + 3 * rows * 4);
+        for (let j = 0; j < n; j++) outs[t + j].set(K.f.subarray((op >> 2) + j * rows, (op >> 2) + (j + 1) * rows));
+      }
+      return outs;
+    }
+    for (let t = 0; t < T; t += 4) {
+      const x0 = xs[t], x1 = xs[Math.min(t + 1, T - 1)], x2 = xs[Math.min(t + 2, T - 1)], x3 = xs[Math.min(t + 3, T - 1)];
+      const o0 = outs[t], o1 = outs[Math.min(t + 1, T - 1)], o2 = outs[Math.min(t + 2, T - 1)], o3 = outs[Math.min(t + 3, T - 1)];
+      for (let r = 0; r < rows; r++) {
+        const o = r * cols; let a0 = 0, a1 = 0, a2 = 0, a3 = 0;
+        for (let c = 0; c < cols; c++) { const w = W[o + c]; a0 += w * x0[c]; a1 += w * x1[c]; a2 += w * x2[c]; a3 += w * x3[c]; }
+        o0[r] = a0; o1[r] = a1; o2[r] = a2; o3[r] = a3;
+      }
+    }
+    return outs;
   }
   function rmsnorm(x, w, eps, out) {
     let ss = 0; for (let i = 0; i < x.length; i++) ss += x[i] * x[i];
@@ -200,18 +264,19 @@
   // ---------- the designs: each one says how a token enters, what one layer does, and how the ball is read out ----------
   // Every design fills the same record for the page: per layer the attention weights (none for Mamba), the sizes of
   // the changes it adds onto the ball, and (for full records) every whole vector of the layer in `vec`.
-  function archLlama(cfg, W, g) { // Llama (SmolLM2, TinyStories): RMSNorm, RoPE on whole heads, GQA, SwiGLU, no biases
+  function archLlama(cfg, W, g) { // Llama (SmolLM2, TinyStories): RMSNorm, RoPE on whole heads, GQA, SwiGLU, no biases; Qwen2 adds q/k/v biases
     const D = cfg.hidden_size, L = cfg.num_hidden_layers, H = cfg.num_attention_heads, KVH = cfg.num_key_value_heads || H, HD = D / H, F = cfg.intermediate_size, eps = cfg.rms_norm_eps;
     const E = g('model.embed_tokens.weight'), layers = [];
     for (let l = 0; l < L; l++) {
       const p = `model.layers.${l}.`;
       layers.push({ ln1: g(p + 'input_layernorm.weight'), ln2: g(p + 'post_attention_layernorm.weight'),
         q: g(p + 'self_attn.q_proj.weight'), k: g(p + 'self_attn.k_proj.weight'), v: g(p + 'self_attn.v_proj.weight'), o: g(p + 'self_attn.o_proj.weight'),
+        qb: W[p + 'self_attn.q_proj.bias'] && g(p + 'self_attn.q_proj.bias'), kb: W[p + 'self_attn.k_proj.bias'] && g(p + 'self_attn.k_proj.bias'), vb: W[p + 'self_attn.v_proj.bias'] && g(p + 'self_attn.v_proj.bias'),
         gate: g(p + 'mlp.gate_proj.weight'), up: g(p + 'mlp.up_proj.weight'), down: g(p + 'mlp.down_proj.weight') });
     }
-    const normW = g('model.norm.weight'), rope = makeRope(HD, HD, cfg.rope_theta);
+    const normW = g('model.norm.weight'), rope = makeRope(HD, HD, cfg.rope_theta), Eout = W['lm_head.weight'] ? g('lm_head.weight') : E;
     const b = { h: new Float32Array(D), q: new Float32Array(D), k: new Float32Array(KVH * HD), v: new Float32Array(KVH * HD), att: new Float32Array(D), o: new Float32Array(D), g: new Float32Array(F), u: new Float32Array(F), d: new Float32Array(D) };
-    return { kind: 'llama', D, L, H, KVH, HD, F, E, Eout: E, layers, normW, kvPerToken: 2 * L * KVH * HD * 2,
+    return { kind: 'llama', D, L, H, KVH, HD, F, E, Eout, layers, normW, kvPerToken: 2 * L * KVH * HD * 2,
       embed: (x, id) => x.set(E.subarray(id * D, id * D + D)),
       finalNorm: (x, out) => rmsnorm(x, normW, eps, out),
       newLayerState: () => ({ K: [], Vc: [] }),
@@ -219,6 +284,7 @@
         const P = layers[l];
         rmsnorm(x, P.ln1, eps, b.h);
         matvec(P.q, D, D, b.h, b.q); matvec(P.k, KVH * HD, D, b.h, b.k); matvec(P.v, KVH * HD, D, b.h, b.v);
+        if (P.qb) { addBias(b.q, P.qb); addBias(b.k, P.kb); addBias(b.v, P.vb); }
         if (full) Object.assign(ly.vec, { h1: b.h.slice(), qPre: b.q.slice(), kPre: b.k.slice() });
         rope(b.q, H, pos); rope(b.k, KVH, pos);
         if (full) Object.assign(ly.vec, { q: b.q.slice(), k: b.k.slice(), v: b.v.slice() });
@@ -235,6 +301,25 @@
         matvec(P.down, D, F, b.g, b.d);
         for (let i = 0; i < D; i++) x[i] += b.d[i];
         if (full) { Object.assign(ly.vec, { act: b.g.slice(), down: b.d.slice(), xout: x.slice() }); ly.downNorm = H2(b.d); ly.ffnIn = b.h.slice(); ly.neurons = topk(b.g.map(Math.abs), 5).map(i => ({ i, v: b.g[i] })); }
+      },
+      // one layer for a run of prompt tokens at positions pos0, pos0+1, ...; each token still only sees itself and earlier ones
+      blockBatch(l, xs, st, pos0) {
+        const P = layers[l], T = xs.length, mk = n => Array.from({ length: T }, () => new Float32Array(n));
+        const h = xs.map(x => rmsnorm(x, P.ln1, eps, new Float32Array(D)));
+        const q = matmat(P.q, D, D, h, mk(D)), k = matmat(P.k, KVH * HD, D, h, mk(KVH * HD)), v = matmat(P.v, KVH * HD, D, h, mk(KVH * HD));
+        const att = mk(D), o = mk(D);
+        for (let t = 0; t < T; t++) {
+          if (P.qb) { addBias(q[t], P.qb); addBias(k[t], P.kb); addBias(v[t], P.vb); }
+          rope(q[t], H, pos0 + t); rope(k[t], KVH, pos0 + t);
+          st.K.push(k[t]); st.Vc.push(v[t]);
+          attend(q[t], st.K, st.Vc, H, KVH, HD, null, null, att[t]);
+        }
+        matmat(P.o, D, D, att, o);
+        for (let t = 0; t < T; t++) { const x = xs[t]; for (let i = 0; i < D; i++) x[i] += o[t][i]; rmsnorm(x, P.ln2, eps, h[t]); }
+        const gt = matmat(P.gate, F, D, h, mk(F)), up = matmat(P.up, F, D, h, mk(F));
+        for (let t = 0; t < T; t++) for (let i = 0; i < F; i++) gt[t][i] = silu(gt[t][i]) * up[t][i];
+        const d = matmat(P.down, D, F, gt, mk(D));
+        for (let t = 0; t < T; t++) { const x = xs[t]; for (let i = 0; i < D; i++) x[i] += d[t][i]; }
       },
       neuron: (l, n) => ({ gate: layers[l].gate.subarray(n * D, n * D + D), up: layers[l].up.subarray(n * D, n * D + D) }),
     };
@@ -403,7 +488,7 @@
     const nrm = a => { let s = 0; for (let i = 0; i < a.length; i++) s += a[i] * a[i]; return Math.sqrt(s); };
     // Run one token through every layer. record=true returns what every sub-step of every layer did;
     // record='attn' keeps only the attention weights and the ball's first numbers (cheap: no logit lens).
-    async function step(state, id, record, lensTop = 3) {
+    async function step(state, id, record, lensTop = 3, scores = true) { // scores=false: only fill the cache (reading a prompt)
       const t0 = performance.now(), pos = state.pos, x = buf.x, full = record === true;
       A.embed(x, id, pos);
       const rec = record ? { id, pos, embed: Array.from(x.subarray(0, 8)), layers: [] } : null;
@@ -425,11 +510,26 @@
         }
         if (l % 6 === 5) await tick(); // keep the page responsive
       }
-      A.finalNorm(x, buf.hn); matvec(Eout, V, D, buf.hn, buf.logits);
       state.pos++;
+      if (!scores && !record) return { logits: null, rec, ms: performance.now() - t0 };
+      A.finalNorm(x, buf.hn); matvec(Eout, V, D, buf.hn, buf.logits);
       const logits = buf.logits.slice();
       if (full) { const { lse } = softmaxStats(logits); rec.layers[L - 1].lens = topk(logits, lensTop).map(i => ({ id: i, p: Math.exp(logits[i] - lse) })); if (watch) rec.layers[L - 1].watch = watchOf(logits, lse); }
       return { logits, rec, ms: performance.now() - t0 - lensMs };
+    }
+    // Read a run of tokens into the cache (a prompt), several at a time where the design supports it; returns the
+    // scores after the last one. onProgress(done, total) after each group.
+    async function prefill(state, ids, onProgress, group = 32) {
+      if (!A.blockBatch) { let res; for (let i = 0; i < ids.length; i++) { res = await step(state, ids[i], false, 3, i === ids.length - 1); onProgress && onProgress(i + 1, ids.length); } return res; }
+      let last = null;
+      for (let a = 0; a < ids.length; a += group) {
+        const run = ids.slice(a, a + group), xs = run.map((id, t) => { const x = new Float32Array(D); A.embed(x, id, state.pos + t); return x; });
+        for (let l = 0; l < L; l++) { A.blockBatch(l, xs, state.layer[l], state.pos); await tick(); }
+        state.pos += run.length; last = xs[xs.length - 1];
+        onProgress && onProgress(Math.min(ids.length, a + group), ids.length);
+      }
+      A.finalNorm(last, buf.hn); matvec(Eout, V, D, buf.hn, buf.logits);
+      return { logits: buf.logits.slice(), rec: null };
     }
     const embedding = (id, n = 8) => Array.from(E.subarray(id * D, id * D + n));
     // Tokens whose embedding rows point the same way as this one (cosine similarity over all the row's numbers).
@@ -441,7 +541,7 @@
       sims[id] = -2;
       return topk(sims, k).map(i => ({ id: i, sim: sims[i] }));
     }
-    return { cfg, tok, step, newState, setWatch, WATCH_FLOOR, lens, embedding, neighbors, neuron: A.neuron, arch: A, kind: A.kind,
+    return { cfg, tok, step, prefill, newState, setWatch, WATCH_FLOOR, lens, embedding, neighbors, neuron: A.neuron, arch: A, kind: A.kind,
       mats: { E, Eout, layers: A.layers, normW: A.normW, Pos: A.Pos }, D, L, H, KVH, HD, F, V, kvBytesPerToken: A.kvPerToken, stateBytes: A.stateBytes || 0, weightBytes };
   }
 

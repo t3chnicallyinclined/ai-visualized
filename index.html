@@ -138,6 +138,10 @@ svg#board { width: 100%; height: auto; display: block; }
 dialog.dlg { width: min(640px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); box-sizing: border-box; overflow: auto;
   border: 1px solid var(--line); border-radius: 14px; background: var(--panel); color: var(--ink); padding: 20px; }
 dialog.dlg.wide { width: min(940px, calc(100vw - 32px)); }
+dialog.dlg.xwide { width: min(1180px, calc(100vw - 32px)); }
+#agentView { --ag-ink: var(--ink); --ag-muted: var(--muted); --ag-line: var(--line); --ag-panel: var(--panel); --ag-soft: var(--band); --ag-accent: #4f63e6; --ag-onaccent: #fff;
+  --ag-sys: var(--sysc); --ag-user: var(--ffn); --ag-tool: var(--kv); --ag-ok: #2f9e6b; --ag-font: var(--body); margin-top: 12px; }
+.agnotice { font-size: 14px; padding-left: 20px; margin: 0 0 6px; } .agnotice li { margin-bottom: 4px; }
 dialog.dlg::backdrop { background: rgb(10 12 30 / 0.55); }
 dialog.dlg h2 { font: 800 22px/1.15 var(--display); margin: 6px 0 10px; }
 dialog.dlg p { margin: 0 0 10px; text-wrap: pretty; }
@@ -347,6 +351,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
     <button id="trainBtn" type="button">How training sets the knobs</button>
     <button id="tourBtn" type="button">Take the tour</button>
     <button id="famBtn" type="button">How these models relate</button>
+    <button id="agentBtn" type="button">Watch an AI agent work</button>
   </div>
 
   <details class="hwd">
@@ -409,6 +414,21 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
   <h2 id="lyTitle"></h2>
   <p id="lyLead"></p>
   <div id="lyBody"></div>
+</dialog>
+
+<dialog id="agentDlg" class="dlg xwide" aria-labelledby="agTitle">
+  <div class="zhead"><p class="eyebrow">A real agent, step by step</p><button id="agClose" type="button">Close</button></div>
+  <h2 id="agTitle">What an "AI agent" really is</h2>
+  <p>Apps call agents "autonomous". Here is what that means. An agent is <b>a loop of ordinary code that people write around a model</b>. The model can only write tokens. The program gives it a task and a list of tools, reads what it writes, and when the words are a tool request, the program runs that tool itself and hands the result back for the model to read. It keeps going round until the model writes an answer with no tool request, or until the program's step limit.</p>
+  <p>This one is real: <b>Qwen2.5-0.5B-Instruct</b> (a model trained to ask for tools in a fixed format, checked against the reference implementation like every model here), a program whose tools and loop are about 110 lines (<a href="https://github.com/t3chnicallyinclined/ai-visualized/blob/main/agent.js" target="_blank" rel="noopener">agent.js</a>), and three tools on a pretend computer: a calculator, list the files, read a file. Every token is the model's own most likely next token; nothing is staged.</p>
+  <ul class="agnotice">
+    <li><b>Choosing a tool is choosing the next token.</b> Watch "Choosing the next token" as it writes the tool's name.</li>
+    <li><b>The model never runs anything.</b> The program does, and only these three tools exist. "Ask me before each tool runs" is how real agents add a human check.</li>
+    <li><b>Right data, wrong answer is still possible.</b> Run "List my files, then tell me what notes.txt says" and compare its quote with the real file.</li>
+    <li><b>It doesn't always act.</b> "When is the pizza party?" makes this small model ask you for the file name instead of looking.</li>
+    <li>Coding assistants and browsing agents are this same loop with bigger models and more powerful tools. That is why the tools and permissions people give an agent matter more than the word "autonomous".</li>
+  </ul>
+  <div id="agentView"></div>
 </dialog>
 
 <dialog id="family" class="dlg wide" aria-labelledby="faTitle">
@@ -506,6 +526,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="llm.js"></script>
+<script src="agent.js"></script>
 <script src="cloud-data.js"></script>
 <script>
 (function () {
@@ -2557,6 +2578,9 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
   $('#trClose').addEventListener('click', () => $('#train').close());
   $('#famBtn').addEventListener('click', () => { if (tl.isActive()) { tl.pause(); setPlayLabel(); } $('#family').showModal(); });
   $('#faClose').addEventListener('click', () => $('#family').close());
+  let agentMounted = false;
+  $('#agentBtn').addEventListener('click', () => { if (tl.isActive()) { tl.pause(); setPlayLabel(); } if (!agentMounted) { AGENT.mount($('#agentView')); agentMounted = true; } $('#agentDlg').showModal(); });
+  $('#agClose').addEventListener('click', () => $('#agentDlg').close());
   $('#lyClose').addEventListener('click', () => $('#layerDlg').close());
   $('#lyPrev').addEventListener('click', () => { LY.l--; lyRender(''); $('#layerDlg').scrollTop = 0; });
   $('#lyNext').addEventListener('click', () => { LY.l++; lyRender(''); $('#layerDlg').scrollTop = 0; });

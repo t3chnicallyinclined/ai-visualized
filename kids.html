@@ -101,6 +101,8 @@ button:disabled { opacity: 0.5; cursor: default; }
 .fakepage .body { height: 150px; display: grid; place-items: center; font: 700 22px var(--head); transition: background .6s; color: #2b2236; background: #ffffff; }
 .prog { font: 14px/1.5 ui-monospace, Consolas, monospace; background: #241c30; color: #f4eefa; border-radius: 14px; padding: 12px 14px; white-space: pre-wrap; overflow-x: auto; }
 .prog b { color: #f2b63d; }
+#agentView { --ag-ink: var(--ink); --ag-muted: var(--muted); --ag-line: var(--line); --ag-panel: var(--card); --ag-soft: var(--soft); --ag-accent: var(--purple); --ag-onaccent: #fff;
+  --ag-sys: var(--green); --ag-user: var(--orange); --ag-tool: var(--blue); --ag-ok: var(--green); --ag-font: var(--body); font-size: 16px; margin: 10px 0; }
 .teacher summary { font: 700 20px var(--head); cursor: pointer; }
 .teacher li { margin-bottom: 6px; }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
@@ -218,9 +220,17 @@ if one is found: paint the pretend page that colour
 otherwise: do nothing</div></div>
       </div>
       <div class="two"><div><h3>The AI wrote</h3><div class="reply" id="paintReply"></div></div><div><h3>The program did</h3><div class="reply" id="paintDid"></div></div></div>
-      <p>The AI can only <b>write words</b>. A program that <b>people wrote</b> read those words and did the painting, and it can only do what people allowed: paint one box, seven colours. That is all an "AI agent" is: an AI's words plus a program people built, with permissions people chose. Small AIs get this wrong a lot (try "Make it the color of a banana"); bigger ones get it right more often, but people still decide what the program is allowed to do.</p>
+      <p>The AI can only <b>write words</b>. A program that <b>people wrote</b> read those words and did the painting, and it can only do what people allowed: paint one box, seven colours. That is all an "AI agent" is: an AI's words plus a program people built, with permissions people chose (Part 3 shows a real one, step by step). Small AIs get this wrong a lot (try "Make it the color of a banana"); bigger ones get it right more often, but people still decide what the program is allowed to do.</p>
       <p class="note">For this test the hidden instructions say: "Answer with one word: the color the user asks for." The reply and the program are both real; nothing is staged.</p>
     </div>
+  </section>
+
+  <section class="card" id="agent" hidden>
+    <h2>Part 3: Watch an AI agent use tools</h2>
+    <p>You may hear that AI "agents" do jobs "on their own". Let's watch a real one, step by step. An agent is <b>a program that people wrote, going round a loop</b>. The AI only writes words. When its words ask for a tool, the program uses the tool and gives the answer back. Then the AI reads it and writes again.</p>
+    <p>Our agent has a small pretend computer with three tools: a <b>calculator</b>, <b>list the files</b> and <b>read a file</b>. That's all it can ever do, because that's all the people who wrote the program gave it. Try "What is 23 times 47?" first, then look at the five steps light up.</p>
+    <div id="agentView"></div>
+    <p class="note">The AI here is Qwen2.5-0.5B-Instruct, trained by the Qwen team to ask for tools. Every word it writes is real. Things to spot: choosing a tool is just choosing its next word; the AI never uses a tool itself; and it can still copy something wrong (check its answer about notes.txt).</p>
   </section>
 
   <section id="myths" hidden>
@@ -300,6 +310,7 @@ otherwise: do nothing</div></div>
       <li><b>K–2:</b> read steps 1, 4 and 5 aloud. Play "guess the next word" as a class, then roll the dice. Main idea: it picks one word at a time, like a game.</li>
       <li><b>3–5:</b> all five steps, then the "Is it alive?" tests. Try careful vs silly. Main idea: it's numbers made by people, and it can be wrong.</li>
       <li><b>4 and up:</b> Part 2, "Can it follow a command?" (a 269 MB download, best done once on the teacher's computer). Main ideas: a command is just more text in a hidden chat form; the chat AI follows it because it was trained on example conversations; and the AI only writes words, while programs written by people do the actions.</li>
+      <li><b>5 and up:</b> Part 3, a real AI agent (a 988 MB download; best on the teacher's computer, projected). Run "What is 23 times 47?" and follow the five steps round the loop together. Then tick "Ask me before each tool is used" and say no: the class sees that the program, not the AI, decides what happens. Main idea: an "autonomous" agent is a loop that people wrote, and it can only use the tools people gave it.</li>
       <li><b>All grades:</b> "Your limit is your curiosity". Play the copy machine or coach game together, then have students upgrade a "do it for me" ask into a coach question (try first, ask why, ask for a hint, ask to be quizzed). Main idea: AI is a tool for sharpening your own thinking, not a replacement for it.</li>
       <li><b>6–8:</b> add the risks section: why fluent isn't the same as true, where unfairness comes from (the training text), and private information.</li>
       <li><b>9–12:</b> move to <a href="index.html">the full version</a>: tokens, embeddings, attention, the logit lens, the training checkpoints of a real model, and how different model designs compare.</li>
@@ -309,6 +320,7 @@ otherwise: do nothing</div></div>
 </main>
 
 <script src="llm.js"></script>
+<script src="agent.js"></script>
 <script>
 (function () {
   const $ = s => document.querySelector(s);
@@ -316,7 +328,7 @@ otherwise: do nothing</div></div>
   const wait = ms => new Promise(r => setTimeout(r, reduce ? 0 : ms));
   const pct = p => (p >= 0.995 ? '100%' : p < 0.01 ? '<1%' : Math.round(p * 100) + '%');
   const COLORS = ['#e2733b', '#3d7be0', '#7b5cd6', '#2f9e6b', '#d6457a', '#c78a12', '#1f8ea3'];
-  let M = null, busy = false, last = null;
+  let M = null, busy = false, last = null, agentMounted = false;
   const show = id => { const e = $(id); e.hidden = false; if (!reduce) e.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
 
   // load the real model (30 MB)
@@ -389,7 +401,7 @@ otherwise: do nothing</div></div>
       // 4: score and dice
       show('#s4'); guesses(r.res.logits, -1);
       show('#s5'); $('#story').textContent = text;
-      $('#cmd').hidden = false; $('#myths').hidden = false; $('#power').hidden = false; $('#learn').hidden = false; $('#risks').hidden = false;
+      $('#cmd').hidden = false; $('#agent').hidden = false; if (!agentMounted) { AGENT.mount($('#agentView'), { kids: true }); agentMounted = true; } $('#myths').hidden = false; $('#power').hidden = false; $('#learn').hidden = false; $('#risks').hidden = false;
     } finally { busy = false; $('#go').disabled = false; }
   });
   // one dice roll: add the picked word to the story and run the model again for the next one
