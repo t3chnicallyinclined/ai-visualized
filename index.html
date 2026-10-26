@@ -72,7 +72,8 @@ button:hover { border-color: var(--ink); }
 /* the stage: dark in both themes, so light on it always means the model's real activity */
 .stage { --band: var(--st-2); --line: var(--st-rail); --ink: var(--st-ink); --muted: var(--st-ink2); --panel: var(--st-panel); --bg: var(--st-bg);
   background: var(--st-bg); color: var(--st-ink); border: 1px solid var(--st-rail); border-radius: 16px; padding: 12px;
-  display: grid; grid-template-columns: minmax(0, 1fr) 390px; gap: 12px; align-items: start; }
+  display: grid; grid-template-columns: 390px minmax(0, 1fr); gap: 12px; align-items: start; }
+.cloudp { order: 1; } .boardscroll { order: 2; } .nbar { order: 3; }
 @media (max-width: 1180px) { .stage { grid-template-columns: minmax(0, 1fr); } }
 .boardscroll { overflow-x: auto; min-width: 0; }
 svg#board { width: 100%; height: auto; display: block; }
@@ -120,13 +121,15 @@ svg#board { width: 100%; height: auto; display: block; }
 .nb-title { font: 700 16px/1.2 var(--display); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .nb-text { font-size: 13.5px; line-height: 1.4; color: var(--st-ink2); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 /* phones: the board follows the action, and the narrator bar sits right under it and stays on screen */
-@media (max-width: 700px) {
-  .stage { padding: 8px; } .cloudp { order: 1; } .boardscroll { order: 2; } .nbar { order: 3; }
-  .cloudp { position: sticky; top: 0; z-index: 6; background: var(--st-bg); margin: 0 -8px; padding: 8px 8px 6px; box-shadow: 0 8px 18px rgb(0 0 0 / 0.55); gap: 4px; }
+@media (max-width: 1180px) {
+  .cloudp { position: sticky; top: 0; z-index: 6; background: var(--st-bg); margin: 0 -12px; padding: 8px 12px 6px; box-shadow: 0 8px 18px rgb(0 0 0 / 0.55); gap: 4px; }
   .cloudp:not(.open) #cBar, .cloudp:not(.open) #cInfo, .cloudp:not(.open) .cnote, .cloudp:not(.open) .dice { display: none; }
   .cloudp.open { position: static; box-shadow: none; }
   #cTitle { font-size: 13px; height: 2.6em; } .cguess { font-size: 12px; min-height: 2.6em; }
   .ctools { display: inline-block !important; }
+}
+@media (max-width: 700px) {
+  .stage { padding: 8px; } .cloudp { margin: 0 -8px; padding: 8px 8px 6px; }
   .nbar { position: sticky; bottom: 8px; z-index: 5; height: auto; min-height: 96px; grid-template-columns: auto minmax(0, 1fr); row-gap: 8px; box-shadow: 0 6px 24px rgb(0 0 0 / 0.5); }
   .nb-btns { grid-column: 1 / -1; justify-content: flex-end; flex-wrap: wrap; } .nb-text { -webkit-line-clamp: 3; }
   .seg { flex-wrap: nowrap; overflow-x: auto; } .seg button { white-space: nowrap; }
@@ -189,7 +192,7 @@ dt { color: var(--muted); } dd { margin: 0; text-align: right; font-family: var(
 .lcol.future { opacity: 0.4; } .lcol.now { fill: #2c3352; }
 .lstripe.full { fill: var(--attn); } .lstripe.lin { fill: var(--lin); fill-opacity: 0.7; }
 .lane { stroke: var(--st-rail); stroke-width: 1; }
-.kbank { opacity: 0.32; pointer-events: none; } .kbank.now { opacity: 0.95; }
+.kbank { opacity: 0.3; pointer-events: none; transition: opacity .15s; } .kbank.now { opacity: 1; filter: drop-shadow(0 0 3px var(--wt)); }
 .strip16 rect { pointer-events: none; } .plus { font: 700 13px var(--mono); fill: var(--score); pointer-events: none; }
 .lystep { border-top: 1px solid var(--line); padding-top: 4px; margin-top: 8px; }
 .lystrip { display: grid; grid-template-columns: 9em minmax(0, 1fr); gap: 8px; align-items: center; margin: 3px 0; } .lylab { font: 12px var(--mono); color: var(--muted); }
@@ -539,11 +542,11 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
   const STAGES_REAL = () => {
     const R = RM(), chat = R.chat;
     return [
-      ['Type', chat ? 'You type a message (top of the board). A chat app also has a system prompt you usually never see: instructions written by whoever built the app. At this point both are just strings of characters.' : 'You type the start of a story (top of the board). This tiny model only ever saw children\'s stories, so it continues them. At this point it is just a string of characters.'],
+      ['Type', chat ? 'Your message goes into the model\'s chat template after a system prompt (instructions written by whoever built the app, usually hidden from you), shown at the top of the board. At this point it is all just characters.' : 'Your text appears at the top of the board. This tiny model only ever saw children\'s stories, so it continues them; a start-of-text token (<s>) goes in front, as in training. At this point it is just characters.'],
       ['Send', 'In a chat app this is where your message would travel over the internet to a server. Here nothing is sent: the model was downloaded once and runs right in this browser tab, on your computer\'s processor.' + (chat ? ' The app first wraps everything in the model\'s chat template: the system prompt, then your message, each between <|im_start|> and <|im_end|> markers, then "assistant", where the model starts writing.' : ' A start-of-text token (<s>) goes in front, as in training.')],
       ['Tokenize', `The model's own tokenizer cuts the text into pieces it learned from data (${nf(R.V)} of them) and looks each one up to get its ID. A dot (·) means the piece starts with a space.` + (chat ? ' The system prompt and the template markers are tokens like any other; long stretches share one band lane on the board (sys, tpl).' : '')],
       ['Embed', `Each ID picks one row of the model's embedding table (the small grid left of the lanes): ${nf(R.V)} rows, one per token, each ${R.D} numbers learned in training. That row is the ball. The embedding says nothing about word order; that comes later.`],
-      ['Layers', `All the lanes move through all ${R.L} layers at the same time. Each layer is a bank of knobs (its weights), set once in training and never moved while it runs: the ball is multiplied through them. In each layer a token first talks (attention: the pink lines are the model's real attention; this is the only place it can read earlier tokens` + (chat ? ', including the system prompt' : '') + `) and then thinks alone (feed-forward: the amber burst is how much it really added). After every layer the cloud reads the ball with the model's final reader and lights up every token by the chance it would give it. The little bar beside the last ball is its first 16 numbers, changing as each + is added. Click any layer to look inside it.`],
+      ['Layers', `All the lanes move through all ${R.L} layers at the same time. Each layer is a bank of knobs (its weights), set once in training and never moved while it runs: the ball is multiplied through them. In each layer a token first talks (attention: the pink lines are the model's real attention; this is the only place it can read earlier tokens` + (chat ? ', including the system prompt' : '') + `) and then thinks alone (feed-forward: the amber burst is how much it really added). After every layer the cloud reads the ball with the model's final reader and lights up every token by the chance it would give it. The little bar under each ball is its first 16 numbers: the whole prompt goes through every layer together, and every ball's numbers change as each + is added. Click any layer to look inside it.`],
       ['Unembed', `After the last layer comes one more norm, then the ball leaves the board and is compared with every row of the output table, which here is the embedding table reused: one score for each of the ${nf(R.V)} tokens. A token scores high when the ball points the same way as its row.` + (chat ? ' The context decides which way the ball points, so the right context lights up the tokens that fit it.' : '')],
       ['Choose', 'Softmax turns the top five scores into chances, temperature sets how loaded the dice are, and a weighted dice roll picks one: watch the dice hop between the candidates in the cloud.'],
       ['Detokenize', 'The tokenizer runs backwards: the winning ID becomes its piece of text and is added to the output. It also becomes a new lane.'],
@@ -565,6 +568,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
   const pipeBtns = PIPE.map((name, i) => {
     const li = document.createElement('li'), b = document.createElement('button');
     b.type = 'button'; b.textContent = name; b.dataset.stage = i; li.appendChild(b); $('#pipe').appendChild(li);
+    if (name === 'Send' || name === 'Stream back') li.hidden = true; // nothing is sent: the model runs in this tab
     b.addEventListener('click', () => { const at = CAPS.find(c => c[1] === i); if (!at) return; tl.pause(); tl.progress(Math.min(1, (at[0] + 0.05) / tl.duration())); S.hover = null; S.pinned = false; sync(); setPlayLabel(); });
     return b;
   });
@@ -616,7 +620,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
     // header: what the board shows, and a legend that wraps to the width
     el('text', { x: 8, y: 16, class: 'secname' }, g, `${G.L} layers, top to bottom. Each: talk, then think`);
     if (VBW > 620) el('text', { x: VBW - 8, y: 16, 'text-anchor': 'end', class: 'lbl' }, g, 'THE MODEL: IN THIS BROWSER TAB');
-    const leg = [['knob', 'band = that layer\'s knobs (real weights), the same for every token'], ['att', 'talk: attention'], ['kvt', 'KV cache'], ['ff', 'think: feed-forward'], ['plus', '+ = added onto the ball']];
+    const leg = [['knob', 'dials = that layer\'s knobs (real weights, sampled), the same for every token'], ['att', 'talk: attention'], ['kvt', 'KV cache'], ['ff', 'think: feed-forward'], ['plus', '+ = added onto the ball']];
     let lx = 8, ly = 26;
     leg.forEach(([cls, txt]) => {
       const w = txt.length * 6.3; // 10.5px IBM Plex Mono: every character is 6.3 wide
@@ -625,15 +629,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
       el('text', { x: lx + 11, y: ly + 8, class: 'tiny' }, g, cls === 'plus' ? txt.slice(4) : txt);
       lx += 11 + w + 14;
     });
-    // your device
-    G.devTop = ly + 22; G.devH = 30 + G.devLines * 14 + 10;
-    el('rect', { x: 4, y: G.devTop, width: VBW - 8, height: G.devH, rx: 12, class: 'sec' }, g);
-    el('text', { x: 12, y: G.devTop + 16, class: 'lbl' }, g, 'YOU');
-    // the wire into the machine (no internet here: the model runs in this tab)
-    const wx = GUT + 18; G.wireTop = G.devTop + G.devH; G.promptY = G.wireTop + 42;
-    el('path', { d: `M${wx} ${G.wireTop + 2} L${wx} ${G.promptY - 16}`, class: real ? 'wire local' : 'wire' }, g);
-    el('text', { x: wx + 8, y: G.wireTop + 22, class: 'tiny' }, g, real ? 'no internet: the model runs in this tab' : 'internet · HTTPS');
-    G.wireX = wx;
+    G.devTop = ly + 10; G.promptY = ly + 34; G.wireX = GUT + 18;
     el('text', { x: GUT - 6, y: G.promptY + 4, 'text-anchor': 'end', class: 'tiny' }, g, 'prompt');
     // tokens and their embedding rows
     G.tokY = G.promptY + 22 + G.chipH / 2; G.embY = G.tokY + G.chipH / 2 + (G.vertical ? 12 : 22);
@@ -649,7 +645,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
     for (let l = 0; l < G.L; l++) {
       const y = G.Y0 + l * G.LH;
       G.cols.push(el('rect', { x: G.x0, y: y + 0.6, width: G.x1 - G.x0, height: G.LH - 1.2, rx: 3, class: 'lcol full' }, g));
-      if (real && S.llm) G.knobs.push(el('image', { href: knobBank(l), x: G.x0, y: y + 0.6, width: G.x1 - G.x0, height: G.LH - 1.2, preserveAspectRatio: 'none', class: 'kbank' }, g));
+      if (real && S.llm) G.knobs.push(el('image', { href: knobBank(l, G.x1 - G.x0, G.LH - 1.2), x: G.x0, y: y + 0.6, width: G.x1 - G.x0, height: G.LH - 1.2, class: 'kbank' }, g));
       el('rect', { x: G.x0, y: y + 0.6, width: 3, height: G.LH - 1.2, class: 'lstripe full' }, g);
       const every = G.L > 10 ? 5 : 1;
       if (l === 0 || (l + 1) % every === 0) el('text', { x: GUT - 6, y: y + G.LH / 2 + 4, 'text-anchor': 'end', class: 'tiny' }, g, l === 0 ? 'layer 1' : String(l + 1));
@@ -659,7 +655,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
     G.gateY = G.Y0 + G.L * G.LH + 8;
     el('rect', { x: G.x0, y: G.gateY, width: G.x1 - G.x0, height: 30, rx: 6, class: 'gate' }, g);
     G.gateFlash = el('rect', { x: G.x0, y: G.gateY, width: G.x1 - G.x0, height: 30, rx: 6, class: 'gateflash', style: 'opacity:0' }, g);
-    el('text', { x: (G.x0 + G.x1) / 2, y: G.gateY + 19, 'text-anchor': 'middle', class: 'lbl', style: 'letter-spacing:0.12em' }, g, narrow.matches ? 'UNEMBED · INTO THE CLOUD ↑' : 'UNEMBED · INTO THE CLOUD →');
+    el('text', { x: (G.x0 + G.x1) / 2, y: G.gateY + 19, 'text-anchor': 'middle', class: 'lbl', style: 'letter-spacing:0.12em' }, g, stacked.matches ? 'UNEMBED · INTO THE CLOUD ↑' : '← UNEMBED · INTO THE CLOUD');
     G.outY = G.gateY + 58; G.vbH = G.outY + 14;
     el('text', { x: GUT - 6, y: G.outY, 'text-anchor': 'end', class: 'tiny' }, g, 'output');
     $('#board').setAttribute('viewBox', `0 0 ${VBW} ${G.vbH}`);
@@ -708,29 +704,10 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
     el('tspan', { class: 'outp' }, out, D.prompt.length > maxc - 24 ? '…' + D.prompt.slice(-(maxc - 25)) : D.prompt);
     const outW = D.gen.map(gx => el('tspan', { class: 'outg', 'fill-opacity': 0 }, out, gx));
     S.guessEl = el('text', { x: 0, y: 0, class: 'guess', style: 'opacity:0' }, dyn);
-    S.strip = el('g', { class: 'strip16', style: 'opacity:0' }, dyn);
-    S.stripCells = Array.from({ length: 16 }, (_, k) => el('rect', { x: k * 2.6, y: 0, width: 2.2, height: 7, rx: 0.4 }, S.strip));
+    // each lane's ball carries a strip of its first 16 real numbers, which change after every layer
+    const sw = Math.min(G.LW - 4, 42); S.stripW = sw;
+    S.strips = Array.from({ length: N }, () => { const sg = el('g', { class: 'strip16', style: 'opacity:0' }, dyn); return { g: sg, cells: Array.from({ length: 16 }, (_, k) => el('rect', { x: k * sw / 16, y: 0, width: Math.max(0.6, sw / 16 - 0.4), height: 6 }, sg)) }; });
     S.balls = ball;
-    // the device: the system prompt (chat model; usually hidden), your message, and the reply that streams in
-    const gDev = el('g', {}, dyn), DCH = 14, dw = 6.6, by = G.devTop + 30; // 11px IBM Plex Mono: each character 6.6 wide
-    const bubble = (k, text, cls, label) => {
-      const c = G.dev[k], ls = wrapTo(text, c.n), max = k === 'sys' ? 3 : 4, show = ls.slice(0, max);
-      if (ls.length > max) show[max - 1] = show[max - 1].slice(0, c.n - 1) + '…';
-      const gb = el('g', { style: 'opacity:0' }, gDev);
-      el('rect', { x: c.x, y: by - 14, width: c.w, height: Math.max(1, show.length) * DCH + 10, rx: 8, class: 'bub ' + cls }, gb);
-      if (label) el('text', { x: c.x + 4, y: by - 18, class: 'tiny', style: 'font-size:9.5px' }, gb, label);
-      return { g: gb, lines: show.map((ln, i) => el('text', { x: c.x + 7, y: by + i * DCH, class: 'dtext' + (cls === 'sys' ? ' sys' : ''), style: cls === 'you' ? 'opacity:0' : '' }, gb, ln)) };
-    };
-    const gSys = D.sys ? bubble('sys', D.sys, 'sys', 'SYSTEM · HIDDEN').g : el('g', {}, gDev);
-    const you = bubble('you', D.prompt, 'you', D.sys ? 'YOUR MESSAGE' : null), youBub = you.g, youTxt = you.lines;
-    // the reply: place each new piece where it will sit, wrapping at piece boundaries
-    const rc = G.dev.rep, repPieces = []; let cx0 = 0, line = 0;
-    D.gen.forEach(pc => { const txt = pc.replace(/^ /, line || cx0 ? ' ' : ''); if (cx0 + txt.length > rc.n && cx0) { line++; cx0 = 0; } const t2 = cx0 ? txt : txt.trimStart(); repPieces.push(el('text', { x: rc.x + 7 + cx0 * dw, y: by + Math.min(line, 3) * DCH, class: 'dtext rep', style: 'opacity:0' }, gDev, t2)); cx0 += t2.length; });
-    const repBub = el('rect', { x: rc.x, y: by - 14, width: rc.w, height: (Math.min(line, 3) + 1) * DCH + 10, rx: 8, class: 'bub them', style: 'opacity:0' }, gDev);
-    gDev.insertBefore(repBub, gDev.firstChild);
-    el('text', { x: rc.x + 4, y: by - 18, class: 'tiny', style: 'font-size:9.5px' }, gDev, 'REPLY');
-    const packet = el('g', { style: 'opacity:0' }, dyn);
-    el('rect', { x: -9, y: -6, width: 18, height: 12, rx: 3, class: 'pkt' }, packet); el('path', { d: 'M-9 -6 L0 1 L9 -6', class: 'pktl' }, packet);
     // the prompt as the model reads it, cut into the pieces that become lanes
     const GAP = 4, tx0 = G.x0, ty = G.promptY + 4, gText = el('g', {}, dyn), segEls = [], cuts = [];
     const nch = D.segs.reduce((a, sg) => a + sg.length, 0), CW = Math.min(7.2, (G.x1 - tx0 - GAP * D.segs.length) / Math.max(1, nch)), fs = (CW / 0.6).toFixed(2); // IBM Plex Mono: a character is 0.6 em wide
@@ -771,7 +748,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
     }
     const LD = 0.42; // seconds per layer in the prompt pass
     function pass(p, cols, focus, t, s) {
-      PASSES.push({ t0: t, focus });
+      PASSES.push({ t0: t, focus, cols });
       const d = LD * s;
       for (let l = 0; l < L; l++) {
         const ty2 = G.talkY(l), hy = G.thinkY(l);
@@ -832,37 +809,18 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
       tl.to(rows[row].g, { opacity: 1, duration: 0.25 }, t + 1.25);
       tl.to(outW[k], { attr: { 'fill-opacity': 1 }, duration: 0.2 }, t + 1.3);
       t += 1.5;
-      // stream back: the new piece goes to the reply on your device straight away
-      mark(8, t); STEPLOG.push([t, -9, 0, k]);
-      const rp = repPieces[k], rx = +rp.getAttribute('x'), ry = +rp.getAttribute('y') - 4;
-      const pk = el('g', { style: 'opacity:0' }, g);
-      el('rect', { x: -9, y: -6, width: 18, height: 12, rx: 3, class: 'pkt' }, pk); el('path', { d: 'M-9 -6 L0 1 L9 -6', class: 'pktl' }, pk);
-      tl.to(pk, { opacity: 1, duration: 0.1 }, t);
-      tl.fromTo(pk, { attr: { transform: `translate(${X(row)} ${G.tokY})` } }, { attr: { transform: `translate(${rx + 8} ${ry})` }, duration: 0.5, ease: 'power1.inOut', immediateRender: false }, t);
-      tl.to(pk, { opacity: 0, duration: 0.12 }, t + 0.5);
-      if (k === 0) tl.to(repBub, { opacity: 1, duration: 0.2 }, t + 0.4);
-      tl.to(rp, { opacity: 1, duration: 0.15 }, t + 0.5);
-      t += 0.65;
-      info({ gen: k + 1 }, t - 0.2);
+      mark(8, t); // stream back: no time here (the reply is the output line, already updated)
+      info({ gen: k + 1 }, t);
       tl.to(g, { opacity: 0, duration: 0.3 }, t);
       return t + 0.35;
     }
 
     let t = 0;
-    // type: the message appears on the device, line by line (the system prompt was set by the app beforehand)
+    // type: the text the model reads appears at the top (for the chat model: system prompt and message in its template)
     mark(0, t); info({ kv: 0, read: 0, gen: 0 }, t);
-    tl.to(gSys, { opacity: 1, duration: 0.2 }, t);
-    tl.to(youBub, { opacity: 1, duration: 0.2 }, t);
-    youTxt.forEach((el2, i) => tl.to(el2, { opacity: 1, duration: 0.2 }, t + 0.15 + i * 0.18));
-    t += 0.4 + youTxt.length * 0.18;
-    // send: here it stays on this computer, and drops straight into the model
-    mark(1, t); STEPLOG.push([t, -8, 0, 0]);
-    tl.to(packet, { opacity: 1, duration: 0.1 }, t);
-    tl.fromTo(packet, { attr: { transform: `translate(${G.wireX} ${G.wireTop + 4})` } }, { attr: { transform: `translate(${G.wireX} ${G.promptY - 14})` }, duration: 0.6, ease: 'power1.inOut', immediateRender: false }, t);
-    tl.to(packet, { opacity: 0, duration: 0.15 }, t + 0.6);
-    t += 0.7;
-    tl.to(segEls.map(s2 => s2.el), { opacity: 1, duration: 0.3 }, t);
-    t += 0.6;
+    tl.to(segEls.map(s2 => s2.el), { opacity: 1, duration: 0.3, stagger: 0.03 }, t + 0.1);
+    t += 0.9;
+    mark(1, t); // send: nothing is sent here
     // tokenize: cut the text, then each piece drops into its lane and its ID is looked up
     mark(2, t);
     cuts.forEach((c, k) => tl.to(c, { opacity: 1, duration: 0.15 }, t + k * 0.07));
@@ -913,7 +871,8 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
     const list = STAGES_REAL();
     const [title, text] = list[st] || DONE;
     if (!S.hover) {
-      $('#capStep').textContent = st < list.length ? 'Step ' + (st + 1) + ' of ' + list.length : 'Finished';
+      const shown = PIPE.map((n, i) => i).filter(i => PIPE[i] !== 'Send' && PIPE[i] !== 'Stream back'); // the steps this page shows
+      $('#capStep').textContent = st < list.length ? 'Step ' + (shown.indexOf(st) + 1 || shown.filter(i => i < st).length) + ' of ' + shown.length : 'Finished';
       $('#capTitle').textContent = title;
       $('#capText').textContent = text;
     }
@@ -1064,10 +1023,16 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
         S.guessEl.textContent = S.llm.tok.piece(top.id) + ' ' + fmtPct(top.p);
         S.guessEl.style.opacity = 1;
         // the ball's first 16 numbers after this layer (real), under the ball
-        const rec = D.recs[cur[1]], f = rec.layers[cur[2]].first, sc = rec.sc16 || (rec.sc16 = Math.max(1e-6, ...rec.layers.flatMap(q => q.first.map(Math.abs)))), bg = hexRgb(css('--st-bg'));
-        S.strip.setAttribute('transform', `translate(${left ? x - 50 : x + 9} ${y + 3})`); S.strip.style.opacity = 1;
-        S.stripCells.forEach((c, k) => c.setAttribute('fill', rgbStr(cellCol(f[k], sc, bg))));
-      } else { S.guessEl.style.opacity = 0; S.strip.style.opacity = 0; }
+        const bg = hexRgb(css('--st-bg'));
+        // every lane in this pass: its ball's first 16 numbers after this layer (all real), just under the ball
+        S.strips.forEach((st2, i) => {
+          const rr = D.rowRecs[i], on = pass.cols.includes(i) && rr && rr.layers[cur[2]];
+          if (!on) { st2.g.style.opacity = 0; return; }
+          const bl = S.balls[i], fv = rr.layers[cur[2]].first, sc2 = rr.sc16 || (rr.sc16 = Math.max(1e-6, ...rr.layers.flatMap(q => q.first.map(Math.abs))));
+          st2.g.setAttribute('transform', `translate(${+bl.getAttribute('cx') - S.stripW / 2} ${+bl.getAttribute('cy') + 7})`); st2.g.style.opacity = 1;
+          st2.cells.forEach((c, k) => c.setAttribute('fill', rgbStr(cellCol(fv[k], sc2, bg))));
+        });
+      } else { S.guessEl.style.opacity = 0; S.strips.forEach(st2 => { st2.g.style.opacity = 0; }); }
     }
     $('#gStrip').hidden = !D.real;
     if (!D.real) { $('#gLine').textContent = ''; return; }
@@ -1116,25 +1081,27 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
     if ($('#bTitle').textContent !== $('#capTitle').textContent) $('#bTitle').textContent = $('#capTitle').textContent;
     if ($('#bText').textContent !== $('#capText').textContent) $('#bText').textContent = $('#capText').textContent;
   }
-  // a layer's knob bank as a picture: its real weights, the talk grids (q, k, v, o) on the top half and the think grids
-  // (gate, up, down) on the bottom half; each pixel is one real weight (warm positive, blue negative), sampled evenly.
-  function knobBank(l) {
-    const key = S.llm.meta.key + ':' + l; S.banks = S.banks || {}; if (S.banks[key]) return S.banks[key];
-    const P = S.llm.mats.layers[l], W = 480, H = 24, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
-    const c = cv.getContext('2d'), img = c.createImageData(W, H), bg = hexRgb(css('--st-bg'));
-    const half = (mats, y0) => { // each knob row of the grids becomes a column of pixels, left to right
-      const rows = mats.map(([m, r]) => r), tot = rows.reduce((a, b) => a + b, 0);
+  // a layer's knob bank: a row of dials across the band (two rows, talk above think, when the band is tall enough).
+  // Each dial is one real weight, sampled evenly through the layer's grids (talk: q, k, v, o; think: gate, up, down);
+  // its needle shows the setting against that grid's spread. Drawn once per model, layer and size.
+  function knobBank(l, w, h) {
+    const key = [S.llm.meta.key, l, Math.round(w), Math.round(h)].join(':'); S.banks = S.banks || {}; if (S.banks[key]) return S.banks[key];
+    const P = S.llm.mats.layers[l], D = S.llm.D, KV = S.llm.KVH * S.llm.HD, F = S.llm.F, k2 = 2, cv = document.createElement('canvas');
+    cv.width = Math.round(w * k2); cv.height = Math.round(h * k2);
+    const c = cv.getContext('2d'); c.scale(k2, k2);
+    const talk = [[P.q, D * D], [P.k, KV * D], [P.v, KV * D], [P.o, D * D]], think = [[P.gate, F * D], [P.up, F * D], [P.down, D * F]];
+    const two = h >= 34, rowsOf = two ? [talk, think] : [talk.concat(think)], r = Math.max(3, Math.min(8, (two ? h / 2 : h) * 0.3)), step = r * 2.7;
+    const n = Math.floor((w - 8) / step), ink = css('--st-ink2'), wt = css('--wt');
+    rowsOf.forEach((mats, ri) => {
+      const tot = mats.reduce((a, [, len]) => a + len, 0), cy = two ? h * (ri ? 0.74 : 0.3) : h / 2;
       mats.forEach(([m]) => { m.sc = m.sc || p98v(m.subarray(0, 65536)); });
-      for (let x = 0; x < W; x++) {
-        let r = Math.floor(x / W * tot), k = 0; while (r >= rows[k]) r -= rows[k++];
-        const [m, , cols] = mats[k];
-        for (let y = 0; y < H / 2; y++) { const col = cellCol(m[r * cols + Math.floor(y / (H / 2) * cols)], m.sc, bg), o = ((y0 + y) * W + x) * 4; img.data[o] = col[0]; img.data[o + 1] = col[1]; img.data[o + 2] = col[2]; img.data[o + 3] = 255; }
+      for (let k = 0; k < n; k++) {
+        let at = Math.floor((k + 0.5) / n * tot), j = 0; while (at >= mats[j][1]) at -= mats[j++][1];
+        const [m] = mats[j], v = Math.max(-1, Math.min(1, m[at] / m.sc)), cx = 4 + (k + 0.5) * step, ang = v * 0.75 * Math.PI - Math.PI / 2;
+        c.strokeStyle = wt; c.lineWidth = 1; c.beginPath(); c.arc(cx, cy, r, 0.75 * Math.PI, 2.25 * Math.PI); c.stroke();
+        c.strokeStyle = ink; c.lineWidth = Math.max(1, r / 4); c.lineCap = 'round'; c.beginPath(); c.moveTo(cx, cy); c.lineTo(cx + Math.cos(ang) * r * 0.9, cy + Math.sin(ang) * r * 0.9); c.stroke();
       }
-    };
-    const D = S.llm.D, KV = S.llm.KVH * S.llm.HD, F = S.llm.F;
-    half([[P.q, D, D], [P.k, KV, D], [P.v, KV, D], [P.o, D, D]], 0);
-    half([[P.gate, F, D], [P.up, F, D], [P.down, D, F]], H / 2);
-    c.putImageData(img, 0, 0);
+    });
     return (S.banks[key] = cv.toDataURL());
   }
   function syncLayers(time) {
@@ -1688,7 +1655,7 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
   }
   // the cloud on the stage, the board's destination (on phones it sits on top, sticky, so it stays in view while the layers run)
   const cardView = new CloudView($('#cloudCv'), $('#cInfo'), 1);
-  cardView.maxH = () => (matchMedia('(max-width: 700px)').matches && !$('#cloudCard').classList.contains('open') ? Math.round(innerHeight * 0.3) : Infinity);
+  cardView.maxH = () => (matchMedia('(max-width: 1180px)').matches && !$('#cloudCard').classList.contains('open') ? Math.round(innerHeight * 0.3) : Infinity);
   $('#cTools').addEventListener('click', () => { const open = $('#cloudCard').classList.toggle('open'); $('#cTools').setAttribute('aria-expanded', open); $('#cTools').textContent = open ? 'Close tools' : 'Tools'; cardView.render(); });
   if (matchMedia('(min-width: 700px)').matches && !reduced) cardView.tilt = 0.92;
   cloudControls($('#cBar'), cardView);
@@ -2077,7 +2044,7 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
   }
 
   // ---- the guided tour: one token, step by step (pauses at the start of each step; Next plays on to the next) ----
-  function tourMarks() { const seen = new Set(), m = []; for (const [t, st] of CAPS) { if (st > 8) break; if (!seen.has(st)) { seen.add(st); m.push(t); } } return m; }
+  function tourMarks() { const seen = new Set(), m = []; for (const [t, st] of CAPS) { if (st > 8) break; if (!seen.has(st) && st !== 1 && st !== 8) { seen.add(st); m.push(t); } } return m; } // Send and Stream back take no time here
   function startTour() {
     S.tour = { marks: tourMarks(), i: 0 }; S.hover = null; S.pinned = false;
     tl.pause(); tl.time(0); $('#nbTour').hidden = false; sync(); tl.play(); setPlayLabel(); // plays the first step, then stops at each next one
@@ -2101,17 +2068,17 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
     }
   }
   // ---- the page follows the falling ball while it plays (until you scroll it yourself) ----
-  const narrow = matchMedia('(max-width: 700px)');
+  const narrow = matchMedia('(max-width: 700px)'), stacked = matchMedia('(max-width: 1180px)'); // stacked: the cloud sits on top
   S.followOff = 0; S.followCool = 0;
   ['wheel', 'touchstart', 'keydown'].forEach(ev => addEventListener(ev, () => { S.followOff = Date.now() + 6000; }, { passive: true }));
   function follow(time, st) {
     if (!G || G.Y0 == null || (!tl.isActive() && !S.tour) || Date.now() < S.followOff || Date.now() < S.followCool) return;
-    let y = G.devTop + 20;
+    let y = G.promptY;
     if (st >= 2 && st <= 3) y = G.tokY;
     else if (st === 4 || st === 9) { let cur = null; for (const e of STEPLOG) if (e[0] <= time) cur = e; y = cur && cur[1] >= 0 ? G.Y0 + (cur[1] + 0.5) * G.LH : G.Y0; }
     else if (st >= 5 && st <= 7) y = G.gateY;
     const r = $('#board').getBoundingClientRect(), sy = r.top + y * (r.height / G.vbH);
-    const topLim = narrow.matches ? $('#cloudCard').getBoundingClientRect().bottom + 24 : 70, botLim = innerHeight - (narrow.matches ? $('#nbar').offsetHeight + 30 : 110);
+    const topLim = stacked.matches ? $('#cloudCard').getBoundingClientRect().bottom + 24 : 70, botLim = innerHeight - (narrow.matches ? $('#nbar').offsetHeight + 30 : 110);
     if (sy < topLim || sy > botLim) { S.followCool = Date.now() + 600; scrollBy({ top: sy - (topLim + (botLim - topLim) * 0.4), behavior: reduced ? 'auto' : 'smooth' }); }
   }
 

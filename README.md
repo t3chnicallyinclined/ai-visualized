@@ -15,7 +15,7 @@ No install, no build step, no account. Plain HTML and JavaScript you can read. T
 
 ## What you are looking at
 
-Read the board top to bottom, like Plinko. Each token gets a **lane** running down the board, and the lanes fall through **every layer** of the model (each layer is a band holding that layer's real weights) (6 for TinyStories 15M, 30 for SmolLM2-135M-Instruct). In each layer a token does two things:
+Read the board top to bottom, like Plinko. Each token gets a **lane** running down the board, and the lanes fall through **every layer** of the model (each layer is a band of dials, each dial one of that layer's real weights) (6 for TinyStories 15M, 30 for SmolLM2-135M-Instruct). In each layer a token does two things:
 
 - **Talk (attention):** it compares itself with the earlier tokens and blends in information from the ones that match. This is the only place tokens share information. Pink lines show who it listens to (the model's real attention). Its key and value stay behind in that layer's **KV cache** (a teal tick).
 - **Think (feed-forward):** it works alone. Hundreds of neurons check the ball for patterns and some fire strongly; the burst shows how much was added.
@@ -24,15 +24,13 @@ Both add onto the ball rather than replacing it. Point at any lane in any layer 
 
 A strip at the top of the stage shows the whole process, in order, and lights up each step as it runs (click one to jump to it):
 
-1. **Type**: you type a message on your device (the box at the top of the board).
-2. **Send**: a chat app wraps it in a chat template (with its system prompt) and sends it over HTTPS to a server with a GPU. Here nothing is sent: the model runs in your browser tab, and the page says so.
+1. **Type**: your text (for the chat model: the system prompt and your message in its chat template) appears at the top of the board.
 3. **Tokenize**: the text is cut into pieces the model knows, and each piece is looked up in the vocabulary to get its ID.
 4. **Embed**: each ID picks one row of a big learned table; that row of numbers is the ball. It carries no word order.
 5. **Layers**: every lane goes through every layer: talk, then think. Word order gets in during talk, where each query and key is rotated by its position (RoPE).
 6. **Unembed**: one more norm, then the ball is compared with every row of an output table, giving one score per token (both models reuse their embedding table here).
 7. **Choose**: softmax over the top five, temperature, and a weighted dice roll.
 8. **Detokenize**: the winning ID turns back into text and is added to the output.
-9. **Stream back**: the new piece goes straight back to your device, which is why replies appear word by word.
 10. **Repeat**: the new token becomes a new lane and goes through alone, reading the KV cache, until an end-of-text token or a length limit.
 
 ### The embedding explorer
@@ -68,7 +66,7 @@ With either one, everything on the board is the model's actual output: tokens an
 
 ### Knobs, and what a layer does to the ball
 
-Every parameter is a knob, set once in training and never moved while the model runs; no prompt can turn one. On the board each layer band is drawn as that layer's knob bank: its real weights (the talk grids on the top half, the think grids on the bottom), the same knobs for every token, lit while the ball is multiplied through them. The ball is a list of numbers, not a single value: the last ball carries a strip of its first 16 real numbers, and a + marks each change being added onto it (the residual stream).
+Every parameter is a knob, set once in training and never moved while the model runs; no prompt can turn one. On the board each layer band is drawn as that layer's knob bank: its real weights (the talk grids on the top half, the think grids on the bottom), the same knobs for every token, lit while the ball is multiplied through them. The ball is a list of numbers, not a single value: every ball carries a strip of its first 16 real numbers (the whole prompt goes through each layer together), and a + marks each change being added onto it (the residual stream).
 
 **Look inside a layer** (or click any layer band on the board) opens one token's ball going through that layer step by step, with the model's own numbers: the ball arriving, the RMS norm (with its own knobs), query/key/value = knobs × ball, the rotation by position, attention over every earlier token (all heads), the output knobs, the + onto the ball, then the feed-forward gate and up knobs, the neurons firing, the down knobs and the second +. Each "knobs × ball" step is the real knob grid: the ball across the top, one output per row on the right; **Multiply, row by row** animates it, pointing at a row shows that row's dot product, and the page recomputes every product from the real weights and confirms it matches the model's own numbers.
 
