@@ -42,6 +42,18 @@ h1 { font: 800 clamp(28px, 4vw, 40px)/1 var(--display); margin: 0; letter-spacin
 h1 .vz { font-weight: 400; font-size: 0.62em; color: var(--muted); letter-spacing: 0; margin: 0 0.06em; }
 header p { margin: 0; color: var(--muted); max-width: 72ch; text-wrap: pretty; }
 header a { color: var(--ink); font-weight: 600; }
+.pic { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; }
+.pichead { display: flex; flex-wrap: wrap; gap: 4px 16px; align-items: baseline; } .pichead h2 { font: 800 22px/1.15 var(--display); margin: 0; } .pichead p { margin: 0; color: var(--muted); }
+.tiles { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 10px; counter-reset: t; }
+.tiles li { counter-increment: t; background: var(--band); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; position: relative; }
+.tiles li::after { content: counter(t); position: absolute; top: 8px; right: 10px; font: 600 11px var(--mono); color: var(--muted); }
+.tiles .ic { font-size: 24px; line-height: 1; } .tiles b { font: 700 15px/1.25 var(--display); } .tiles span:not(.ic) { font-size: 13.5px; line-height: 1.45; color: var(--ink); } .tiles em { font: 12px var(--mono); color: var(--muted); font-style: normal; margin-top: auto; }
+.picfoot { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 12px; align-items: start; }
+@media (max-width: 760px) { .picfoot { grid-template-columns: 1fr; } .tiles { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 82%; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 4px; } .tiles li { scroll-snap-align: start; } }
+.hear { background: var(--band); border-radius: 12px; padding: 10px 12px; } .hear b { font: 700 15px var(--display); }
+.hrow { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0; } .hrow input { flex: 1 1 90px; min-width: 0; font: 500 14px var(--mono); padding: 6px 9px; border-radius: 8px; border: 1.5px solid var(--line); background: var(--panel); color: var(--ink); }
+.hear .note b { font: 700 14px var(--mono); }
+.bends summary { cursor: pointer; font-weight: 600; } .bends p { margin: 6px 0 0; font-size: 14px; color: var(--muted); }
 .hero { position: relative; overflow: hidden; border-radius: 18px; padding: 22px 24px; color: #eef0fa;
   background: radial-gradient(120% 140% at 0% 0%, #2a2f6e 0%, #141733 45%, #0c0e1c 100%); border: 1px solid #2f3566;
   display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px 28px; align-items: center; }
@@ -304,7 +316,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
 <div id="page">
   <header>
     <h1 aria-label="AI Visualized">A<span class="vz" aria-hidden="true">(visualized)</span>I</h1>
-    <p>Watch a real language model pick its next word, running in your browser: every number on this page is the model's own. Your prompt becomes numbers, falls through every layer of knobs, and lands in the token cloud, where the model's options light up and a dice roll picks one. <a href="kids.html">A version for kids and classrooms</a> · <a href="agent.html">an AI agent, step by step</a>.</p>
+    <p><b>It's autocomplete:</b> a language model guesses the next word, adds it, and guesses again. Here a real one runs in your browser and every number on the page is its own. Your prompt becomes numbers, falls through every layer of knobs, and lands in the token cloud, where the model's options light up and a dice roll picks one. <a href="kids.html">A version for kids and classrooms</a> · <a href="agent.html">an AI agent, step by step</a>.</p>
   </header>
 
   <section class="hero" aria-labelledby="heroT">
@@ -316,6 +328,28 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
     <div class="hbtns">
       <button type="button" class="hwork" id="heroWork">Watch it work</button>
       <button type="button" class="hrogue" id="heroRogue">Try to make it go rogue</button>
+    </div>
+  </section>
+
+  <section class="pic" aria-labelledby="picT">
+    <div class="pichead"><h2 id="picT">The picture in one minute</h2><p>Think of a stereo with millions of volume knobs. Then watch the real thing below: every part of this picture is on the board.</p></div>
+    <ol class="tiles">
+      <li><span class="ic" aria-hidden="true">🔤</span><b>Your words go in as sounds</b><span>Each word is looked up and becomes its own list of numbers: its “sound”. Not how it is pronounced: a sound made from how the word is used.</span><em>On the board: tokens and the embed strips</em></li>
+      <li><span class="ic" aria-hidden="true">🎛️</span><b>Volume knobs, set at the factory and glued</b><span>Rows of knobs turn parts of the sound up or down and mix them. Training set every knob; nothing you type turns them.</span><em>On the board: the dials in every layer</em></li>
+      <li><span class="ic" aria-hidden="true">👂</span><b>Before each row, it listens back</b><span>Each word listens to the earlier words and blends in the ones that matter. The only part that changes with what you type.</span><em>On the board: the pink arcs and the bars on the context tape</em></li>
+      <li><span class="ic" aria-hidden="true">💡</span><b>A wall of lights, one per word</b><span>At the end, every word in the dictionary gets a light that glows by how well the final sound matches it.</span><em>On the board: the unembed, then the token cloud</em></li>
+      <li><span class="ic" aria-hidden="true">🎲</span><b>A dice weighted by the brightest lights</b><span>Usually the brightest wins; sometimes a dimmer one does. The temperature slider sets how loaded the dice is.</span><em>On the board: choose</em></li>
+      <li><span class="ic" aria-hidden="true">🔁</span><b>Add the word, and go again</b><span>The new word joins the line and the whole thing runs again for the next one. That is all it ever does.</span><em>On the board: repeat</em></li>
+    </ol>
+    <div class="picfoot">
+      <div class="hear">
+        <b>How do two words sound to the machine?</b>
+        <div class="hrow"><input id="hearA" value="two" maxlength="20" aria-label="First word"><input id="hearB" value="three" maxlength="20" aria-label="Second word"><button type="button" id="hearGo">Compare</button></div>
+        <p class="note" id="hearOut">Compares the two words' rows in the loaded model's embedding table (1 = the same direction, 0 = unrelated). Try <i>two / too</i>, <i>red / read</i>, <i>cat / dog</i>.</p>
+      </div>
+      <details class="bends"><summary>Where the picture bends</summary>
+        <p>A real layer does more than turn parts up or down: it mixes every part with every other part, and it has bends that plain knobs cannot make. Listening back is not magic: it is worked out from the same glued knobs and the words themselves. And the wall of lights is one more set of knobs: one row of numbers per word, compared with the final sound.</p>
+      </details>
     </div>
   </section>
 
@@ -748,7 +782,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
     el('text', { x: 8, y: 16, class: 'secname' }, g, `${G.L} layers, top to bottom. Each: ${hk === 'mamba' ? 'one memory block (no attention)' : hk === 'neox' ? 'talk and think side by side' : 'talk, then think'}`);
     if (VBW > 620) el('text', { x: VBW - 8, y: 16, 'text-anchor': 'end', class: 'lbl' }, g, 'THE MODEL: IN THIS BROWSER TAB');
     const legKind = S.llm && isReal() ? S.llm.kind : 'llama';
-    const leg = [['knob', 'dials = that layer\'s knobs (real weights, sampled), the same for every token'], ...(legKind === 'mamba' ? [['lin', 'memory: written and read by every token']] : [['att', 'talk: attention'], ['kvt', 'KV cache']]), ['ff', legKind === 'mamba' ? 'the change it makes' : 'think: feed-forward'], ['plus', '+ = added onto the ball']];
+    const leg = [['knob', 'dials = that layer\'s volume knobs (real weights, sampled): set in training and glued, the same for every token'], ...(legKind === 'mamba' ? [['lin', 'memory: written and read by every token']] : [['att', 'talk: attention'], ['kvt', 'KV cache']]), ['ff', legKind === 'mamba' ? 'the change it makes' : 'think: feed-forward'], ['plus', '+ = added onto the ball']];
     let lx = 8, ly = 26;
     leg.forEach(([cls, txt]) => {
       const w = txt.length * 6.3; // 10.5px IBM Plex Mono: every character is 6.3 wide
@@ -1316,9 +1350,23 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
     y += HH + 18;
     $('#ueSvg').setAttribute('viewBox', `0 0 ${VW} ${y}`); $('#ueSvg').innerHTML = parts.join('');
     const top = u.top[0];
-    $('#ueTitle').textContent = `Unembed · one score for every one of the ${nf(u.V)} tokens`;
-    $('#ueNote').textContent = `After the last layer the ball goes through one more norm. Then it is compared with every row of the output table: ${nf(u.V)} rows of ${u.Dm} numbers${G.kind === 'neox' ? ' (Pythia has its own output table)' : ' (here it is the same table as the embedding)'}. Each comparison is a dot product: multiply the ball and the row number by number, add it all up. Think of a bank of ${nf(u.V)} meters, one per token: each shows how well the ball matches that token's row. “${m.tok.piece(top.id)}” reads highest (${top.s.toFixed(1)}). Softmax turns all the readings into chances (${fmtPct(top.p)} for it), and then the dice picks.`;
+    $('#ueTitle').textContent = `The wall of lights (unembed) · one light for every one of the ${nf(u.V)} tokens`;
+    $('#ueNote').textContent = `After the last layer the ball goes through one more norm. Then it is compared with every row of the output table: ${nf(u.V)} rows of ${u.Dm} numbers${G.kind === 'neox' ? ' (Pythia has its own output table)' : ' (here it is the same table as the embedding)'}. Each comparison is a dot product: multiply the ball and the row number by number, add it all up. Think of a wall of ${nf(u.V)} lights, one per token: each glows by how well the ball matches that token's row. “${m.tok.piece(top.id)}” reads highest (${top.s.toFixed(1)}). Softmax turns all the readings into chances (${fmtPct(top.p)} for it), and then the dice picks.`;
   }
+  // how two words "sound" to the machine: cosine similarity of their rows in the loaded model's embedding table
+  function hear() {
+    const m = S.llm, out = $('#hearOut'); if (!m || !m.mats) { out.textContent = 'The model is still loading.'; return; }
+    const one = w => { const ids = m.tok.encode(' ' + w.trim()).filter(id => m.tok.piece(id).replace(/·/g, '') !== ''); return ids; };
+    const a = $('#hearA').value.trim(), b = $('#hearB').value.trim(); if (!a || !b) return;
+    const ia = one(a), ib = one(b);
+    if (ia.length !== 1 || ib.length !== 1) { out.innerHTML = `In ${m.name}, ${[[a, ia], [b, ib]].filter(([, i]) => i.length !== 1).map(([w, i]) => `“${w.replace(/[&<>]/g, '')}” is ${i.length} tokens`).join(' and ')}. Try shorter, common words (each must be one token).`; return; }
+    const E = m.mats.E, D = m.D, ra = ia[0] * D, rb = ib[0] * D; let s2 = 0, na = 0, nb = 0;
+    for (let c = 0; c < D; c++) { const x = E[ra + c], y = E[rb + c]; s2 += x * y; na += x * x; nb += y * y; }
+    const cs = s2 / Math.sqrt(na * nb), word = cs > 0.45 ? 'close: the machine treats them alike' : cs > 0.25 ? 'somewhat alike' : 'far apart: to the machine they sound different';
+    out.innerHTML = `${m.name}: “${a.replace(/[&<>]/g, '')}” and “${b.replace(/[&<>]/g, '')}” → <b>${cs.toFixed(2)}</b>, ${word}. (Rows of ${D} numbers each.)`;
+  }
+  $('#hearGo').addEventListener('click', hear);
+  [$('#hearA'), $('#hearB')].forEach(i => i.addEventListener('keydown', e => { if (e.key === 'Enter') hear(); }));
   function liveLine(time, st) { // one line of real numbers for this exact moment
     const D = S.data, m = S.llm; if (!D || !D.real || st < 4 || st >= 10) return '';
     const now = nowAt(time); if (!now) return '';
