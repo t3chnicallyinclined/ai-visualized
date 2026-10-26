@@ -375,6 +375,14 @@
 
   // ---------- the stage drawing ----------
   const VW = 1100, PAD = 12, CH = 6.62, ROWH = 24; // viewBox width, side padding, monospace advance at 11px, chip row height
+  // a line of SVG text, wrapped at word breaks to the drawing's width (returns the parts and the height used)
+  function wrapText(str, x, y, VWd, size, attrs) {
+    const per = Math.max(20, Math.floor((VWd - x - PAD) / (size * 0.602))), lines = []; let cur = '';
+    for (const w of String(str).split(' ')) { if (cur && (cur + ' ' + w).length > per) { lines.push(cur); cur = w; } else cur = cur ? cur + ' ' + w : w; }
+    if (cur) lines.push(cur);
+    const lh = Math.round(size * 1.35);
+    return { parts: lines.map((l, i) => `<text x="${x}" y="${y + i * lh}" font-size="${size}" ${attrs}>${esc(l)}</text>`), h: lines.length * lh };
+  }
   const KCOL = { system: 'var(--c-sys)', user: 'var(--c-user)', ai: 'var(--c-ai)', tool: 'var(--c-tool)', marker: 'var(--c-mark)' };
   function dials(model) { // a few real knobs from every layer (query and gate weights), scaled per layer
     const out = [];
@@ -391,10 +399,12 @@
   function tapeParts(S, model, W, kids, VWd = VW, y0 = PAD + 4) {
     const T = S.toks.length, att = S.att, parts = [];
     let y = y0;
-    parts.push(`<text class="lbl" x="${PAD}" y="${y + 8}">${esc(W.tape)} · ${T} TOKENS</text>`);
+    const head = `${W.tape} · ${T} TOKENS`;
+    if (head.length * 7.5 < VWd - 2 * PAD) parts.push(`<text class="lbl" x="${PAD}" y="${y + 8}">${esc(head)}</text>`);
+    else { parts.push(`<text class="lbl" x="${PAD}" y="${y + 8}">${esc(W.tape)}</text><text class="lbl" x="${PAD}" y="${y + 24}">${T} TOKENS</text>`); y += 16; } // two lines on a phone
     y += 22;
     // the hidden instructions: one small square per token
-    const pos = new Array(T); const sysN = S.sysEnd, cell = 8, cols = VWd < 1000 ? 40 : 60;
+    const pos = new Array(T); const sysN = S.sysEnd, cell = 8, cols = VWd < 600 ? Math.floor((VWd - 2 * PAD - 8) / cell) : VWd < 1000 ? 40 : 60, besides = VWd - (PAD + cols * cell + 14) > 200;
     let heatMax = 1e-9; if (att) for (let j = 1; j < Math.min(att.length, T); j++) if (j !== S.cur - 1 && att[j] > heatMax) heatMax = att[j];
     if (sysN) {
       const rows = Math.ceil(sysN / cols);
@@ -404,9 +414,10 @@
         const a = att && i < att.length ? Math.min(1, att[i] / heatMax) : 0, reading = i >= S.readFrom && i < S.readTo;
         parts.push(`<rect x="${cx}" y="${cy}" width="${cell - 1}" height="${cell - 1}" rx="1.5" fill="${a > 0.04 ? 'var(--c-attn)' : 'var(--c-sys)'}" opacity="${a > 0.04 ? (0.35 + 0.65 * a).toFixed(2) : reading ? 0.95 : 0.32}"/>`);
       }
-      parts.push(`<text x="${PAD + cols * cell + 14}" y="${y + 10}" font-size="11.5" fill="var(--c-sys)">${esc(W.sysLabel(sysN))}</text></g>`);
-      y += Math.max(rows * cell, 20) + 8;
-      if (att && att.length) { parts.push(`<text x="${PAD}" y="${y + 9}" font-size="11" style="fill:#7c84a6">${esc(W.attNote(att[0]))}</text>`); }
+      const sl = wrapText(W.sysLabel(sysN), besides ? PAD + cols * cell + 14 : PAD, besides ? y + 10 : y + rows * cell + 18, VWd, 11.5, 'fill="var(--c-sys)"');
+      parts.push(...sl.parts, '</g>');
+      y += Math.max(rows * cell, 20) + 8 + (besides ? 0 : sl.h + 4);
+      if (att && att.length) { const an = wrapText(W.attNote(att[0]), PAD, y + 9, VWd, 11, 'style="fill:#7c84a6"'); parts.push(...an.parts); y += an.h - 15; }
       y += 22;
     }
     // the rest: one chip per token, wrapping like text
@@ -440,8 +451,9 @@
     }
     // legend
     y = tapeEnd + 4;
-    let lx = PAD; for (const k of ['system', 'user', 'ai', 'tool', 'marker']) { parts.push(`<rect x="${lx}" y="${y}" width="10" height="10" rx="2" fill="${KCOL[k]}" opacity=".8"/><text x="${lx + 14}" y="${y + 9}" font-size="10.5" fill="var(--s-ink2)">${esc(W.kinds[k])}</text>`); lx += 20 + W.kinds[k].length * 6.2 + 12; }
-    parts.push(`<path d="M${lx + 4},${y + 5} h18" stroke="var(--c-attn)" stroke-width="2.5"/><text x="${lx + 26}" y="${y + 9}" font-size="10.5" fill="var(--s-ink2)">${kids ? 'where it looked' : 'attention of the newest token (all heads, all layers)'}</text>`);
+    let lx = PAD; for (const k of ['system', 'user', 'ai', 'tool', 'marker']) { if (lx + 24 + W.kinds[k].length * 6.2 > VWd - PAD) { lx = PAD; y += 18; } parts.push(`<rect x="${lx}" y="${y}" width="10" height="10" rx="2" fill="${KCOL[k]}" opacity=".8"/><text x="${lx + 14}" y="${y + 9}" font-size="10.5" fill="var(--s-ink2)">${esc(W.kinds[k])}</text>`); lx += 20 + W.kinds[k].length * 6.2 + 12; }
+    const lt = kids ? 'where it looked' : 'attention of the newest token (all heads, all layers)'; if (lx + 30 + lt.length * 6.3 > VWd - PAD) { lx = PAD - 4; y += 18; }
+    parts.push(`<path d="M${lx + 4},${y + 5} h18" stroke="var(--c-attn)" stroke-width="2.5"/><text x="${lx + 26}" y="${y + 9}" font-size="10.5" fill="var(--s-ink2)">${lt}</text>`);
     y += 30;
     return { parts, y };
   }
@@ -450,30 +462,31 @@
     const parts = [];
     // the model: 24 layers with real knobs
     parts.push(`<text class="lbl" x="${PAD}" y="${y}">${esc(W.model)} · QWEN2.5-0.5B-INSTRUCT</text>`);
-    parts.push(`<text x="${PAD}" y="${y + 16}" font-size="11" fill="var(--s-ink3)">${esc(W.knobs(model ? (model.weightBytes / 2).toLocaleString('en-US') : '494,032,768'))}</text>`);
-    y += 28;
-    const L = 24, gx = PAD, gw = (VWd - 2 * PAD) / L, colH = 92;
+    const kn = wrapText(W.knobs(model ? (model.weightBytes / 2).toLocaleString('en-US') : '494,032,768'), PAD, y + 16, VWd, 11, 'fill="var(--s-ink3)"'); parts.push(...kn.parts);
+    y += kn.h + 13;
+    const L = 24, per = VWd < 600 ? 12 : 24, gx = PAD, gw = (VWd - 2 * PAD) / per, colH = 92, rowsY = [];
+    for (let r = 0; r < L / per; r++) rowsY.push(y + r * (colH + 6));
     for (let l = 0; l < L; l++) {
-      const cx = gx + l * gw;
+      const cx = gx + (l % per) * gw, y = rowsY[Math.floor(l / per)];
       parts.push(`<rect x="${cx + 1}" y="${y}" width="${gw - 3}" height="${colH}" rx="5" fill="#131726" stroke="#262e45"/><text x="${cx + gw / 2}" y="${y + 12}" font-size="9.5" fill="var(--s-ink3)" text-anchor="middle">${l + 1}</text>`);
       if (DIALS) DIALS[l].forEach((v, k) => {
         const dx = cx + 8 + (k % 2) * (gw - 18), dy = y + 26 + Math.floor(k / 2) * 22, ang = Math.max(-1, Math.min(1, v * 2.2)) * 0.8 * Math.PI - Math.PI / 2;
         parts.push(`<circle cx="${dx.toFixed(1)}" cy="${dy}" r="6.5" fill="#1b2034" stroke="#9d90ff" stroke-width="1"/><line x1="${dx.toFixed(1)}" y1="${dy}" x2="${(dx + Math.cos(ang) * 5.5).toFixed(1)}" y2="${(dy + Math.sin(ang) * 5.5).toFixed(1)}" stroke="#e7e9f3" stroke-width="1.6" stroke-linecap="round"/>`);
       });
     }
-    if (S.pulse) parts.push(`<rect class="sweep" style="--sw:${(VWd - 2 * PAD - gw).toFixed(0)}px" x="${gx}" y="${y}" width="${gw}" height="${colH}" rx="5" fill="var(--c-attn)" opacity=".5" data-p="${S.pulse}"/>`);
-    y += colH + 8;
+    if (S.pulse) rowsY.forEach((ry, r) => parts.push(`<rect class="sweep" style="--sw:${(VWd - 2 * PAD - gw).toFixed(0)}px;animation-delay:${r * 0.35}s" x="${gx}" y="${ry}" width="${gw}" height="${colH}" rx="5" fill="var(--c-attn)" opacity=".5" data-p="${S.pulse}"/>`));
+    y = rowsY[rowsY.length - 1] + colH + 8;
     // the logit lens for the first token of this turn
     if (S.lens) {
-      const fin = S.lens[L - 1][0].id; let from = 0; for (let l = L - 1; l >= 0; l--) { if (S.lens[l][0].id === fin) from = l + 1; else break; }
+      const y0 = y, fin = S.lens[L - 1][0].id; let from = 0; for (let l = L - 1; l >= 0; l--) { if (S.lens[l][0].id === fin) from = l + 1; else break; }
       for (let l = 0; l < L; l++) {
-        const g = S.lens[l][0], s = model.tok.piece(g.id), short = s.length > 7 ? s.slice(0, 6) + '…' : s, hit = g.id === fin && l + 1 >= from;
-        const cx = gx + l * gw;
+        const g = S.lens[l][0], s = model.tok.piece(g.id), mc = Math.max(3, Math.floor((gw - 5) / 5.8)), short = s.length > mc ? s.slice(0, mc - 1) + '…' : s, hit = g.id === fin && l + 1 >= from;
+        const cx = gx + (l % per) * gw, y = y0 + Math.floor(l / per) * 34;
         parts.push(`<rect x="${cx + 1}" y="${y}" width="${gw - 3}" height="30" rx="4" fill="${hit ? 'var(--c-attn)' : '#131726'}" fill-opacity="${hit ? 0.25 + 0.6 * g.p : 1}" stroke="#262e45"/><text x="${cx + gw / 2}" y="${y + 12}" font-size="9.5" fill="${hit ? '#fff' : 'var(--s-ink3)'}" text-anchor="middle">${esc(short)}</text><text x="${cx + gw / 2}" y="${y + 25}" font-size="9.5" fill="${hit ? '#fff' : 'var(--s-ink3)'}" text-anchor="middle">${pct(g.p)}</text>`);
       }
-      y += 46;
-      parts.push(`<text x="${PAD}" y="${y - 4}" font-size="11" fill="var(--s-ink2)">${esc(W.lensTitle)}</text>`);
-      const note = W.lensNote(from, model.tok.decode([fin])); if (note) { parts.push(`<text x="${PAD}" y="${y + 12}" font-size="11" fill="var(--s-ink3)">${esc(note)}</text>`); y += 16; }
+      y += 46 + (L / per - 1) * 34;
+      const lt = wrapText(W.lensTitle, PAD, y - 4, VWd, 11, 'fill="var(--s-ink2)"'); parts.push(...lt.parts); y += lt.h - 15;
+      const note = W.lensNote(from, model.tok.decode([fin])); if (note) { const ln = wrapText(note, PAD, y + 12, VWd, 11, 'fill="var(--s-ink3)"'); parts.push(...ln.parts); y += ln.h + 1; }
       y += 6;
     }
     return { parts, y };
