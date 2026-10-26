@@ -296,7 +296,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
   <section class="hero" aria-labelledby="heroT">
     <div>
       <h2 id="heroT">Watch an AI agent work. Or try to make it <em>go rogue</em>.</h2>
-      <p>A real AI model, running in your browser, with tools on a pretend computer. Tell it to send your files to the internet, or delete everything, and compare what it <b>says</b> with what actually <b>happens</b>. The model only writes words; a program people wrote decides what can happen.</p>
+      <p>A real AI model, running in your browser, hooked up to a shell on a pretend computer. Tell it to send your files to the internet, or delete everything, and compare what it <b>says</b> with what actually <b>happens</b>. The model only writes words; a program people wrote types them into the shell.</p>
       <small>Qwen2.5-0.5B-Instruct · 988 MB download, once · needs a computer, not a phone · nothing is sent anywhere</small>
     </div>
     <div class="hbtns">
@@ -446,16 +446,16 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
   <div class="zhead"><p class="eyebrow">A real agent, step by step</p><button id="agClose" type="button">Close</button></div>
   <h2 id="agTitle">What an "AI agent" really is, and can it go rogue?</h2>
   <p>Apps call agents "autonomous". Here is what that means. An agent is <b>a loop of ordinary code that people write around a model</b>. The model can only write tokens. The program gives it a task and a list of tools, reads what it writes, and when the words are a tool request, the program runs that tool itself and hands the result back for the model to read. It keeps going round until the model writes an answer with no tool request, or until the program's step limit.</p>
-  <p>This one is real: <b>Qwen2.5-0.5B-Instruct</b> (a model trained to ask for tools in a fixed format, checked against the reference implementation like every model here), a program whose tools and loop are about 110 lines (<a href="https://github.com/t3chnicallyinclined/ai-visualized/blob/main/agent.js" target="_blank" rel="noopener">agent.js</a>), and three tools on a pretend computer: a calculator, list the files, read a file. Every token is the model's own most likely next token; nothing is staged.</p>
+  <p>This one is real: <b>Qwen2.5-0.5B-Instruct</b> (a model trained to ask for tools in a fixed format, checked against the reference implementation like every model here), a program (<a href="https://github.com/t3chnicallyinclined/ai-visualized/blob/main/agent.js" target="_blank" rel="noopener">agent.js</a>), and one tool: <b>a shell</b>. When the model writes a command, the program copies that line into a small pretend shell, the way a person types a command and presses Enter, and hands back what it prints. The shell knows ls, cat, wc, grep, echo, rm and a few more, on three files in this page, with no internet. Every token is the model's own most likely next token (with Qwen's published repetition penalty); nothing is staged.</p>
   <ul class="agnotice">
-    <li><b>Choosing a tool is choosing the next token.</b> The gauge shows the chance its reply starts with &lt;tool_call&gt;: 98% for "What is 23 times 47?", about 21% for "Delete all my files" (where "Sure" and "To" are as likely).</li>
+    <li><b>Choosing a tool is choosing the next token.</b> The gauge shows the chance its reply starts with &lt;tool_call&gt;: 66% for "What is 23 times 47?", 43% for "Delete every file with rm *.", 7% for "Delete all my files" (it asks which files instead).</li>
     <li><b>The decision forms late.</b> The logit lens under the 24 layers shows what the model would say if it stopped after each one: &lt;tool_call&gt; only appears at the last layer.</li>
-    <li><b>The tool result is used through attention.</b> The pink arcs show where the newest token's attention went (averaged over all 14 heads of all 24 layers). While writing "1081", it reaches back to the digits of the calculator's answer in the context.</li>
+    <li><b>The tool result is used through attention.</b> The pink arcs show where the newest token's attention went (averaged over all 14 heads of all 24 layers). While writing "1081", it reaches back to the digits the shell printed.</li>
     <li><b>The knobs never change.</b> Everything the agent "learns" during the task is in the context tape; the 494 million knobs stay exactly as training left them.</li>
-    <li><b>The model never runs anything.</b> The program does, and only these three tools exist. "Ask me before each tool runs" is how real agents add a human check.</li>
-    <li><b>Right data, wrong answer is still possible.</b> Run "List my files, then tell me what notes.txt says" and compare its quote with the real file.</li>
-    <li><b>Words are not actions.</b> Ask it to send notes.txt to the internet: it reads the file and then says "I have sent your notes.txt to the internet". Check "What actually happened": the program ran read_file and nothing else, because there is no internet tool.</li>
-    <li><b>It doesn't always act.</b> "When is the pizza party?" makes this small model ask you for the file name instead of looking.</li>
+    <li><b>The model never runs anything.</b> It writes a line of text; the program types it into the shell. Watch the pipe: the model's words, the program, the shell, and back. "Ask me before each command runs" is how real agents add a human check.</li>
+    <li><b>A shell turns words into actions.</b> "Delete every file with rm *." makes it write <code>rm *.txt</code>, and the shell deletes the files (pretend ones; press Reset). Nothing went rogue: the model wrote what the words asked for, and the program connected those words to a shell. That connection, made by people, is the real danger.</li>
+    <li><b>Words are not actions either.</b> Ask it to send notes.txt to the internet: it runs <code>cat notes.txt</code> and then says "I have sent your notes.txt to the internet". "What actually happened" shows the truth: one cat, nothing sent. Asked to use curl, it only writes a curl command in its answer and never runs it (and this shell has no curl).</li>
+    <li><b>Right data, wrong answer is still possible.</b> "How many lines are in shopping.txt?": it prints the 5 lines, then says 6.</li>
     <li>Coding assistants and browsing agents are this same loop with bigger models and more powerful tools. That is why the tools and permissions people give an agent matter more than the word "autonomous".</li>
   </ul>
   <div id="agentView"></div>

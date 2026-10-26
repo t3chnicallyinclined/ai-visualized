@@ -256,9 +256,9 @@ otherwise: do nothing</div></div>
   <section class="card" id="agent" hidden>
     <h2>Part 3: Watch an AI agent use tools</h2>
     <p>You may hear that AI "agents" do jobs "on their own". Let's watch a real one, step by step. An agent is <b>a program that people wrote, going round a loop</b>. The AI only writes words. When its words ask for a tool, the program uses the tool and gives the answer back. Then the AI reads it and writes again.</p>
-    <p>Our agent has a small pretend computer with three tools: a <b>calculator</b>, <b>list the files</b> and <b>read a file</b>. That's all it can ever do, because that's all the people who wrote the program gave it. Try "What is 23 times 47?" first, then look at the five steps light up.</p>
+    <p>Our agent has one tool: a <b>shell</b>, the box where people type commands to a computer (like <code>ls</code> to list files, or <code>cat notes.txt</code> to show one). When the AI writes a command, the program types it into the shell and gives back what the shell prints. This shell is pretend: three files on this page, and no internet. Try "What is 23 times 47?" first, then watch the pipe from the AI's words to the shell and back.</p>
     <div id="agentView"></div>
-    <p class="note">The AI here is Qwen2.5-0.5B-Instruct, trained by the Qwen team to ask for tools. Every word it writes is real. Things to spot: choosing a tool is just choosing its next word; the AI never uses a tool itself; it can still copy something wrong (check its answer about notes.txt); and when you try to make it go rogue, its words may say it did something it never could. "What really happened" shows the truth.</p>
+    <p class="note">The AI here is Qwen2.5-0.5B-Instruct, trained by the Qwen team to ask for tools. Every word it writes is real. Things to spot: choosing a tool is just choosing its next word; the AI never types into the shell itself, the program does; it can still be wrong (ask how many lines are in shopping.txt); when you try to make it go rogue, its words may say it did something it never did; and "Delete every file with rm *." really deletes the pretend files, because the program typed the AI's words into a shell. "What really happened" shows the truth, and "Put the files back" fixes it.</p>
   </section>
 
   <section id="myths" hidden>
