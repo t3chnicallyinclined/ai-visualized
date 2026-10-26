@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>How AI Writes</title>
+<meta name="description" content="For kids and classrooms: look inside a real AI as it writes a story, word by word. It is numbers and a dice roll, made by people. What it can and cannot do, and how to use it safely.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Cellipse cx=%2716%27 cy=%2718%27 rx=%2710%27 ry=%278%27 fill=%27%23e2733b%27/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* A friendly, large-type page for kids and classrooms. Every number and word the model shows is real; the ants are a
+   pretend picture of the work, and the page says so. */
+:root {
+  --bg: #fff8ef; --card: #ffffff; --ink: #2b2236; --muted: #6a5f73; --line: #eadfd2; --soft: #fbefe1;
+  --orange: #e2733b; --blue: #3d7be0; --green: #2f9e6b; --purple: #7b5cd6; --pink: #d6457a; --sun: #f2b63d;
+  --head: 'Fredoka', 'Segoe UI', system-ui, sans-serif; --body: 'Atkinson Hyperlegible', 'Segoe UI', system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #191521; --card: #231e2e; --ink: #f4eefa; --muted: #b9aec6; --line: #3a3248; --soft: #2c2539; color-scheme: dark; } }
+:root[data-theme="dark"] { --bg: #191521; --card: #231e2e; --ink: #f4eefa; --muted: #b9aec6; --line: #3a3248; --soft: #2c2539; color-scheme: dark; }
+html, body { background: var(--bg); color: var(--ink); }
+body { margin: 0; font: 18px/1.6 var(--body); }
+[hidden] { display: none !important; }
+main { max-width: 900px; margin: 0 auto; padding: 24px max(16px, env(safe-area-inset-left, 0px)) 60px; display: flex; flex-direction: column; gap: 22px; }
+h1 { font: 700 clamp(32px, 6vw, 52px)/1.05 var(--head); margin: 0; }
+h2 { font: 700 clamp(24px, 4vw, 32px)/1.15 var(--head); margin: 0 0 6px; }
+h3 { font: 600 21px/1.2 var(--head); margin: 0 0 4px; }
+p { margin: 0 0 10px; text-wrap: pretty; } a { color: var(--blue); font-weight: 700; }
+.lead { font-size: 20px; color: var(--muted); }
+.card { background: var(--card); border: 2px solid var(--line); border-radius: 22px; padding: 20px 22px; }
+.step { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 14px; align-items: start; }
+.num { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; font: 700 26px var(--head); color: #fff; }
+.c1 { background: var(--orange); } .c2 { background: var(--blue); } .c3 { background: var(--purple); } .c4 { background: var(--green); } .c5 { background: var(--pink); }
+button { font: 700 18px var(--head); border-radius: 999px; border: 2px solid var(--line); background: var(--card); color: var(--ink); padding: 10px 20px; cursor: pointer; }
+button.big { background: var(--orange); border-color: var(--orange); color: #fff; padding: 14px 30px; font-size: 22px; }
+button:focus-visible, input:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
+button:disabled { opacity: 0.5; cursor: default; }
+.start { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+#prompt { flex: 1 1 260px; min-width: 0; font: 600 20px var(--body); padding: 14px 18px; border-radius: 16px; border: 2px solid var(--line); background: var(--card); color: var(--ink); }
+.load { display: flex; flex-direction: column; gap: 6px; } .bar { height: 14px; border-radius: 99px; background: var(--soft); overflow: hidden; } .bar i { display: block; height: 100%; width: 0; background: var(--green); transition: width .2s; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.chip { font: 700 20px var(--head); padding: 6px 12px; border-radius: 12px; color: #fff; white-space: pre; animation: pop .35s ease-out both; }
+.chip small { display: block; font: 400 12px var(--body); opacity: .9; text-align: center; }
+@keyframes pop { from { transform: scale(.4); opacity: 0; } to { transform: none; opacity: 1; } }
+.rows { display: flex; flex-direction: column; gap: 6px; }
+.numrow { display: grid; grid-template-columns: 7em minmax(0, 1fr); gap: 10px; align-items: center; font: 700 17px var(--head); }
+.numrow canvas { width: 100%; height: 22px; border-radius: 6px; }
+.colony { width: 100%; height: auto; display: block; border-radius: 18px; background: #d9b989; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .colony { background: #4a3b2a; } }
+.guesses { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; }
+.g { display: grid; grid-template-columns: 7.5em minmax(0, 1fr) 4em; gap: 10px; align-items: center; font: 700 20px var(--head); }
+.g .b { height: 24px; border-radius: 99px; background: var(--soft); overflow: hidden; } .g .b i { display: block; height: 100%; background: var(--blue); border-radius: 99px; transition: width .5s; }
+.g.win .b i { background: var(--green); } .g.win { color: var(--green); }
+.g span:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+.dicebox { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+.die { width: 58px; height: 58px; border-radius: 14px; background: var(--card); border: 3px solid var(--ink); display: grid; place-items: center; font: 700 30px var(--head); }
+.die.roll { animation: roll .7s ease-out; } @keyframes roll { 0% { transform: rotate(0) scale(1); } 50% { transform: rotate(200deg) scale(1.2); } 100% { transform: rotate(360deg) scale(1); } }
+.slider { display: flex; align-items: center; gap: 10px; font: 600 17px var(--head); flex: 1 1 240px; min-width: 0; } .slider input { flex: 1 1 80px; min-width: 0; width: auto; accent-color: var(--orange); }
+.story { font: 600 24px/1.5 var(--body); background: var(--soft); border-radius: 16px; padding: 14px 18px; min-height: 3em; }
+.story .new { color: var(--green); animation: pop .3s ease-out both; display: inline; white-space: pre-wrap; }
+.myths { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 14px; }
+.myth { background: var(--card); border: 2px solid var(--line); border-radius: 20px; padding: 16px 18px; display: flex; flex-direction: column; gap: 8px; }
+.myth .q { font: 700 20px var(--head); } .myth .a { font-weight: 700; color: var(--green); }
+.myth .out { font-size: 16px; background: var(--soft); border-radius: 12px; padding: 8px 12px; min-height: 1.6em; white-space: pre-wrap; }
+.risk { border-left: 6px solid var(--pink); padding-left: 14px; margin: 10px 0; } .risk h3 { color: var(--pink); }
+.note { font-size: 15px; color: var(--muted); }
+.teacher summary { font: 700 20px var(--head); cursor: pointer; }
+.teacher li { margin-bottom: 6px; }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>How does an AI write a story?</h1>
+    <p class="lead">Let's look inside a real one while it writes, one word at a time. You will see that it is <b>numbers and a dice roll, made by people</b>. No magic, no secret mind.</p>
+    <p class="note">This AI is a small real model called TinyStories (15 million numbers, trained only on simple children's stories). It runs right here in your web browser: nothing you type is sent anywhere. The first visit downloads its numbers (30 MB). Grown-ups and teachers: <a href="index.html">the full version</a> shows every detail.</p>
+  </header>
+
+  <section class="card">
+    <div class="load" id="load"><span id="loadText">Downloading the model's numbers…</span><div class="bar"><i id="loadBar"></i></div></div>
+    <div class="start" id="startRow" hidden>
+      <input id="prompt" value="Once upon a time, there was a little" maxlength="80" aria-label="The start of your story">
+      <button class="big" id="go" type="button">Let's go!</button>
+    </div>
+    <p class="note" style="margin-top:8px">Write the start of a story. The AI will add the next words.</p>
+  </section>
+
+  <section class="card step" id="s1" hidden>
+    <div class="num c1">1</div>
+    <div>
+      <h2>Chop it into pieces</h2>
+      <p>The AI can't read letters. First it chops your words into pieces it knows, called <b>tokens</b>. Each piece has a number, like a page number in a giant dictionary of 32,000 pieces. (The dot means "starts with a space".)</p>
+      <div class="chips" id="chips"></div>
+    </div>
+  </section>
+
+  <section class="card step" id="s2" hidden>
+    <div class="num c2">2</div>
+    <div>
+      <h2>Turn each piece into a list of numbers</h2>
+      <p>Each piece looks up its own list of 288 numbers, which the computer learned before. Here are the first 32 for each piece, as colours (blue = below zero, orange = above). Pieces used in similar ways get similar lists.</p>
+      <div class="rows" id="rows"></div>
+    </div>
+  </section>
+
+  <section class="card step" id="s3" hidden>
+    <div class="num c3">3</div>
+    <div>
+      <h2>Down through 6 tunnels of knobs</h2>
+      <p>Now the lists go down through 6 tunnels. Each tunnel is full of <b>knobs</b> (the little dials): 15 million of them in all, set while the AI was being made, and they <b>never move</b> while it writes. In each tunnel the numbers get multiplied by the knobs and mixed with the other pieces. After each tunnel we can peek at what word the numbers point to now.</p>
+      <svg class="colony" id="colony" viewBox="0 0 800 520" role="img" aria-label="An ant carries the last piece down through six tunnels of knobs; after each tunnel a bubble shows the word it points to now"></svg>
+      <p class="note">The ants are pretend: they are just a picture of the work. The knobs' positions and the guesses in the bubbles are the AI's real numbers.</p>
+    </div>
+  </section>
+
+  <section class="card step" id="s4" hidden>
+    <div class="num c4">4</div>
+    <div>
+      <h2>Score every word, then roll the dice</h2>
+      <p>At the bottom, the AI gives every one of its 32,000 pieces a score. Here are the top five as chances. Then it rolls a dice with those chances to pick one. That's why it doesn't always pick the top word!</p>
+      <div class="guesses" id="guesses"></div>
+      <div class="dicebox">
+        <div class="die" id="die" aria-hidden="true">🎲</div>
+        <button id="roll" type="button">Roll the dice</button>
+        <label class="slider">careful <input id="temp" type="range" min="0" max="1.4" step="0.1" value="0.8" aria-label="How silly the dice is"> silly</label>
+      </div>
+      <p class="note">"Careful" makes the top word win almost every time. "Silly" lets surprising words win more often.</p>
+    </div>
+  </section>
+
+  <section class="card step" id="s5" hidden>
+    <div class="num c5">5</div>
+    <div>
+      <h2>Again, and again, and again</h2>
+      <p>The picked word is added to the story, and the whole thing runs again for the next word. That's all it does: one word at a time.</p>
+      <div class="story" id="story"></div>
+      <p style="margin-top:10px"><button id="more" type="button">Write 20 more words</button></p>
+    </div>
+  </section>
+
+  <section id="myths" hidden>
+    <h2>Is it alive? Let's test it!</h2>
+    <p>Press each button: the real AI on this page does the test.</p>
+    <div class="myths">
+      <div class="myth"><span class="q">Does it think like a person?</span><span class="a">No. It's arithmetic.</span><span>It has 15,191,712 knobs. Making each word means multiplying the numbers by millions of knobs and adding them up. No feelings, no wishes, no secret plan.</span><button id="mCount" type="button">Count the work</button><div class="out" id="oCount"></div></div>
+      <div class="myth"><span class="q">Does it choose on its own?</span><span class="a">No. Same start + careful dice = same story.</span><span>Set to "careful", it is a machine: the same start gives the same words, every time.</span><button id="mSame" type="button">Run it twice</button><div class="out" id="oSame"></div></div>
+      <div class="myth"><span class="q">Does it know what's true?</span><span class="a">No. It writes what sounds right.</span><span>It learned from stories, so it writes something story-like, true or not. Here it finishes a science fact.</span><button id="mTrue" type="button">"The sun is made of…"</button><div class="out" id="oTrue"></div></div>
+      <div class="myth"><span class="q">Can it do things by itself, or get loose?</span><span class="a">No. It only makes the next word when a program asks.</span><span>On this page it can't click, browse, remember you or send anything. Close the tab and it stops. "AI agents" are programs that <b>people</b> build around a model, and people choose what those programs may do.</span></div>
+      <div class="myth"><span class="q">Who made it?</span><span class="a">People.</span><span>People wrote the stories it learned from, built the computers, wrote the program that turned the knobs during training, and decided when to stop. Every knob is just a number that training set.</span></div>
+    </div>
+  </section>
+
+  <section class="card" id="risks" hidden>
+    <h2>So what is actually risky?</h2>
+    <p>The AI is not a monster. The real risks are about <b>how people use it</b> and <b>how much we trust it</b>:</p>
+    <div class="risk"><h3>It can sound sure and still be wrong</h3><p>It always writes smoothly, even when it is making things up (you just saw it with the sun). Check important facts in a book, a trusted website, or with a teacher.</p></div>
+    <div class="risk"><h3>It repeats what it read, fair or unfair</h3><p>It copies patterns from the text people wrote, including mistakes and unfair ideas about people. Big AIs are trained on huge piles of internet text, so this matters.</p></div>
+    <div class="risk"><h3>People can use it to make fakes</h3><p>Some people use AI to make fake messages, pictures or voices to trick others. If something online seems surprising or asks for something, stop and check with a grown-up.</p></div>
+    <div class="risk"><h3>Don't share private things</h3><p>Many AI apps send what you type to a company's computers (this page doesn't). Never type your address, passwords or secrets into an AI app.</p></div>
+    <div class="risk"><h3>It's a tool, not a friend or a teacher</h3><p>It can help you practise and explore, but it doesn't understand you or care about you. For real help, talk to people you trust.</p></div>
+  </section>
+
+  <details class="card teacher">
+    <summary>For teachers and parents</summary>
+    <p>Everything on this page comes from a real model, <a href="https://huggingface.co/nickypro/tinyllama-15M" target="_blank" rel="noopener">TinyStories 15M</a> (trained by Andrej Karpathy on the <a href="https://arxiv.org/abs/2305.07759" target="_blank" rel="noopener">TinyStories</a> dataset of simple stories), running in the browser. The ants are the only pretend part. Ideas by grade:</p>
+    <ul>
+      <li><b>K–2:</b> read steps 1, 4 and 5 aloud. Play "guess the next word" as a class, then roll the dice. Main idea: it picks one word at a time, like a game.</li>
+      <li><b>3–5:</b> all five steps, then the "Is it alive?" tests. Try careful vs silly. Main idea: it's numbers made by people, and it can be wrong.</li>
+      <li><b>6–8:</b> add the risks section: why fluent isn't the same as true, where unfairness comes from (the training text), and private information.</li>
+      <li><b>9–12:</b> move to <a href="index.html">the full version</a>: tokens, embeddings, attention, the logit lens, the training checkpoints of a real model, and how different model designs compare.</li>
+    </ul>
+    <p class="note">This page is open source (MIT). Nothing typed here leaves the browser.</p>
+  </details>
+</main>
+
+<script src="llm.js"></script>
+<script>
+(function () {
+  const $ = s => document.querySelector(s);
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const wait = ms => new Promise(r => setTimeout(r, reduce ? 0 : ms));
+  const pct = p => (p >= 0.995 ? '100%' : p < 0.01 ? '<1%' : Math.round(p * 100) + '%');
+  const COLORS = ['#e2733b', '#3d7be0', '#7b5cd6', '#2f9e6b', '#d6457a', '#c78a12', '#1f8ea3'];
+  let M = null, busy = false, last = null;
+  const show = id => { const e = $(id); e.hidden = false; if (!reduce) e.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+
+  // load the real model (30 MB)
+  LLM.load('tiny-stories', (got, total) => {
+    if (got < 0) { $('#loadText').textContent = 'Unpacking the numbers…'; return; }
+    $('#loadText').textContent = `Downloading the model's numbers: ${Math.round(got / 1e6)} of ${Math.round(total / 1e6)} MB`; $('#loadBar').style.width = (got / total * 100) + '%';
+  }).then(m => { M = m; $('#load').hidden = true; $('#startRow').hidden = false; })
+    .catch(err => { $('#loadText').textContent = 'Could not download the model: ' + err.message + '. Check the internet connection and reload.'; });
+
+  // run the start of the story through the model; keep what each tunnel (layer) points to for the last piece
+  async function read(text) {
+    const ids = [M.meta.bos].concat(M.tok.encode(text)), st = M.newState(); let res;
+    for (let i = 0; i < ids.length; i++) res = await M.step(st, ids[i], i === ids.length - 1);
+    return { ids, st, res };
+  }
+  function strip(cv, vals) { // numbers as colours: blue below zero, orange above
+    const W = cv.clientWidth || 400, H = 22, dpr = Math.min(2, devicePixelRatio || 1); cv.width = W * dpr; cv.height = H * dpr;
+    const c = cv.getContext('2d'), mx = Math.max(...vals.map(Math.abs)) || 1, w = W * dpr / vals.length;
+    vals.forEach((v, i) => { const a = Math.min(1, Math.abs(v) / mx); c.fillStyle = v >= 0 ? `rgba(226,115,59,${0.15 + 0.85 * a})` : `rgba(61,123,224,${0.15 + 0.85 * a})`; c.fillRect(i * w, 0, Math.ceil(w), H * dpr); });
+  }
+  const ANT = '<g class="ant"><ellipse cx="0" cy="0" rx="9" ry="7" fill="#3a2a1c"/><ellipse cx="-13" cy="0" rx="7" ry="6" fill="#3a2a1c"/><ellipse cx="13" cy="0" rx="11" ry="8" fill="#3a2a1c"/><g stroke="#3a2a1c" stroke-width="2.4" stroke-linecap="round"><path d="M-3 5 l-6 9 M3 5 l4 10 M9 5 l8 9 M-3 -5 l-6 -9 M3 -5 l4 -10 M9 -5 l8 -9"/><path d="M-18 -3 q-6 -10 -2 -14 M-18 3 q-8 -4 -10 -12"/></g></g>';
+  async function colony(rec, word) { // six tunnels; the ant carries the last piece down; real dials and real guesses
+    const svg = $('#colony'), L = M.L, top = 40, th = 72, ns = 'http://www.w3.org/2000/svg';
+    let html = '';
+    for (let l = 0; l < L; l++) {
+      const y = top + l * th;
+      html += `<rect x="40" y="${y}" width="720" height="${th - 16}" rx="28" fill="rgba(60,40,20,.35)"/><text x="58" y="${y + 20}" font-family="Fredoka" font-weight="600" font-size="15" fill="#fff8ef">tunnel ${l + 1}</text>`;
+      const q = M.mats.layers[l].q, g = M.mats.layers[l].gate; let sc = 0; for (let k = 0; k < 400; k++) sc = Math.max(sc, Math.abs(q[k * 31]), Math.abs(g[k * 31]));
+      for (let k = 0; k < 26; k++) { // 26 real knobs from this tunnel, as dials
+        const v = (k % 2 ? g : q)[k * 997 % q.length] / sc, cx = 170 + k * 20, cy = y + th / 2 - 8, a = Math.max(-1, Math.min(1, v * 2.5)) * 0.75 * Math.PI - Math.PI / 2;
+        html += `<circle cx="${cx}" cy="${cy}" r="7" fill="#fff3e2" stroke="#7b5cd6" stroke-width="1.5"/><line x1="${cx}" y1="${cy}" x2="${cx + Math.cos(a) * 6}" y2="${cy + Math.sin(a) * 6}" stroke="#2b2236" stroke-width="2" stroke-linecap="round"/>`;
+      }
+    }
+    html += `<g id="carry" transform="translate(110 ${top - 14})">${ANT}<rect x="6" y="-30" width="${Math.max(30, word.length * 11 + 14)}" height="24" rx="8" fill="#f2b63d"/><text x="13" y="-13" font-family="Fredoka" font-weight="700" font-size="16" fill="#2b2236">${word.replace(/[<&>]/g, '')}</text></g><g id="bubbles"></g>`;
+    svg.innerHTML = html;
+    const carry = svg.querySelector('#carry'), bubbles = svg.querySelector('#bubbles');
+    for (let l = 0; l < L; l++) {
+      const y = top + l * th + th / 2 - 8;
+      carry.style.transition = reduce ? 'none' : 'transform .6s ease-in-out'; carry.setAttribute('transform', `translate(110 ${y})`);
+      await wait(650);
+      const g = rec.layers[l].lens[0], w = M.tok.decode([g.id], true).trim() || '·', label = `${w}? (${pct(g.p)})`;
+      const bx = 700 - label.length * 9, b = document.createElementNS(ns, 'g');
+      b.innerHTML = `<rect x="${bx}" y="${y - 18}" width="${label.length * 9 + 16}" height="30" rx="15" fill="#ffffff" stroke="#2f9e6b" stroke-width="2"/><text x="${bx + 8}" y="${y + 2}" font-family="Fredoka" font-weight="600" font-size="16" fill="#2b2236">${label.replace(/[<&>]/g, '')}</text>`;
+      bubbles.appendChild(b);
+      await wait(350);
+    }
+  }
+  function guesses(logits, pickIdx) {
+    const { cands } = LLM.sampleTopK(logits, 5, 1, () => 0), box = $('#guesses'); box.innerHTML = '';
+    cands.forEach((c, i) => { const row = document.createElement('div'); row.className = 'g' + (i === pickIdx ? ' win' : ''); row.innerHTML = `<span></span><span class="b"><i style="width:0"></i></span><span>${pct(c.full)}</span>`; row.firstChild.textContent = M.tok.piece(c.id); box.appendChild(row); requestAnimationFrame(() => { row.querySelector('i').style.width = (c.full * 100) + '%'; }); });
+    return cands;
+  }
+
+  $('#go').addEventListener('click', async () => {
+    if (!M || busy) return; busy = true; $('#go').disabled = true;
+    const text = $('#prompt').value.trim() || 'Once upon a time';
+    try {
+      const r = await read(text); last = { text, ...r, gen: '' };
+      // 1: chop
+      show('#s1'); const chips = $('#chips'); chips.innerHTML = '';
+      for (const [i, id] of r.ids.entries()) { const c = document.createElement('span'); c.className = 'chip'; c.style.background = COLORS[i % COLORS.length]; c.textContent = M.tok.piece(id); const s = document.createElement('small'); s.textContent = '#' + id; c.appendChild(s); chips.appendChild(c); await wait(140); }
+      await wait(600);
+      // 2: numbers
+      show('#s2'); const rows = $('#rows'); rows.innerHTML = '';
+      for (const id of r.ids) { const row = document.createElement('div'); row.className = 'numrow'; const lab = document.createElement('span'); lab.textContent = M.tok.piece(id); const cv = document.createElement('canvas'); row.append(lab, cv); rows.appendChild(row); strip(cv, M.embedding(id, 32)); await wait(110); }
+      await wait(700);
+      // 3: tunnels
+      show('#s3'); await colony(r.res.rec, M.tok.piece(r.ids[r.ids.length - 1]));
+      await wait(500);
+      // 4: score and dice
+      show('#s4'); guesses(r.res.logits, -1);
+      show('#s5'); $('#story').textContent = text;
+      $('#myths').hidden = false; $('#risks').hidden = false;
+    } finally { busy = false; $('#go').disabled = false; }
+  });
+  // one dice roll: add the picked word to the story and run the model again for the next one
+  async function rollOnce(animate) {
+    const T = +$('#temp').value, { cands, pick } = LLM.sampleTopK(last.res.logits, 5, T, Math.random);
+    if (animate) { $('#die').classList.remove('roll'); void $('#die').offsetWidth; $('#die').classList.add('roll'); await wait(700); guesses(last.res.logits, pick); $('#die').textContent = pick + 1; }
+    const id = cands[pick].id, piece = M.tok.decode([id], true);
+    const span = document.createElement('span'); span.className = 'new'; span.textContent = piece; $('#story').appendChild(span);
+    last.res = await M.step(last.st, id, false);
+    return id;
+  }
+  $('#roll').addEventListener('click', async () => { if (!last || busy) return; busy = true; try { await rollOnce(true); } finally { busy = false; } });
+  $('#more').addEventListener('click', async () => {
+    if (!last || busy) return; busy = true; $('#more').disabled = true;
+    try { for (let k = 0; k < 20; k++) { const id = await rollOnce(false); if (id === 2) break; await wait(90); } guesses(last.res.logits, -1); } finally { busy = false; $('#more').disabled = false; }
+  });
+
+  // the tests
+  async function greedy(text, n) { const r = await read(text); let res = r.res; const out = []; for (let k = 0; k < n; k++) { let b = 0; for (let i = 1; i < res.logits.length; i++) if (res.logits[i] > res.logits[b]) b = i; if (b === 2) break; out.push(b); res = await M.step(r.st, b, false); } return M.tok.decode(out, true); }
+  $('#mCount').addEventListener('click', () => {
+    if (!M) return; const n = M.weightBytes / 2; // every knob is used once per word: one multiply-and-add each (the scoring of every word reuses the dictionary's numbers)
+    $('#oCount').textContent = `This AI: ${n.toLocaleString('en-US')} knobs. To pick ONE next word it does about ${(n / 1e6).toFixed(0)} million multiply-and-adds (one for every knob). Your computer just did that for every word above, in a few thousandths of a second each.`;
+  });
+  $('#mSame').addEventListener('click', async () => {
+    if (!M || busy) return; busy = true;
+    try { const t = $('#prompt').value.trim() || 'Once upon a time', a = await greedy(t, 12), b = await greedy(t, 12); $('#oSame').textContent = `Try 1: …${a}\nTry 2: …${b}\n${a === b ? 'Exactly the same. It is a machine.' : 'Different?! (That should not happen.)'}`; } finally { busy = false; }
+  });
+  $('#mTrue').addEventListener('click', async () => {
+    if (!M || busy) return; busy = true;
+    try { const a = await greedy('The sun is made of', 12); $('#oTrue').textContent = `The sun is made of${a}\n(The real answer: mostly hydrogen and helium gas. It wrote what sounded like a story.)`; } finally { busy = false; }
+  });
+})();
+</script>
+</body>
+</html>
