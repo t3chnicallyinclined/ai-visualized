@@ -147,6 +147,7 @@ svg#board { width: 100%; height: auto; display: block; }
 .nb-step { font: 600 11px var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--st-ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .nb-title { font: 700 16px/1.2 var(--display); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .nb-live { font: 12.5px/1.35 var(--mono); color: var(--score); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-height: 1.35em; }
+@media (max-width: 760px) { .nb-live { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; } }
 .nb-text { font-size: 13.5px; line-height: 1.4; color: var(--st-ink2); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 /* phones: the board follows the action, and the narrator bar sits right under it and stays on screen */
 @media (max-width: 1180px) {
