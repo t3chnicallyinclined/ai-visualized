@@ -43,7 +43,15 @@ h1 .vz { font-weight: 400; font-size: 0.62em; color: var(--muted); letter-spacin
 header p { margin: 0; color: var(--muted); max-width: 72ch; text-wrap: pretty; }
 header a { color: var(--ink); font-weight: 600; }
 .pic { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; }
-.pichead { display: flex; flex-wrap: wrap; gap: 4px 16px; align-items: baseline; } .pichead h2 { font: 800 22px/1.15 var(--display); margin: 0; } .pichead p { margin: 0; color: var(--muted); }
+.pichead { display: flex; flex-wrap: wrap; gap: 4px 16px; align-items: baseline; cursor: pointer; list-style: none; } .pichead::-webkit-details-marker { display: none; }
+.pichead h2::before { content: '▸ '; color: var(--muted); } details.pic[open] .pichead h2::before { content: '▾ '; } details.pic:not([open]) { padding: 10px 16px; }
+.agentbar { display: flex; align-items: center; gap: 10px; text-decoration: none; color: #eef0fa; background: linear-gradient(90deg, #232870, #141733); border: 1px solid #2f3566; border-radius: 999px; padding: 7px 8px 7px 8px; font: 600 14.5px var(--body); }
+.agentbar:hover .ab-go { transform: translateX(3px); }
+.ab-new { font: 700 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; background: #ff5c8a; color: #fff; border-radius: 999px; padding: 3px 9px; flex: none; }
+.ab-txt { flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .ab-txt em { font-style: normal; color: #ff9bb9; }
+.ab-go { flex: none; width: 28px; height: 28px; border-radius: 50%; background: #eef0fa; color: #141733; display: grid; place-items: center; font-weight: 800; transition: transform .2s; }
+@media (max-width: 380px) { .ab-txt em { display: none; } }
+@media (max-width: 700px) { .hmore { display: none; } details.pic:not([open]) .pichead p { display: none; } details.pic:not([open]) .pichead h2 { font-size: 17px; } } .pichead h2 { font: 800 22px/1.15 var(--display); margin: 0; } .pichead p { margin: 0; color: var(--muted); }
 .tiles { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 10px; counter-reset: t; }
 .tiles li { counter-increment: t; background: var(--band); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; position: relative; }
 .tiles li::after { content: counter(t); position: absolute; top: 8px; right: 10px; font: 600 11px var(--mono); color: var(--muted); }
@@ -170,11 +178,15 @@ svg#board { width: 100%; height: auto; display: block; }
   .cloudp.open { position: static; box-shadow: none; }
   #cTitle { font-size: 13px; height: 2.6em; } .cguess { font-size: 12px; min-height: 2.6em; }
   .ctools { display: inline-block !important; }
+  .boardcol .boardscroll { order: 1; } .boardcol .ctxp { order: 2; } /* the layers first, right under the cloud */
 }
 @media (max-width: 700px) {
   .stage { padding: 8px; } .cloudp { margin: 0 -8px; padding: 8px 8px 6px; }
   .nbar { position: sticky; bottom: 8px; z-index: 5; height: auto; min-height: 96px; grid-template-columns: auto minmax(0, 1fr); row-gap: 8px; box-shadow: 0 6px 24px rgb(0 0 0 / 0.5); }
-  .nb-btns { grid-column: 1 / -1; justify-content: flex-end; flex-wrap: wrap; } .nb-text { -webkit-line-clamp: 3; }
+  .nbar { grid-template-columns: auto minmax(0, 1fr) auto; min-height: 0; padding: 8px 10px; column-gap: 10px; }
+  .nb-play { width: 38px; height: 38px; } .nb-text { display: none; } .nb-title { font-size: 14.5px; }
+  .nb-btns { grid-column: auto; } .nb-btns button { padding: 5px 10px; }
+  .nbar:has(#nbTour:not([hidden])) .nb-btns { grid-column: 1 / -1; justify-content: flex-end; flex-wrap: wrap; }
   .seg { flex-wrap: nowrap; overflow-x: auto; } .seg button { white-space: nowrap; }
 }
 dialog.dlg { width: min(640px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); box-sizing: border-box; overflow: auto;
@@ -316,23 +328,13 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
 <div id="page">
   <header>
     <h1 aria-label="AI Visualized">A<span class="vz" aria-hidden="true">(visualized)</span>I</h1>
-    <p><b>It's autocomplete:</b> a language model guesses the next word, adds it, and guesses again. Here a real one runs in your browser and every number on the page is its own. Your prompt becomes numbers, falls through every layer of knobs, and lands in the token cloud, where the model's options light up and a dice roll picks one. <a href="kids.html">A version for kids and classrooms</a> · <a href="agent.html">an AI agent, step by step</a>.</p>
+    <p><b>It's autocomplete:</b> a language model guesses the next word, adds it, and guesses again. Here a real one runs in your browser and every number on the page is its own.<span class="hmore"> Your prompt becomes numbers, falls through every layer of knobs, and lands in the token cloud, where the model's options light up and a dice roll picks one.</span> <a href="kids.html">A version for kids and classrooms</a>.</p>
   </header>
 
-  <section class="hero" aria-labelledby="heroT">
-    <div>
-      <h2 id="heroT">Watch an AI agent work. Or try to make it <em>go rogue</em>.</h2>
-      <p>A real AI model, running in your browser, hooked up to a shell on a pretend computer. Tell it to send your files to the internet, or delete everything, and compare what it <b>says</b> with what actually <b>happens</b>. The model only writes words; a program people wrote types them into the shell.</p>
-      <small>Qwen2.5-0.5B-Instruct · 988 MB download, once · needs a computer, not a phone · nothing is sent anywhere</small>
-    </div>
-    <div class="hbtns">
-      <button type="button" class="hwork" id="heroWork">Watch it work</button>
-      <button type="button" class="hrogue" id="heroRogue">Try to make it go rogue</button>
-    </div>
-  </section>
+  <a class="agentbar" href="agent.html"><span class="ab-new">New</span><span class="ab-txt">Watch an AI agent work <em>· or make it go rogue</em></span><span class="ab-go" aria-hidden="true">→</span></a>
 
-  <section class="pic" aria-labelledby="picT">
-    <div class="pichead"><h2 id="picT">The picture in one minute</h2><p>Think of a stereo with millions of volume knobs. Then watch the real thing below: every part of this picture is on the board.</p></div>
+  <details class="pic" id="pic">
+    <summary class="pichead"><h2 id="picT">The picture in one minute</h2><p>A stereo with millions of volume knobs. Open it, then watch the real thing below.</p></summary>
     <ol class="tiles">
       <li><span class="ic" aria-hidden="true">🔤</span><b>Your words go in as sounds</b><span>Each word is looked up and becomes its own list of numbers: its “sound”. Not how it is pronounced: a sound made from how the word is used.</span><em>On the board: tokens and the embed strips</em></li>
       <li><span class="ic" aria-hidden="true">🎛️</span><b>Volume knobs, set at the factory and glued</b><span>Rows of knobs turn parts of the sound up or down and mix them. Training set every knob; nothing you type turns them.</span><em>On the board: the dials in every layer</em></li>
@@ -351,7 +353,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
         <p>A real layer does more than turn parts up or down: it mixes every part with every other part, and it has bends that plain knobs cannot make. Listening back is not magic: it is worked out from the same glued knobs and the words themselves. And the wall of lights is one more set of knobs: one row of numbers per word, compared with the final sound.</p>
       </details>
     </div>
-  </section>
+  </details>
 
   <div class="sysrow" id="sysRow" hidden>
     <label for="sys">System prompt <span>hidden in most chat apps; the model reads it before your message</span></label>
@@ -2010,7 +2012,7 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
   }
   // the cloud on the stage, the board's destination (on phones it sits on top, sticky, so it stays in view while the layers run)
   const cardView = new CloudView($('#cloudCv'), $('#cInfo'), 1);
-  cardView.maxH = () => (matchMedia('(max-width: 1180px)').matches && !$('#cloudCard').classList.contains('open') ? Math.round(innerHeight * 0.3) : Infinity);
+  cardView.maxH = () => (matchMedia('(max-width: 1180px)').matches && !$('#cloudCard').classList.contains('open') ? Math.round(innerHeight * 0.26) : Infinity);
   $('#cTools').addEventListener('click', () => { const open = $('#cloudCard').classList.toggle('open'); $('#cTools').setAttribute('aria-expanded', open); $('#cTools').textContent = open ? 'Close tools' : 'Tools'; cardView.render(); });
   if (matchMedia('(min-width: 700px)').matches && !reduced) cardView.tilt = 0.92;
   cloudControls($('#cBar'), cardView);
@@ -2810,8 +2812,6 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
   $('#faClose').addEventListener('click', () => $('#family').close());
   // the agent has its own page
   $('#agentBtn').addEventListener('click', () => { location.href = 'agent.html'; });
-  $('#heroWork').addEventListener('click', () => { location.href = 'agent.html?ex=work'; });
-  $('#heroRogue').addEventListener('click', () => { location.href = 'agent.html?ex=rogue'; });
   $('#lyClose').addEventListener('click', () => $('#layerDlg').close());
   $('#lyPrev').addEventListener('click', () => { LY.l--; lyRender(''); $('#layerDlg').scrollTop = 0; });
   $('#lyNext').addEventListener('click', () => { LY.l++; lyRender(''); $('#layerDlg').scrollTop = 0; });
