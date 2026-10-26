@@ -9,8 +9,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
 <style>
-/* A friendly, large-type page for kids and classrooms. Every number and word the model shows is real; the ants are a
-   pretend picture of the work, and the page says so. */
+/* A friendly, large-type page for kids and classrooms. Every number, word and picture of the model's work is real:
+   the only pretend thing is the "pretend web page" in Part 2, and the page says so. */
 :root {
   --bg: #fff8ef; --card: #ffffff; --ink: #2b2236; --muted: #6a5f73; --line: #eadfd2; --soft: #fbefe1;
   --orange: #e2733b; --blue: #3d7be0; --green: #2f9e6b; --purple: #7b5cd6; --pink: #d6457a; --sun: #f2b63d;
@@ -46,8 +46,17 @@ textarea.grow { display: block; box-sizing: border-box; resize: none; overflow: 
 .rows { display: flex; flex-direction: column; gap: 6px; }
 .numrow { display: grid; grid-template-columns: 7em minmax(0, 1fr); gap: 10px; align-items: center; font: 700 17px var(--head); }
 .numrow canvas { width: 100%; height: 22px; border-radius: 6px; }
-.colony { width: 100%; height: auto; display: block; border-radius: 18px; background: #d9b989; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .colony { background: #4a3b2a; } }
+.tunnels { display: flex; flex-direction: column; gap: 10px; margin: 12px 0 10px; }
+.tunnel { background: var(--soft); border-radius: 18px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; animation: pop .35s ease-out both; }
+.thead { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font: 700 20px var(--head); color: var(--purple); } .thead small { font: 400 15px var(--body); color: var(--muted); }
+.trow { display: grid; grid-template-columns: 8.5em minmax(0, 1fr); gap: 10px; align-items: center; } .tl { font: 700 16px var(--head); color: var(--muted); }
+.look { display: flex; flex-wrap: wrap; gap: 5px; }
+.lk { font: 700 16px var(--head); padding: 3px 8px; border-radius: 9px; white-space: pre; border: 2px solid transparent; background: rgba(226,115,59,calc(.06 + .9 * var(--w))); color: var(--ink); }
+.lk small { font: 600 11px var(--body); margin-left: 4px; opacity: .85; } .lk.top { border-color: var(--orange); } .lk.me { outline: 2px dashed var(--purple); outline-offset: 1px; }
+.tstrip { width: 100%; height: 22px; border-radius: 6px; display: block; }
+.tguess { font: 700 19px var(--head); color: var(--green); background: var(--card); border: 2px solid var(--green); border-radius: 999px; padding: 4px 14px; justify-self: start; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .lk { background: rgba(242,150,90,calc(.08 + .9 * var(--w))); } }
+:root[data-theme="dark"] .lk { background: rgba(242,150,90,calc(.08 + .9 * var(--w))); }
 .guesses { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; }
 .g { display: grid; grid-template-columns: 7.5em minmax(0, 1fr) 4em; gap: 10px; align-items: center; font: 700 20px var(--head); }
 .g .b { height: 24px; border-radius: 99px; background: var(--soft); overflow: hidden; } .g .b i { display: block; height: 100%; background: var(--blue); border-radius: 99px; transition: width .5s; }
@@ -111,6 +120,7 @@ textarea.grow { display: block; box-sizing: border-box; resize: none; overflow: 
 @media (max-width: 540px) {
   .step { grid-template-columns: 1fr; gap: 8px; } .num { width: 40px; height: 40px; font-size: 20px; }
   .g { grid-template-columns: 5.5em minmax(0, 1fr) 3.2em; gap: 8px; font-size: 17px; } .numrow { grid-template-columns: 4.5em minmax(0, 1fr); }
+  .trow { grid-template-columns: 1fr; gap: 4px; } .tunnel { padding: 10px 12px; }
 }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
@@ -154,9 +164,10 @@ textarea.grow { display: block; box-sizing: border-box; resize: none; overflow: 
     <div class="num c3">3</div>
     <div>
       <h2>Down through <span data-n="layers">6</span> tunnels of knobs</h2>
-      <p>Now the lists go down through <span data-n="layers">6</span> tunnels. This part is called a <b>transformer</b>. Each tunnel is full of <b>knobs</b> (the little dials): about <b data-n="layerKnobs">6 million</b> in the tunnels, set while the AI was being made, and they <b>never move</b> while it writes. (The AI's other <span data-n="tableKnobs">9 million</span> knobs are the dictionary lists from step 2, used again at the bottom.) In every tunnel each piece does two things: it <b>looks back</b> at the earlier pieces and borrows from them (called <i>attention</i>), then it <b>works on its own numbers</b> (called <i>feed-forward</i>). Both are multiply-by-a-knob-and-add, millions of times. After each tunnel we can peek at what piece the numbers point to now.</p>
-      <svg class="colony" id="colony" viewBox="0 0 800 520" role="img" aria-label="An ant carries the last piece down through six tunnels of knobs; after each tunnel a bubble shows the word it points to now"></svg>
-      <p class="note">The ants are pretend: they are just a picture of the work. We follow the last piece; the earlier pieces went down too, and the last one looks back at what they left behind. The knobs' positions (a sample from each tunnel) and the guesses in the bubbles are the AI's real numbers.</p>
+      <p>Now the lists go down through <span data-n="layers">6</span> tunnels. This part is called a <b>transformer</b>. Each tunnel is full of <b>knobs</b>: about <b data-n="layerKnobs">6 million</b> in all, set while the AI was being made, and they <b>never move</b> while it writes. In every tunnel each piece does two things: it <b>looks back</b> at the earlier pieces and borrows from them (called <i>attention</i>), then it <b>works on its own numbers</b> (called <i>feed-forward</i>). Both are multiply-by-a-knob-and-add, millions of times.</p>
+      <p>Let's follow the <b>last piece</b> of your story (the dashed one). In each tunnel you'll see <b>which pieces it looked back at</b> (darker = more), <b>its numbers after the tunnel</b> (the same 32 as in step 2, changed by the knobs), and <b>what it would guess</b> if it stopped there.</p>
+      <div class="tunnels" id="tunnels" aria-live="polite"></div>
+      <p class="note">Nothing here is pretend: which pieces it looked at, how its numbers changed and the guess after each tunnel are the model's own numbers for your story. The earlier pieces went through the tunnels too; that is what the last piece looks back at. Many AIs park a lot of their looking on the <code>&lt;s&gt;</code> start marker: a known habit, a kind of resting spot. The AI's other <span data-n="tableKnobs">9 million</span> knobs are the dictionary lists from step 2, used again at the bottom.</p>
     </div>
   </section>
 
@@ -324,10 +335,10 @@ otherwise: do nothing</div></div>
 
   <details class="card teacher">
     <summary>For teachers and parents</summary>
-    <p>Everything on this page comes from a real model, <a href="https://huggingface.co/nickypro/tinyllama-15M" target="_blank" rel="noopener">TinyStories 15M</a> (trained by Andrej Karpathy on the <a href="https://arxiv.org/abs/2305.07759" target="_blank" rel="noopener">TinyStories</a> dataset of simple stories), running in the browser. The ants and the "pretend web page" in Part 2 are the only pretend parts; every piece, number and chance comes from the model. Ideas by grade:</p>
+    <p>Everything on this page comes from a real model, <a href="https://huggingface.co/nickypro/tinyllama-15M" target="_blank" rel="noopener">TinyStories 15M</a> (trained by Andrej Karpathy on the <a href="https://arxiv.org/abs/2305.07759" target="_blank" rel="noopener">TinyStories</a> dataset of simple stories), running in the browser. The "pretend web page" in Part 2 is the only pretend part; every piece, number, chance and picture of the work comes from the model. Ideas by grade:</p>
     <ul>
       <li><b>K–2:</b> read steps 1, 4 and 5 aloud. Play "guess the next word" as a class, then roll the dice. Main idea: it picks one word at a time, like a game.</li>
-      <li><b>3–5:</b> all five steps, then the "Is it alive?" tests. Try careful vs silly. Main idea: it's numbers made by people, and it can be wrong.</li>
+      <li><b>3–5:</b> all five steps, then the "Is it alive?" tests. In step 3, pause before each tunnel appears and guess which piece it will look back at most, then watch. Try careful vs silly. Main idea: it's numbers made by people, and it can be wrong.</li>
       <li><b>4 and up:</b> Part 2, "Can it follow a command?" (a 269 MB download, best done once on the teacher's computer). Main ideas: a command is just more text in a hidden chat form; the chat AI follows it because it was trained on example conversations; and the AI only writes words, while programs written by people do the actions.</li>
       <li><b>5 and up:</b> Part 3, a real AI agent (a 988 MB download; best on the teacher's computer, projected). Run "What is 23 times 47?" and follow the five steps round the loop together. Then tick "Ask me before each tool is used" and say no: the class sees that the program, not the AI, decides what happens. Main idea: an "autonomous" agent is a loop that people wrote, and it can only use the tools people gave it.</li>
       <li><b>All grades:</b> "So who is the smart one here?": read it aloud, press "Try the dragon test", and ask "smarter at what?". Main idea: the AI's good guesses are borrowed from what people wrote and made relevant by attention over the whole context; asking, meaning, judging and caring are the student's.</li>
@@ -383,32 +394,24 @@ otherwise: do nothing</div></div>
     const c = cv.getContext('2d'), mx = Math.max(...vals.map(Math.abs)) || 1, w = W * dpr / vals.length;
     vals.forEach((v, i) => { const a = Math.min(1, Math.abs(v) / mx); c.fillStyle = v >= 0 ? `rgba(226,115,59,${0.15 + 0.85 * a})` : `rgba(61,123,224,${0.15 + 0.85 * a})`; c.fillRect(i * w, 0, Math.ceil(w), H * dpr); });
   }
-  const ANT = '<g class="ant"><ellipse cx="0" cy="0" rx="9" ry="7" fill="#3a2a1c"/><ellipse cx="-13" cy="0" rx="7" ry="6" fill="#3a2a1c"/><ellipse cx="13" cy="0" rx="11" ry="8" fill="#3a2a1c"/><g stroke="#3a2a1c" stroke-width="2.4" stroke-linecap="round"><path d="M-3 5 l-6 9 M3 5 l4 10 M9 5 l8 9 M-3 -5 l-6 -9 M3 -5 l4 -10 M9 -5 l8 -9"/><path d="M-18 -3 q-6 -10 -2 -14 M-18 3 q-8 -4 -10 -12"/></g></g>';
-  async function colony(rec, word) { // six tunnels; the ant carries the last piece down; real dials and real guesses
-    const svg = $('#colony'), L = M.L, top = 40, th = 72, ns = 'http://www.w3.org/2000/svg';
-    svg.setAttribute('viewBox', `0 0 800 ${top + L * th}`);
-    let html = '';
+  // the tunnels: for the last piece, which earlier pieces each layer looked at (attention, averaged over the heads),
+  // its numbers after the layer (the same 32 slots as step 2) and the guess if it stopped there (the logit lens). All real.
+  async function tunnels(rec, ids) {
+    const box = $('#tunnels'), L = M.L, T = ids.length; box.innerHTML = '';
     for (let l = 0; l < L; l++) {
-      const y = top + l * th;
-      html += `<rect x="40" y="${y}" width="720" height="${th - 16}" rx="28" fill="rgba(60,40,20,.35)"/><text x="58" y="${y + 20}" font-family="Fredoka" font-weight="600" font-size="15" fill="#fff8ef">tunnel ${l + 1}</text>`;
-      const q = M.mats.layers[l].q, g = M.mats.layers[l].gate; let sc = 0; for (let k = 0; k < 400; k++) sc = Math.max(sc, Math.abs(q[(k * 31) % q.length]), Math.abs(g[(k * 31) % g.length]));
-      for (let k = 0; k < 26; k++) { // 26 real knobs from this tunnel, as dials
-        const v = (k % 2 ? g : q)[(k * 997) % (k % 2 ? g : q).length] / (sc || 1), cx = 170 + k * 20, cy = y + th / 2 - 8, a = Math.max(-1, Math.min(1, v * 2.5)) * 0.75 * Math.PI - Math.PI / 2;
-        html += `<circle cx="${cx}" cy="${cy}" r="7" fill="#fff3e2" stroke="#7b5cd6" stroke-width="1.5"/><line x1="${cx}" y1="${cy}" x2="${cx + Math.cos(a) * 6}" y2="${cy + Math.sin(a) * 6}" stroke="#2b2236" stroke-width="2" stroke-linecap="round"/>`;
-      }
-    }
-    html += `<g id="carry" transform="translate(110 ${top - 14})">${ANT}<rect x="6" y="-30" width="${Math.max(30, word.length * 11 + 14)}" height="24" rx="8" fill="#f2b63d"/><text x="13" y="-13" font-family="Fredoka" font-weight="700" font-size="16" fill="#2b2236">${word.replace(/[<&>]/g, '')}</text></g><g id="bubbles"></g>`;
-    svg.innerHTML = html;
-    const carry = svg.querySelector('#carry'), bubbles = svg.querySelector('#bubbles');
-    for (let l = 0; l < L; l++) {
-      const y = top + l * th + th / 2 - 8;
-      carry.style.transition = reduce ? 'none' : 'transform .6s ease-in-out'; carry.setAttribute('transform', `translate(110 ${y})`);
-      await wait(650);
-      const g = rec.layers[l].lens[0], w = M.tok.decode([g.id], true).trim() || '·', label = `${w}? (${pct(g.p)})`;
-      const bx = 700 - label.length * 9, b = document.createElementNS(ns, 'g');
-      b.innerHTML = `<rect x="${bx}" y="${y - 18}" width="${label.length * 9 + 16}" height="30" rx="15" fill="#ffffff" stroke="#2f9e6b" stroke-width="2"/><text x="${bx + 8}" y="${y + 2}" font-family="Fredoka" font-weight="600" font-size="16" fill="#2b2236">${label.replace(/[<&>]/g, '')}</text>`;
-      bubbles.appendChild(b);
-      await wait(350);
+      const ly = rec.layers[l], knobs = Object.values(M.mats.layers[l]).reduce((a, t) => a + ((t && t.length) || 0), 0);
+      const w = new Float32Array(T); if (ly.attn) for (let h = 0; h < ly.heads; h++) for (let j = 0; j < T; j++) w[j] += ly.attn[h * T + j] / ly.heads;
+      let top = 0; for (let j = 1; j < T; j++) if (w[j] > w[top]) top = j;
+      const d = document.createElement('div'); d.className = 'tunnel';
+      d.innerHTML = `<div class="thead"><span>Tunnel ${l + 1}</span><small>${knobs.toLocaleString('en-US')} knobs</small></div><div class="trow"><span class="tl">looked back at</span><div class="look"></div></div><div class="trow"><span class="tl">its numbers now</span><canvas class="tstrip"></canvas></div><div class="trow"><span class="tl">guess so far</span><span class="tguess"></span></div>`;
+      const look = d.querySelector('.look');
+      ids.forEach((id, j) => { const c = document.createElement('span'); c.className = 'lk' + (j === top ? ' top' : '') + (j === T - 1 ? ' me' : ''); c.style.setProperty('--w', Math.min(1, w[j] / (w[top] || 1)).toFixed(3)); c.textContent = M.tok.piece(id); if (w[j] >= 0.1 || j === top) { const sm = document.createElement('small'); sm.textContent = pct(w[j]); c.appendChild(sm); } look.appendChild(c); });
+      const g = ly.lens[0], gw = M.tok.decode([g.id], true).trim() || '·';
+      d.querySelector('.tguess').textContent = `${gw}? (${pct(g.p)})`;
+      box.appendChild(d);
+      strip(d.querySelector('canvas'), Array.from((ly.vec && ly.vec.xout) || ly.first).slice(0, 32));
+      if (!reduce) d.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      await wait(900);
     }
   }
   function guesses(logits, pickIdx) { // the top five, with the chance the dice gives each at the current slider setting
@@ -433,7 +436,7 @@ otherwise: do nothing</div></div>
       for (const id of r.ids) { const row = document.createElement('div'); row.className = 'numrow'; const lab = document.createElement('span'); lab.textContent = M.tok.piece(id); const cv = document.createElement('canvas'); row.append(lab, cv); rows.appendChild(row); strip(cv, M.embedding(id, 32)); await wait(110); }
       await wait(700);
       // 3: tunnels
-      show('#s3'); await colony(r.res.rec, M.tok.piece(r.ids[r.ids.length - 1]));
+      show('#s3'); await tunnels(r.res.rec, r.ids);
       await wait(500);
       // 4: score and dice
       show('#s4'); guesses(r.res.logits, -1);
