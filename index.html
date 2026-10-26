@@ -88,7 +88,19 @@ button:hover { border-color: var(--ink); }
 .stage { --band: var(--st-2); --line: var(--st-rail); --ink: var(--st-ink); --muted: var(--st-ink2); --panel: var(--st-panel); --bg: var(--st-bg);
   background: var(--st-bg); color: var(--st-ink); border: 1px solid var(--st-rail); border-radius: 16px; padding: 12px;
   display: grid; grid-template-columns: 390px minmax(0, 1fr); gap: 12px; align-items: start; }
-.cloudp { order: 1; } .boardscroll { order: 2; } .nbar { order: 3; }
+.cloudp { order: 1; } .boardcol { order: 2; } .nbar { order: 3; }
+.boardcol { min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.ctxp { background: var(--st-2); border: 1px solid var(--st-rail); border-radius: 10px; padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; }
+.ctxhead { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font: 600 11px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--st-ink2); }
+.ctxhead #ctxNote { text-transform: none; letter-spacing: 0; font-weight: 400; color: var(--st-ink3); }
+#ctxTape { width: 100%; height: auto; display: block; }
+#ctxTape text { font-family: var(--mono); }
+#ctxTape .tarc { fill: none; stroke: var(--attn); stroke-linecap: round; }
+.lensrow { display: grid; grid-template-columns: repeat(auto-fill, minmax(56px, 1fr)); gap: 3px; }
+.lensrow div { font: 10.5px/1.3 var(--mono); background: var(--st-bg); border: 1px solid var(--st-rail); border-radius: 5px; padding: 2px 4px; text-align: center; color: var(--st-ink3); min-width: 0; }
+.lensrow div b { display: block; font-weight: 500; color: var(--st-ink2); overflow: hidden; text-overflow: ellipsis; white-space: pre; }
+.lensrow div.future { opacity: 0.22; } .lensrow div.cur { outline: 1.5px solid var(--st-ink); outline-offset: 1px; }
+.lensrow div.match { background: rgb(255 92 138 / 0.22); border-color: var(--attn); color: var(--st-ink); } .lensrow div.match b { color: var(--st-ink); }
 @media (max-width: 1180px) { .stage { grid-template-columns: minmax(0, 1fr); } }
 .boardscroll { overflow-x: auto; min-width: 0; }
 svg#board { width: 100%; height: auto; display: block; }
@@ -126,14 +138,15 @@ svg#board { width: 100%; height: auto; display: block; }
 .speed button { padding: 6px 9px; font: 500 12px var(--mono); }
 /* the narrator bar: fixed height inside the stage, so nothing jumps; the full text opens in a dialog */
 .nbar { grid-column: 1 / -1; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; column-gap: 14px; align-items: center;
-  height: 92px; box-sizing: border-box; overflow: hidden; padding: 10px 14px; border-radius: 10px; background: var(--st-2); border: 1px solid var(--st-rail); color: var(--st-ink); }
-.nb-main { display: grid; grid-template-rows: auto auto auto; row-gap: 2px; min-width: 0; cursor: pointer; }
+  height: 108px; box-sizing: border-box; overflow: hidden; padding: 10px 14px; border-radius: 10px; background: var(--st-2); border: 1px solid var(--st-rail); color: var(--st-ink); }
+.nb-main { display: grid; grid-template-rows: auto auto auto auto; row-gap: 2px; min-width: 0; cursor: pointer; }
 .nb-main:hover .nb-title { text-decoration: underline; text-underline-offset: 3px; }
 .nb-play { width: 44px; height: 44px; border-radius: 50%; padding: 0; font-size: 15px; background: var(--st-ink); color: var(--st-bg); border-color: var(--st-ink); }
 .nb-btns { display: flex; gap: 6px; align-items: center; } .nb-btns button { padding: 6px 12px; font-size: 13px; } .nb-tour { display: flex; gap: 6px; }
 .nb-next { background: var(--score) !important; color: var(--st-bg) !important; border-color: var(--score) !important; }
 .nb-step { font: 600 11px var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--st-ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .nb-title { font: 700 16px/1.2 var(--display); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nb-live { font: 12.5px/1.35 var(--mono); color: var(--score); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-height: 1.35em; }
 .nb-text { font-size: 13.5px; line-height: 1.4; color: var(--st-ink2); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 /* phones: the board follows the action, and the narrator bar sits right under it and stays on screen */
 @media (max-width: 1180px) {
@@ -333,10 +346,18 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
 
   <div class="stage">
     <ol class="pipe" id="pipe" aria-label="The steps, in order"></ol>
+    <div class="boardcol">
+    <section class="ctxp" id="ctxp" aria-label="The context and the logit lens for the current token" hidden>
+      <div class="ctxhead"><span id="ctxTitle">The context</span><span id="ctxNote"></span></div>
+      <svg id="ctxTape" viewBox="0 0 900 40" role="img" aria-label="Every token the model can read, with a bar under each for how much attention the current token gives it"></svg>
+      <div class="ctxhead"><span id="lensTitle">If it stopped after each layer</span></div>
+      <div class="lensrow" id="lensRow"></div>
+    </section>
     <div class="boardscroll">
       <svg id="board" viewBox="0 0 1000 560" role="img" aria-label="Board: your device at the top; each token is a lane falling down through every layer (bands of the layer's real weights) to the exit into the token cloud">
         <g id="static"></g><g id="dyn"></g><g id="sel"></g>
       </svg>
+    </div>
     </div>
     <section class="cloudp" id="cloudCard" aria-label="Token cloud">
       <div class="chead"><h2 id="cTitle">Token cloud</h2><button type="button" class="ctools" id="cTools" aria-expanded="false">Tools</button></div>
@@ -353,6 +374,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
       <div class="nb-main" id="nbMain" role="button" tabindex="0" aria-live="polite" aria-label="What is happening now: open for the full explanation">
         <span class="nb-step" id="bStep">Step 1 of 10</span>
         <span class="nb-title" id="bTitle">Type</span>
+        <span class="nb-live" id="bLive" aria-hidden="true"></span>
         <span class="nb-text" id="bText"></span>
       </div>
       <div class="nb-btns">
@@ -1192,6 +1214,94 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
       c.title = done ? `layer ${i + 1}: ${S.llm.tok.piece(top)}` : '';
     });
   }
+  // ---- the context tape (every token the model can read, with the current token's attention under each), the logit
+  // lens row (what the current token would become after each layer) and the narrator's live line. All real numbers.
+  let ctxKey = '', lensKey = '';
+  const posRoles = D => { const r = []; D.rows.forEach(rw => rw.pos.forEach(k => { r[k] = rw.kind === 'early' ? 'user' : rw.kind; })); return r; };
+  const ROLE_COL = { sys: 'var(--sysc)', tpl: 'var(--st-ink3)', bos: 'var(--st-ink3)', user: 'var(--ffn)', gen: 'var(--score)' };
+  function meanAtt(ly) { const T = ly.attn.length / ly.heads, w = new Float32Array(T); for (let h = 0; h < ly.heads; h++) for (let j = 0; j < T; j++) w[j] += ly.attn[h * T + j] / ly.heads; return w; }
+  function nowAt(time) { // the current step: pass, layer (or -4 score, -1 choose, -6 detokenize) and talk/think
+    let cur = null; for (const e of STEPLOG) if (e[0] <= time) cur = e;
+    return cur ? { l: cur[1], which: cur[2], p: cur[3] } : null;
+  }
+  function syncCtx(time, st) {
+    const D = S.data, m = S.llm; $('#ctxp').hidden = !D || !D.real; if (!D || !D.real) return;
+    const now = st >= 4 && st < 10 ? nowAt(time) : null, p = now ? now.p : D.recs.length - 1, rec = D.recs[p], L = rec.layers.length;
+    const lCur = now && now.l >= 0 ? now.l : -1, done = st >= 10 || (now && now.l < 0);
+    const nVis = st >= 10 ? D.allIds.length : st < 4 ? D.nTok : rec.pos + 1 + (now && now.l === -6 ? 1 : 0);
+    const focus = rec.pos, roles = posRoles(D), ids = D.allIds, mamba = G.kind === 'mamba';
+    const att = lCur >= 0 && !mamba && rec.layers[lCur].attn ? meanAtt(rec.layers[lCur]) : null;
+    const key = [D.prompt, S.mode, p, lCur, nVis, $('#ctxTape').clientWidth].join('|');
+    if (key !== ctxKey) {
+      ctxKey = key;
+      const VW = Math.max(300, Math.round($('#ctxTape').clientWidth || 800)), CH = 6.62, parts = [];
+      let x = 2, y = 14; const pos = [];
+      for (let i = 0; i < nVis; i++) {
+        const t = m.tok.piece(ids[i]), txt = t.length > 22 ? t.slice(0, 21) + '…' : t, w = Math.max(10, txt.length * CH + 8);
+        if (x + w > VW - 2) { x = 2; y += 27; }
+        pos[i] = { x, y, w, txt }; x += w + 3;
+      }
+      let look = [], sink = 0;
+      if (att) {
+        sink = att[0];
+        const cand = []; for (let j = 1; j < focus; j++) cand.push(j);
+        cand.sort((a, b) => att[b] - att[a]); look = cand.slice(0, 3).filter(j => att[j] > 0.01);
+        const c = pos[focus];
+        look.forEach((j, r) => {
+          const q = pos[j], cx = c.x + c.w / 2, tx = q.x + q.w / 2, h = 10 + Math.min(26, Math.abs(cx - tx) * 0.08 + Math.abs(c.y - q.y) * 0.4);
+          parts.push(`<path class="tarc" stroke-width="${(1.2 + 4 * att[j] / att[look[0]]).toFixed(1)}" opacity="${(0.95 - r * 0.2).toFixed(2)}" d="M${cx} ${c.y} C${cx} ${c.y - h} ${tx} ${q.y - h} ${tx} ${q.y}"/>`);
+        });
+      }
+      let mx = 1e-9; if (att) for (let j = 1; j < att.length; j++) if (j !== focus && att[j] > mx) mx = att[j];
+      for (let i = 0; i < nVis; i++) {
+        const q = pos[i], col = ROLE_COL[roles[i] || 'gen'] || 'var(--score)', isF = (lCur >= 0 || now) && i === focus && !done, isL = look.includes(i);
+        parts.push(`<rect x="${q.x}" y="${q.y}" width="${q.w}" height="17" rx="4" fill="${col}" fill-opacity="${isF ? 0.5 : 0.14}" stroke="${isF ? 'var(--st-ink)' : isL ? 'var(--attn)' : col}" stroke-width="${isF || isL ? 1.6 : 0.8}"/>`);
+        parts.push(`<text x="${q.x + 4}" y="${q.y + 12.5}" font-size="11" style="fill:var(--st-ink)">${q.txt.replace(/[&<>]/g, c2 => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c2])}</text>`);
+        if (att && i < att.length && i !== focus) { const a = Math.min(1, att[i] / mx); if (a > 0.03) parts.push(`<rect x="${q.x}" y="${q.y + 19}" width="${(q.w * a).toFixed(1)}" height="2.5" fill="var(--attn)"/>`); }
+        if (isL) parts.push(`<text x="${q.x + q.w / 2}" y="${q.y - 3}" font-size="9.5" text-anchor="middle" style="fill:var(--attn)">${fmtPct(att[i])}</text>`);
+      }
+      $('#ctxTape').setAttribute('viewBox', `0 0 ${VW} ${y + 26}`);
+      $('#ctxTape').innerHTML = parts.join('');
+      const ft = m.tok.piece(ids[focus]);
+      $('#ctxTitle').textContent = `The context · ${nVis} tokens` + (att ? ` · attention of “${ft}” in layer ${lCur + 1}` : '');
+      $('#ctxNote').textContent = mamba ? 'Mamba has no attention: each token writes into a fixed memory in every layer instead.' : att ? `Bars: share of attention (mean of ${rec.layers[lCur].heads} heads). ` + (sink >= 0.1 ? ` The first token takes ${fmtPct(sink)} (an "attention sink", common in these models); the arcs leave it out.` : ' Arcs: the three strongest, leaving out the first token.') : 'During a layer, bars show where the current token looks.';
+    }
+    // the logit lens row
+    const lk = [D.prompt, S.mode, p, done ? 'done' : lCur, st >= 4].join('|');
+    if (lk !== lensKey) {
+      lensKey = lk;
+      const fin = rec.layers[L - 1].lens[0].id; let from = L; for (let l = L - 1; l >= 0; l--) { if (rec.layers[l].lens[0].id === fin) from = l; else break; }
+      const upto = st < 4 ? -1 : done ? L - 1 : lCur;
+      $('#lensRow').style.gridTemplateColumns = L <= 16 ? `repeat(${L}, minmax(0, 1fr))` : '';
+      $('#lensRow').innerHTML = rec.layers.map((ly, l) => {
+        const g = ly.lens[0], show = l <= upto, cls = !show ? 'future' : (l >= from ? 'match' : '') + (l === lCur && !done ? ' cur' : '');
+        const w = show ? m.tok.piece(g.id).replace(/[&<>]/g, c2 => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c2]) : '·';
+        return `<div class="${cls}" title="layer ${l + 1}${show ? ': ' + w + ' ' + fmtPct(g.p) : ''}"><b>${w}</b>${l + 1}${show ? ' · ' + fmtPct(g.p) : ''}</div>`;
+      }).join('');
+      $('#lensTitle').textContent = `If “${m.tok.piece(ids[focus])}” stopped after each layer (the logit lens)` + (upto >= L - 1 ? ` · its final pick first appears in layer ${from + 1}` : '');
+    }
+  }
+  function liveLine(time, st) { // one line of real numbers for this exact moment
+    const D = S.data, m = S.llm; if (!D || !D.real || st < 4 || st >= 10) return '';
+    const now = nowAt(time); if (!now) return '';
+    const rec = D.recs[now.p], L = rec.layers.length, f = `“${m.tok.piece(D.allIds[rec.pos])}”`;
+    if (now.l >= 0) {
+      const ly = rec.layers[now.l], at = `Layer ${now.l + 1} of ${L} · `;
+      if (now.which === 0) {
+        if (G.kind === 'mamba') return at + `${f} writes into this layer's memory and reads it back (no attention)`;
+        const w = meanAtt(ly), cand = []; for (let j = 1; j < rec.pos; j++) cand.push(j); cand.sort((a, b) => w[b] - w[a]);
+        const top = cand.slice(0, 3).filter(j => w[j] > 0.01).map(j => `“${m.tok.piece(D.allIds[j])}” ${fmtPct(w[j])}`).join(', ');
+        return at + `talk: ${f} looks back at ${top || 'mostly itself and the first token'}`;
+      }
+      const add = ly.downNorm != null ? ly.downNorm : ly.outNorm;
+      return at + `think: adds a change of size ${add.toFixed(1)} → ball size ${ly.norm.toFixed(1)} · if it stopped here: “${m.tok.piece(ly.lens[0].id)}” ${fmtPct(ly.lens[0].p)}`;
+    }
+    const sk = D.steps[now.p]; if (!sk) return '';
+    if (now.l === -4) return `Scores all ${nf(m.V)} tokens · top: ` + sk.c.slice(0, 3).map(c => `“${c.w}” ${fmtPct(c.full)}`).join(', ');
+    if (now.l === -1) return `Dice at temperature ${D.T}: picks “${sk.c[sk.pick].w}” (it had a ${fmtPct(sk.c[sk.pick].p)} chance among the top five)`;
+    if (now.l === -6) return `ID ${sk.c[sk.pick].id} → “${sk.c[sk.pick].w}” joins the context as token ${rec.pos + 2}`;
+    return '';
+  }
   function sync() {
     const time = tl.time() + 1e-6;
     let st = 0; for (const [tt, s] of CAPS) if (tt <= time) st = s;
@@ -1202,7 +1312,10 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
       $('#rKvSize').textContent = (o.kv * S.llm.kvBytesPerToken / 1024).toFixed(1) + ' KB';
       syncGuess(time);
       syncCloud(time);
+      syncCtx(time, st);
     }
+    const live = isReal() ? liveLine(time, st) : '';
+    if ($('#bLive').textContent !== live) $('#bLive').textContent = live;
     syncInspector(time, st);
     syncLayers(time);
     syncBar();
