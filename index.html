@@ -45,7 +45,7 @@ header a { color: var(--ink); font-weight: 600; }
 .pic { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; }
 .pichead { display: flex; flex-wrap: wrap; gap: 4px 16px; align-items: baseline; cursor: pointer; list-style: none; } .pichead::-webkit-details-marker { display: none; }
 .pichead h2::before { content: '▸ '; color: var(--muted); } details.pic[open] .pichead h2::before { content: '▾ '; } details.pic:not([open]) { padding: 10px 16px; }
-.agentbar { display: flex; align-items: center; gap: 10px; text-decoration: none; color: #eef0fa; background: linear-gradient(90deg, #232870, #141733); border: 1px solid #2f3566; border-radius: 999px; padding: 7px 8px 7px 8px; font: 600 14.5px var(--body); }
+.agentbar { display: flex; align-self: flex-start; max-width: 100%; box-sizing: border-box; align-items: center; gap: 10px; text-decoration: none; color: #eef0fa; background: linear-gradient(90deg, #232870, #141733); border: 1px solid #2f3566; border-radius: 999px; padding: 7px 8px 7px 8px; font: 600 14.5px var(--body); }
 .agentbar:hover .ab-go { transform: translateX(3px); }
 .ab-new { font: 700 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; background: #ff5c8a; color: #fff; border-radius: 999px; padding: 3px 9px; flex: none; }
 .ab-txt { flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .ab-txt em { font-style: normal; color: #ff9bb9; }
