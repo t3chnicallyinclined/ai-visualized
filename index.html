@@ -110,6 +110,42 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
 .walk.imm .sec.on .cap { font-size: 21px; line-height: 1.45; } @media (max-width: 700px) { .walk.imm .sec.on .cap { font-size: 17.5px; } }
 .walk.imm .sec.on h2 { font-size: 13px; }
 @keyframes secin { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+/* ---- the player: while a walk runs it is a full-screen app, one screen per step, nothing to scroll ----
+   Top: progress segments (one per step), the step's name, the picture (i) and close (x). Middle: the step, scaled to
+   fit the screen. Bottom: the controls bar. Swipe left for Continue, right for Back. */
+body.playing { overflow: hidden; }
+:is(#writeMode, #agentMode) .walk.imm { position: fixed; inset: 0; z-index: 40; background: radial-gradient(120% 80% at 50% 0%, #161a2c 0%, var(--bg) 60%); display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); gap: 0; padding: calc(10px + env(safe-area-inset-top, 0px)) 0 calc(var(--ctlh, 70px) + 6px); box-sizing: border-box; align-items: stretch; }
+:is(#writeMode, #agentMode) .walk.imm .rail { display: flex !important; position: static; flex-direction: row; gap: 4px; padding: 0 92px 0 max(14px, env(safe-area-inset-left, 0px)); max-width: 1100px; width: 100%; margin: 0 auto; box-sizing: border-box; }
+:is(#writeMode, #agentMode) .walk.imm .rail li { flex: 1 1 0; height: 4px; padding: 0; border-radius: 99px; background: rgb(255 255 255 / .14); font-size: 0; overflow: hidden; cursor: default; transition: background .3s; }
+:is(#writeMode, #agentMode) .walk.imm .rail li::before, :is(#writeMode, #agentMode) .walk.imm .rail li::after { display: none; }
+:is(#writeMode, #agentMode) .walk.imm .rail li.done { background: rgb(255 255 255 / .55); cursor: pointer; }
+:is(#writeMode, #agentMode) .walk.imm .rail li.on { background: var(--attn); box-shadow: 0 0 10px rgb(255 92 138 / .7); }
+:is(#writeMode, #agentMode) .walk.imm .rail li.seen { background: #fff; }
+.ptools { display: none; } .walk.imm .ptools { display: flex; gap: 6px; position: absolute; top: calc(2px + env(safe-area-inset-top, 0px)); right: max(10px, env(safe-area-inset-right, 0px)); z-index: 2; }
+.ptools button { width: 36px; height: 36px; padding: 0; border-radius: 50%; font: 600 16px var(--body); background: rgb(255 255 255 / .06); border-color: rgb(255 255 255 / .12); }
+.walk.imm.pics .ptools .pinfo { background: var(--knob); border-color: var(--knob); color: #fff; }
+:is(#writeMode, #agentMode) .walk.imm .secs { min-height: 0; overflow: hidden; padding: 14px max(14px, env(safe-area-inset-left, 0px)) 0; max-width: 1100px; width: 100%; margin: 0 auto; box-sizing: border-box; display: block; }
+:is(#writeMode, #agentMode) .walk.imm .sec:not(.on) { display: none; }
+:is(#writeMode, #agentMode) .walk.imm .sec.on { height: 100%; min-height: 0; overflow: hidden; display: flex; flex-direction: column; background: transparent; border: 0; box-shadow: none; padding: 0 3px; opacity: 1; animation: secin .5s cubic-bezier(.2, .8, .2, 1) both; }
+:is(#writeMode, #agentMode) .walk.imm .sec.on.scroll { overflow-y: auto; }
+:is(#writeMode, #agentMode) .walk.imm .sec.on h2 { font-size: 12px; margin-bottom: 8px; color: var(--attn); }
+:is(#writeMode, #agentMode) .walk.imm .sec.on h2 i { display: none; }
+:is(#writeMode, #agentMode) .walk.imm .sec.on .cap { font: 600 clamp(17px, 2.3vw, 24px)/1.4 var(--body); color: #fff; margin: 0 0 12px; min-height: 0; text-wrap: pretty; animation: capin .5s ease-out both; }
+:is(#writeMode, #agentMode) .walk.imm .fitbox { transform-origin: top center; transition: transform .35s ease; flex: none; }
+:is(#writeMode, #agentMode) .walk.imm .sec.on > * { flex: none; }
+:is(#writeMode, #agentMode) .walk.imm:not(.pics) .pic { display: none; }
+@keyframes capin { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+body.playing .ctl, body.playing :is(#writeMode, #agentMode) .ctl { z-index: 50; background: rgb(10 11 17 / .92); }
+body.playing .ctl .now { display: none; }
+@media (max-width: 700px) {
+  body.playing .ctl .in { flex-wrap: nowrap; gap: 8px; }
+  body.playing :is(#writeMode, #agentMode) .ctl .speed, body.playing :is(#writeMode, #agentMode) .ctl .autol, body.playing #agentMode .ctl label { display: none; }
+  body.playing :is(#writeMode, #agentMode) .ctl .in { flex-wrap: nowrap; }
+  body.playing .ctl .cont { flex: 1 1 auto; font-size: 18px; padding: 13px 18px; }
+  body.playing .ctl #wBack, body.playing .ctl #aBack { flex: none; width: 52px; height: 48px; padding: 0; }
+}
+@media (prefers-reduced-motion: reduce) { :is(#writeMode, #agentMode) .walk.imm .sec.on, :is(#writeMode, #agentMode) .walk.imm .sec.on .cap { animation: none; } :is(#writeMode, #agentMode) .walk.imm .fitbox { transition: none; } }
+
 .walk.imm .rail li.done { cursor: pointer; } .walk.imm .rail li.done:hover { color: #fff; }
 .lookback { display: none; } .walk.imm.viewing .lookback { display: block; margin: 0 0 10px; padding: 6px 10px; border-radius: 8px; background: rgb(255 92 138 / .12); color: #ffd0de; font-size: 13.5px; }
 @media (prefers-reduced-motion: reduce) { .walk.imm .sec.on { animation: none; } }
@@ -866,7 +902,7 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
   let round = 1;
   function focus(k, cap) {
     const sec = $('#s-' + k); if (cap != null) sec.querySelector('.cap').textContent = cap;
-    curK = k; show(k);
+    curK = k; show(k); draw(); // redrawn at the size it is shown
     $('#aNow').firstChild.textContent = STEP_NAMES[k]; $('#aNowSub').textContent = round > 1 ? `round ${round}` : '';
   }
   const capOf = k => $('#s-' + k + ' .cap');
@@ -875,7 +911,7 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
   const S = { toks: [], sysEnd: 0, replyStart: 0, cur: -1, att: null, readFrom: 0, readTo: 0, lens: null, newFrom: 0, pulse: 0 };
   let raf = 0; const draw = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; render(); }); };
   function render() {
-    const VW = Math.round(Math.max(340, Math.min(900, $('#tape').parentNode.clientWidth || 900))); // drawn at the size it is shown, so the text stays readable (layers in two rows on phones)
+    const VW = Math.round(Math.max(340, Math.min(900, $('#tape').parentNode.clientWidth || ($('#aWalk .secs').clientWidth - 8) || 900))); // a hidden step has no width: use the stage's // drawn at the size it is shown, so the text stays readable (layers in two rows on phones)
     const a = A.tapeParts(S, view, W, false, VW); $('#tape').setAttribute('viewBox', `0 0 ${VW} ${Math.ceil(a.y)}`); $('#tape').innerHTML = a.parts.join('');
     const b = A.modelParts(S, view, W, DIALS, 14, VW); $('#model').setAttribute('viewBox', `0 0 ${VW} ${Math.ceil(b.y + 4)}`); $('#model').innerHTML = b.parts.join('');
     S.newFrom = S.toks.length;
@@ -1313,6 +1349,58 @@ ${A.SYSTEM}<|im_end|>`; p.hidden = !p.hidden; } });
   $('#pcReset').addEventListener('click', async () => { if (!pc || busy) return; lock(true); await pc.reset(); await files(); stage(null); lock(false); });
   $('#chatWalk').addEventListener('click', () => { if (lastTask) P().start(lastTask); });
   window.__chat = { chat, get busy() { return busy; }, machine: () => machine(), speed: v => { SPEED = v; } }; // for testing
+})();
+</script>
+<script>
+// the player: makes a running walk a full-screen app. Each step's content is scaled to fit the screen (down to 60%;
+// below that it scrolls inside), refitted whenever it changes. Swipe left = Continue, right = Back.
+(function () {
+  'use strict';
+  const $ = s => document.querySelector(s);
+  function player(walk, ctl, contBtn, backBtn) {
+    const tools = document.createElement('div'); tools.className = 'ptools';
+    tools.innerHTML = '<button type="button" class="pinfo" aria-label="Show the picture for this step" title="The picture">i</button><button type="button" class="pclose" aria-label="Leave full screen" title="Leave full screen">✕</button>';
+    walk.appendChild(tools);
+    tools.querySelector('.pinfo').addEventListener('click', () => { walk.classList.toggle('pics'); refit(); });
+    tools.querySelector('.pclose').addEventListener('click', () => { walk.classList.remove('imm'); sync(); });
+    let raf = 0;
+    const refit = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; fit(); }); };
+    function fit() {
+      const sec = walk.querySelector('.sec.on'); if (!sec || !walk.classList.contains('imm')) return;
+      let box = sec.querySelector(':scope > .fitbox');
+      if (!box) { box = document.createElement('div'); box.className = 'fitbox'; [...sec.children].filter(c => !/^H2$/.test(c.tagName) && !c.classList.contains('cap') && !c.classList.contains('lookback')).forEach(c => box.appendChild(c)); sec.appendChild(box); }
+      const head = [...sec.children].filter(c => c !== box).reduce((a, c) => a + c.offsetHeight + parseFloat(getComputedStyle(c).marginBottom || 0), 0);
+      const avail = sec.clientHeight - head - 16, nat = box.scrollHeight;
+      let k = nat > 0 ? Math.min(1, avail / nat) : 1; const tooBig = k < 0.6; if (tooBig) k = 0.6;
+      box.style.transform = k < 0.999 ? `scale(${k.toFixed(3)})` : ''; box.style.width = k < 0.999 ? (100 / k).toFixed(2) + '%' : ''; box.style.marginLeft = k < 0.999 ? ((100 - 100 / k) / 2).toFixed(2) + '%' : '';
+      box.style.marginBottom = k < 0.999 ? (-(nat * (1 - k))).toFixed(0) + 'px' : '';
+      sec.classList.toggle('scroll', tooBig);
+    }
+    function sync() {
+      const on = walk.classList.contains('imm');
+      document.body.classList.toggle('playing', on);
+      if (on) document.documentElement.style.setProperty('--ctlh', (ctl.offsetHeight || 70) + 'px');
+      walk.querySelectorAll('.fitbox').forEach(b => { if (!on) { b.style.transform = b.style.width = b.style.marginLeft = b.style.marginBottom = ''; } });
+      refit();
+    }
+    new MutationObserver(m => { if (m.some(x => x.type === 'attributes' && x.target === walk)) sync(); else refit(); })
+      .observe(walk, { attributes: true, attributeFilter: ['class'], subtree: true, childList: true, characterData: true });
+    addEventListener('resize', () => { sync(); });
+    // swipes
+    let sx = 0, sy = 0, st = 0;
+    walk.addEventListener('touchstart', e => { if (!walk.classList.contains('imm')) return; const t = e.touches[0]; sx = t.clientX; sy = t.clientY; st = Date.now(); }, { passive: true });
+    walk.addEventListener('touchend', e => {
+      if (!walk.classList.contains('imm') || !st) return; const t = e.changedTouches[0], dx = t.clientX - sx, dy = t.clientY - sy; st = 0;
+      if (Math.abs(dx) > 60 && Math.abs(dy) < 60) { if (dx < 0 && !contBtn.disabled && !contBtn.hidden) contBtn.click(); if (dx > 0 && !backBtn.disabled) backBtn.click(); }
+    }, { passive: true });
+    // leaving full screen mid-run: a button in the bar brings it back
+    const fs = document.createElement('button'); fs.type = 'button'; fs.className = 'pfull'; fs.textContent = '⛶ Full screen'; fs.hidden = true;
+    ctl.querySelector('.in').appendChild(fs);
+    fs.addEventListener('click', () => { walk.classList.add('imm'); });
+    new MutationObserver(() => { fs.hidden = walk.classList.contains('imm') || !walk.classList.contains('live'); }).observe(walk, { attributes: true, attributeFilter: ['class'] });
+  }
+  player($('#walk'), $('#ctl'), $('#cont'), $('#wBack'));
+  player($('#aWalk'), $('#aCtl'), $('#aCont'), $('#aBack'));
 })();
 </script>
 </body>
