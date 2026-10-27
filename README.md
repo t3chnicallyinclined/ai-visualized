@@ -2,7 +2,7 @@
 
 A visualization of a language model writing, one token at a time, with the real numbers on screen.
 
-**Try it:** [guided walk-through](https://t3chnicallyinclined.github.io/ai-visualized/) · [Explorer](https://t3chnicallyinclined.github.io/ai-visualized/explore.html) · [agent, step by step](https://t3chnicallyinclined.github.io/ai-visualized/?mode=agent) · [kids and classroom](https://t3chnicallyinclined.github.io/ai-visualized/kids.html)
+**Try it:** [the show](https://t3chnicallyinclined.github.io/ai-visualized/show.html) · [guided walk-through](https://t3chnicallyinclined.github.io/ai-visualized/) · [Explorer](https://t3chnicallyinclined.github.io/ai-visualized/explore.html) · [agent, step by step](https://t3chnicallyinclined.github.io/ai-visualized/?mode=agent) · [kids and classroom](https://t3chnicallyinclined.github.io/ai-visualized/kids.html)
 
 Plain HTML and JavaScript, no build step and no server. The models run in your browser and nothing you type leaves it. The first visit downloads a 30 MB model.
 
@@ -17,6 +17,8 @@ The knobs then do their work. The only place the words affect each other is atte
 An agent is the same machine with a person next to it: a program that reads the words it writes, types any commands into a shell, and hands the output back.
 
 ## The pages
+
+**The show** (`show.html`) — one word, as a full-screen film on one canvas: your words shatter into pieces, fly to their spots in the cloud of every piece the model knows, the last piece listens back along six coloured threads (one per attention head), its numbers fall through the six layers as a ring of 288 spokes while the cloud lights up with each layer's guess, the wall of lights, the weighted dice, and the word drops into the sentence; then the next words run through the whole loop. Every frame is drawn from the model's own numbers for your sentence (TinyStories 15M). Continue, Back, swipe, or Autoplay.
 
 **Guided walk-through** (`index.html`) — one run of a real model, slowed down and lit one step at a time, in two modes. **Write**: words into pieces, each piece a spot in the cloud, one layer close up, every layer, the wall of lights, the dice, repeat. **Agent**: the same steps on Qwen2.5-0.5B-Instruct, plus the ones only an agent has (marked *agent* on the page).
 
@@ -69,6 +71,7 @@ Issues and pull requests welcome. No build step:
 
 | File | What it is |
 |---|---|
+| `show.html` | the show: one word as a full-screen film, drawn from the model's numbers |
 | `index.html` | guided walk-through: Write mode and Agent mode |
 | `explore.html` | the Explorer (GSAP from a CDN for the board timeline) |
 | `kids.html` | kids and classroom version |
