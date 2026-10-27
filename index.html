@@ -129,7 +129,12 @@ body.playing { overflow: hidden; }
 :is(#writeMode, #agentMode) .walk.imm .sec.on { height: 100%; min-height: 0; overflow: hidden; display: flex; flex-direction: column; background: transparent; border: 0; box-shadow: none; padding: 0 3px; opacity: 1; animation: secin .5s cubic-bezier(.2, .8, .2, 1) both; }
 :is(#writeMode, #agentMode) .walk.imm .sec.on.scroll { overflow-y: auto; }
 :is(#writeMode, #agentMode) .walk.imm .sec.on h2 { font-size: 12px; margin-bottom: 8px; color: var(--attn); padding: 2px 96px 0 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
-:is(#writeMode, #agentMode) .walk.imm .sec.on h2 .agtag { margin-left: 6px; }
+:is(#writeMode, #agentMode) .walk.imm .sec.on h2 .agtag { display: none; }
+.walk.imm #lookChips { padding-top: 18px; } /* room for the attention percentages above the chips */
+/* bars grow to their real value when they appear */
+@keyframes growx { from { width: 0; } }
+.light em, .cand .b i, .mcands em { animation: growx .6s cubic-bezier(.2, .8, .2, 1) both; }
+.light:nth-child(2) em, .cand:nth-child(2) .b i { animation-delay: .06s; } .light:nth-child(3) em, .cand:nth-child(3) .b i { animation-delay: .12s; } .light:nth-child(4) em, .cand:nth-child(4) .b i { animation-delay: .18s; } .light:nth-child(5) em, .cand:nth-child(5) .b i { animation-delay: .24s; }
 :is(#writeMode, #agentMode) .walk.imm .sec.on h2 i { display: none; }
 :is(#writeMode, #agentMode) .walk.imm .sec.on .cap { font: 600 clamp(17px, 2.3vw, 24px)/1.4 var(--body); color: #fff; margin: 0 0 12px; min-height: 0; text-wrap: pretty; animation: capin .5s ease-out both; }
 :is(#writeMode, #agentMode) .walk.imm .fitbox { transform-origin: top center; transition: transform .35s ease; flex: none; }
@@ -548,15 +553,15 @@ body.playing .ctl .now { display: none; }
           <p class="note" id="expNote"></p>
         </details>
       </section>
-      <section class="sec" id="s-ctx"><h2><i>3</i>Your words become pieces: everything the model reads</h2><p class="lookback">Looking back at an earlier step. Press Continue to return to where you were.</p><p class="cap"></p><div class="svgwrap"><svg id="tape" class="ag-svg" viewBox="0 0 900 120" role="img" aria-label="Everything the model reads, as a tape of real tokens, with the newest token's attention as pink arcs"></svg></div><pre class="syspre" id="syspre" hidden></pre></section>
-      <section class="sec" id="s-model"><h2><i>4</i>Through every layer: 24 layers of fixed knobs</h2><p class="lookback">Looking back at an earlier step. Press Continue to return to where you were.</p><p class="cap"></p><div class="svgwrap"><svg id="model" class="ag-svg" viewBox="0 0 900 160" role="img" aria-label="The model's 24 layers with real knobs, and the logit lens of the first token of each turn"></svg></div><div class="gauge" id="gauge"></div><div class="mbbox" id="aMbBox"></div></section>
-      <section class="sec" id="s-words"><h2><i>5</i>The wall of lights, word by word</h2><p class="lookback">Looking back at an earlier step. Press Continue to return to where you were.</p><p class="cap"></p><div class="words" id="words"></div>
-        <p class="note" style="margin-top:8px">The same wall of lights as in Write mode, but no dice: this agent always takes the brightest light (temperature 0), so a run comes out the same each time and can be checked.</p>
+      <section class="sec" id="s-ctx"><h2><i>3</i>Everything the model reads</h2><p class="lookback">Looking back at an earlier step. Press Continue to return to where you were.</p><p class="cap"></p><div class="svgwrap"><svg id="tape" class="ag-svg" viewBox="0 0 900 120" role="img" aria-label="Everything the model reads, as a tape of real tokens, with the newest token's attention as pink arcs"></svg></div><pre class="syspre" id="syspre" hidden></pre></section>
+      <section class="sec" id="s-model"><h2><i>4</i>Through every layer</h2><p class="lookback">Looking back at an earlier step. Press Continue to return to where you were.</p><p class="cap"></p><div class="svgwrap"><svg id="model" class="ag-svg" viewBox="0 0 900 160" role="img" aria-label="The model's 24 layers with real knobs, and the logit lens of the first token of each turn"></svg></div><div class="gauge" id="gauge"></div><div class="mbbox" id="aMbBox"></div></section>
+      <section class="sec" id="s-words"><h2><i>5</i>The wall of lights</h2><p class="lookback">Looking back at an earlier step. Press Continue to return to where you were.</p><p class="cap"></p><div class="words" id="words"></div>
+        <p class="note pic" style="margin-top:8px">The same wall of lights as in Write mode, but no dice: this agent always takes the brightest light (temperature 0), so a run comes out the same each time and can be checked.</p>
         <div class="why"><div><h3>Its next-token chances</h3><div class="cands" id="cands"></div></div><div><h3>Where it looked back (attention)</h3><div class="look" id="look"></div></div></div></section>
       <section class="sec" id="s-prog"><h2><i>6</i>The program reads the reply <b class="agtag">agent</b></h2><p class="lookback">Looking back at an earlier step. Press Continue to return to where you were.</p><p class="cap"></p>
         <div class="incoming" id="incoming" hidden><small>the model's words, handed to the program</small><span id="incomingText"></span></div>
         <div class="code" id="code"></div>
-        <p class="note" style="margin-top:8px">This is the program's loop, simplified from <a href="https://github.com/t3chnicallyinclined/ai-visualized/blob/main/agent.js">agent.js</a> (the real one also catches broken requests). The values next to the lines are the real ones from this run.</p>
+        <p class="note pic" style="margin-top:8px">This is the program's loop, simplified from <a href="https://github.com/t3chnicallyinclined/ai-visualized/blob/main/agent.js">agent.js</a> (the real one also catches broken requests). The values next to the lines are the real ones from this run.</p>
         <div class="prog" id="prog" hidden></div></section>
       <section class="sec" id="s-shell"><h2><i>7</i>The shell runs it <b class="agtag">agent</b></h2><p class="lookback">Looking back at an earlier step. Press Continue to return to where you were.</p><p class="cap"></p><div class="termbox"><pre class="ag-term" id="term"></pre></div></section>
       <section class="sec" id="s-back"><h2><i>8</i>The output goes back <b class="agtag">agent</b></h2><p class="lookback">Looking back at an earlier step. Press Continue to return to where you were.</p><p class="cap"></p><div class="back" id="back"></div></section>
@@ -1099,7 +1104,7 @@ body.playing .ctl .now { display: none; }
         capOf('model').textContent = `Answer, or ask for the shell? The row under the layers is its best guess after each one: “${view.tok.piece(fin)}” only appears at layer ${from + 1}.`;
         await slide(5200);
         focus('words', firstTurn ? 'Now it writes, one token at a time. Each token is its most likely next token.' : 'It writes again, now with the shell\'s output in front of it.');
-        await slide(1400);
+        await beat(600); // the wall of lights fills in before the first stop
       } else if (e.t === 'token') {
         const t = e.tok;
         $('#cands').innerHTML = t.cands.map((c, i) => `<div class="cand${i === 0 ? ' win' : ''}"><span>${esc(view.tok.piece(c.id))}</span><span class="b"><i style="width:${(c.full * 100).toFixed(1)}%"></i></span><span>${pct(c.full)}</span></div>`).join('');
