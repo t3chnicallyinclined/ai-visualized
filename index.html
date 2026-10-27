@@ -105,6 +105,14 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
 .picks div { animation: pop .3s ease-out both; } .picks b { color: var(--pick); }
 .ctl { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: rgb(12 14 22 / .95); border-top: 1px solid var(--s-line); backdrop-filter: blur(8px); }
 .ctl .in { max-width: 1040px; margin: 0 auto; padding: 9px max(16px, env(safe-area-inset-left, 0px)) calc(9px + env(safe-area-inset-bottom, 0px)); display: flex; gap: 8px 12px; align-items: center; flex-wrap: wrap; }
+.walk.imm .sec:not(.on) { display: none; }
+.walk.imm .sec.on { min-height: calc(100svh - 170px); box-sizing: border-box; animation: secin .45s ease-out both; }
+.walk.imm .sec.on .cap { font-size: 21px; line-height: 1.45; } @media (max-width: 700px) { .walk.imm .sec.on .cap { font-size: 17.5px; } }
+.walk.imm .sec.on h2 { font-size: 13px; }
+@keyframes secin { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+.walk.imm .rail li.done { cursor: pointer; } .walk.imm .rail li.done:hover { color: #fff; }
+.lookback { display: none; } .walk.imm.viewing .lookback { display: block; margin: 0 0 10px; padding: 6px 10px; border-radius: 8px; background: rgb(255 92 138 / .12); color: #ffd0de; font-size: 13.5px; }
+@media (prefers-reduced-motion: reduce) { .walk.imm .sec.on { animation: none; } }
 .cont { font-size: 16px; padding: 10px 22px; } .cont:not(:disabled) { animation: contpulse 1.6s ease-in-out infinite; } .cont:disabled { animation: none; }
 @keyframes contpulse { 50% { box-shadow: 0 0 0 6px rgb(255 92 138 / .25); } }
 .autol { font-size: 13px; color: var(--s-ink2); display: flex; gap: 6px; align-items: center; }
@@ -373,35 +381,36 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
       <li data-s="again">Again, word by word</li>
     </ol>
     <div class="secs">
-      <section class="sec" id="s-pieces"><h2><i>1</i>Your words become pieces</h2><p class="cap"></p><div class="chips" id="chips"></div>
+      <section class="sec" id="s-pieces"><h2><i>1</i>Your words become pieces</h2><p class="lookback">Looking back at an earlier step. Press Continue to return to where you were.</p><p class="cap"></p><div class="chips" id="chips"></div>
         <p class="pic"><b>The picture:</b> a big dictionary of pieces, each with a number. The model never sees letters, only these numbers.</p></section>
-      <section class="sec" id="s-sounds"><h2><i>2</i>Each piece gets its spot in the cloud</h2><p class="cap"></p>
+      <section class="sec" id="s-sounds"><h2><i>2</i>Each piece gets its spot in the cloud</h2><p class="lookback">Looking back at an earlier step. Press Continue to return to where you were.</p><p class="cap"></p>
         <div class="allgrid"><div class="rows" id="rows"></div><div class="cloudbox"><canvas id="cloud0" aria-label="The cloud: every piece in the dictionary as a dot, similar pieces close together; your pieces are marked"></canvas><p class="note" id="cloud0Note">Your pieces, each at its spot in the cloud.</p></div></div>
         <p class="pic"><b>The picture:</b> a cloud with one dot for every piece in the dictionary. A piece's list of numbers is its address in the cloud, and pieces used alike sit close together: it comes from how a word is used, not how it sounds. The real cloud has one direction per number (from 128 to 768 in these models); the map squashes it flat, so distances on it are rough.</p></section>
-      <section class="sec" id="s-one"><h2><i>3</i>One layer, up close</h2><p class="cap"></p>
+      <section class="sec" id="s-one"><h2><i>3</i>One layer, up close</h2><p class="lookback">Looking back at an earlier step. Press Continue to return to where you were.</p><p class="cap"></p>
         <div class="chips" id="lookChips"></div>
         <div class="twocol" style="margin-top:14px">
           <div class="box"><h3>The knobs</h3><div class="knobs" id="knobs"></div><p class="note" id="knobNote"></p></div>
           <div class="box"><h3>Its numbers, before and after this layer</h3><div class="rows" id="beforeAfter"></div><p class="note" id="baNote"></p></div>
         </div>
         <p class="pic"><b>The picture:</b> rows of volume knobs, set at the factory and glued. Before each row, the newest word listens back to the earlier words (pink) and blends in what matters. That listening is the only step whose mixing depends on what you type.</p></section>
-      <section class="sec" id="s-all"><h2><i>4</i>Through every layer</h2><p class="cap"></p>
+      <section class="sec" id="s-all"><h2><i>4</i>Through every layer</h2><p class="lookback">Looking back at an earlier step. Press Continue to return to where you were.</p><p class="cap"></p>
         <div class="allgrid"><div class="layers" id="layers"></div><div class="cloudbox"><canvas id="cloud" aria-label="The thought cloud: every piece in the dictionary as a dot, similar pieces close together; the pieces it would say after this layer light up"></canvas><p class="note" id="cloudNote">The thought cloud: every piece in the dictionary is a dot, and pieces used alike sit close together.</p></div></div>
         <p class="pic"><b>The picture:</b> the same thing, row after row of knobs. Next to each layer: what it would say if it stopped there (the “logit lens”), and in the cloud, every piece it might say lights up. Early layers are not built to be read this way, so their guesses look odd. The guess after each layer is a peek we take by running the model's final scoring early: the model itself only scores once, after the last layer, and never looks anything up in between. The cloud is a flat map of the model's own embedding rows (made with t-SNE); distances on it are approximate.</p></section>
-      <section class="sec" id="s-lights"><h2><i>5</i>The wall of lights</h2><p class="cap"></p>
+      <section class="sec" id="s-lights"><h2><i>5</i>The wall of lights</h2><p class="lookback">Looking back at an earlier step. Press Continue to return to where you were.</p><p class="cap"></p>
         <div class="allgrid"><div class="lights" id="lights"></div><div class="cloudbox"><canvas id="cloud2" aria-label="The wall of lights laid out as the thought cloud: every piece's final chance as light"></canvas><p class="note">The same wall of lights, laid out as the thought cloud.</p></div></div><p class="note" id="lightsNote" style="margin-top:8px"></p>
         <p class="pic"><b>The picture:</b> a wall with one light for every piece in the dictionary. Each glows by how closely the final list of numbers points the same way as that piece's row in the output table.</p></section>
-      <section class="sec" id="s-dice"><h2><i>6</i>The weighted dice</h2><p class="cap"></p>
+      <section class="sec" id="s-dice"><h2><i>6</i>The weighted dice</h2><p class="lookback">Looking back at an earlier step. Press Continue to return to where you were.</p><p class="cap"></p>
         <div class="lights" id="chances"></div>
         <div class="dice"><div class="die" id="die" aria-hidden="true">🎲</div><p class="note" id="diceNote"></p></div>
         <p class="pic"><b>The picture:</b> a dice loaded by the brightest lights. Usually the brightest wins; sometimes a dimmer one does. That is why the same start can give different stories.</p></section>
-      <section class="sec" id="s-again"><h2><i>7</i>Again, word by word</h2><p class="cap"></p><div class="sentence" id="sentence"></div><div class="picks" id="picks" style="margin-top:10px"></div>
+      <section class="sec" id="s-again"><h2><i>7</i>Again, word by word</h2><p class="lookback">Looking back at an earlier step. Press Continue to return to where you were.</p><p class="cap"></p><div class="sentence" id="sentence"></div><div class="picks" id="picks" style="margin-top:10px"></div>
         <div class="box mbbox" id="mbBox" hidden></div>
         <div class="explore" style="margin-top:12px"><p class="note">That's the whole machine. Want every number at once, the chat model, attention arcs and the training view?</p><a href="explore.html"><button type="button">Open the Explorer →</button></a></div></section>
     </div>
   </div>
   <p class="note">Everything here is real: the pieces, the numbers, the knobs, the listening (attention, averaged over every head of the layer), the guesses after each layer, the scores and the dice. The model engine (<a href="https://github.com/t3chnicallyinclined/ai-visualized/blob/main/llm.js">llm.js</a>) is checked against the official transformers implementation, number by number inside every layer (<a href="https://github.com/t3chnicallyinclined/ai-visualized/blob/main/verify/README.md">the checks and their results</a>). Only the speed is changed.</p>
 <div class="ctl" id="ctl" hidden><div class="in">
+  <button type="button" id="wBack" disabled aria-label="Back to the previous step">◀</button>
   <button type="button" id="cont" class="go cont" disabled>Continue ▶</button>
   <button type="button" id="play" class="go" hidden>Pause</button>
   <div class="speed" role="group" aria-label="Speed"><button type="button" data-sp="0.5" aria-pressed="false">0.5×</button><button type="button" data-sp="1" aria-pressed="true">1×</button><button type="button" data-sp="2" aria-pressed="false">2×</button><button type="button" data-sp="6" aria-pressed="false">fast</button></div>
@@ -481,8 +490,8 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
       <li data-s="done" class="ag">What actually happened</li>
     </ol>
     <div class="secs">
-      <section class="sec" id="s-task"><h2><i>1</i>Your task</h2><p class="cap"></p><div class="bubble" id="bubble"></div></section>
-      <section class="sec" id="s-sys"><h2><i>2</i>The hidden instructions <b class="agtag">agent</b></h2><p class="cap"></p>
+      <section class="sec" id="s-task"><h2><i>1</i>Your task</h2><p class="lookback">Looking back at an earlier step. Press Continue to return to where you were.</p><p class="cap"></p><div class="bubble" id="bubble"></div></section>
+      <section class="sec" id="s-sys"><h2><i>2</i>The hidden instructions <b class="agtag">agent</b></h2><p class="lookback">Looking back at an earlier step. Press Continue to return to where you were.</p><p class="cap"></p>
         <p class="note" style="margin-bottom:10px">Before your task, the program puts text you never see in front of it: the <b>system prompt</b>. Apps do this too. Here it has three parts:</p>
         <div class="sysparts" id="sysparts"></div>
         <details class="why2" id="whyBox"><summary>Why does a bit of text make it use a shell? Test it.</summary>
@@ -493,19 +502,19 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
           <p class="note" id="expNote"></p>
         </details>
       </section>
-      <section class="sec" id="s-ctx"><h2><i>3</i>Your words become pieces: everything the model reads</h2><p class="cap"></p><div class="svgwrap"><svg id="tape" class="ag-svg" viewBox="0 0 900 120" role="img" aria-label="Everything the model reads, as a tape of real tokens, with the newest token's attention as pink arcs"></svg></div><pre class="syspre" id="syspre" hidden></pre></section>
-      <section class="sec" id="s-model"><h2><i>4</i>Through every layer: 24 layers of fixed knobs</h2><p class="cap"></p><div class="svgwrap"><svg id="model" class="ag-svg" viewBox="0 0 900 160" role="img" aria-label="The model's 24 layers with real knobs, and the logit lens of the first token of each turn"></svg></div><div class="gauge" id="gauge"></div><div class="mbbox" id="aMbBox"></div></section>
-      <section class="sec" id="s-words"><h2><i>5</i>The wall of lights, word by word</h2><p class="cap"></p><div class="words" id="words"></div>
+      <section class="sec" id="s-ctx"><h2><i>3</i>Your words become pieces: everything the model reads</h2><p class="lookback">Looking back at an earlier step. Press Continue to return to where you were.</p><p class="cap"></p><div class="svgwrap"><svg id="tape" class="ag-svg" viewBox="0 0 900 120" role="img" aria-label="Everything the model reads, as a tape of real tokens, with the newest token's attention as pink arcs"></svg></div><pre class="syspre" id="syspre" hidden></pre></section>
+      <section class="sec" id="s-model"><h2><i>4</i>Through every layer: 24 layers of fixed knobs</h2><p class="lookback">Looking back at an earlier step. Press Continue to return to where you were.</p><p class="cap"></p><div class="svgwrap"><svg id="model" class="ag-svg" viewBox="0 0 900 160" role="img" aria-label="The model's 24 layers with real knobs, and the logit lens of the first token of each turn"></svg></div><div class="gauge" id="gauge"></div><div class="mbbox" id="aMbBox"></div></section>
+      <section class="sec" id="s-words"><h2><i>5</i>The wall of lights, word by word</h2><p class="lookback">Looking back at an earlier step. Press Continue to return to where you were.</p><p class="cap"></p><div class="words" id="words"></div>
         <p class="note" style="margin-top:8px">The same wall of lights as in Write mode, but no dice: this agent always takes the brightest light (temperature 0), so a run comes out the same each time and can be checked.</p>
         <div class="why"><div><h3>Its next-token chances</h3><div class="cands" id="cands"></div></div><div><h3>Where it looked back (attention)</h3><div class="look" id="look"></div></div></div></section>
-      <section class="sec" id="s-prog"><h2><i>6</i>The program reads the reply <b class="agtag">agent</b></h2><p class="cap"></p>
+      <section class="sec" id="s-prog"><h2><i>6</i>The program reads the reply <b class="agtag">agent</b></h2><p class="lookback">Looking back at an earlier step. Press Continue to return to where you were.</p><p class="cap"></p>
         <div class="incoming" id="incoming" hidden><small>the model's words, handed to the program</small><span id="incomingText"></span></div>
         <div class="code" id="code"></div>
         <p class="note" style="margin-top:8px">This is the program's loop, simplified from <a href="https://github.com/t3chnicallyinclined/ai-visualized/blob/main/agent.js">agent.js</a> (the real one also catches broken requests). The values next to the lines are the real ones from this run.</p>
         <div class="prog" id="prog" hidden></div></section>
-      <section class="sec" id="s-shell"><h2><i>7</i>The shell runs it <b class="agtag">agent</b></h2><p class="cap"></p><div class="termbox"><pre class="ag-term" id="term"></pre></div></section>
-      <section class="sec" id="s-back"><h2><i>8</i>The output goes back <b class="agtag">agent</b></h2><p class="cap"></p><div class="back" id="back"></div></section>
-      <section class="sec" id="s-done"><h2><i>9</i>What actually happened <b class="agtag">agent</b></h2><p class="cap"></p>
+      <section class="sec" id="s-shell"><h2><i>7</i>The shell runs it <b class="agtag">agent</b></h2><p class="lookback">Looking back at an earlier step. Press Continue to return to where you were.</p><p class="cap"></p><div class="termbox"><pre class="ag-term" id="term"></pre></div></section>
+      <section class="sec" id="s-back"><h2><i>8</i>The output goes back <b class="agtag">agent</b></h2><p class="lookback">Looking back at an earlier step. Press Continue to return to where you were.</p><p class="cap"></p><div class="back" id="back"></div></section>
+      <section class="sec" id="s-done"><h2><i>9</i>What actually happened <b class="agtag">agent</b></h2><p class="lookback">Looking back at an earlier step. Press Continue to return to where you were.</p><p class="cap"></p>
         <div class="out"><div><h3>What the model said</h3><p class="said" id="said"></p></div><div><h3>What actually happened</h3><p id="happened"></p><div class="files" id="files"></div><p class="note" id="lesson" style="margin-top:8px"></p></div></div>
         <p style="margin:12px 0 0"><button type="button" id="resetFiles">Put the files back</button> <button type="button" id="again">Try another</button></p></section>
     </div>
@@ -513,6 +522,7 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
   <p class="note">Everything here is real: the examples play back recorded runs of this same page (they come out the same live, because the model always takes its most likely token), the model is Qwen2.5-0.5B-Instruct (checked number by number against the official transformers implementation: <a href="https://github.com/t3chnicallyinclined/ai-visualized/blob/main/verify/README.md">the checks</a>), every token it writes is its most likely next token after Qwen's published repetition penalty, the attention and the logit lens are its own numbers, and in the chat every command runs on a real Linux computer emulated in this tab (v86, with a Linux built for this page: <a href="https://github.com/t3chnicallyinclined/ai-visualized/tree/main/linux">what is in it</a>). The slow step-by-step walk-through uses a small pretend shell in agent.js with the same three files; for these examples both print exactly the same. Only the speed is changed: the model works faster than you can read, so the page shows each step slowly. Source: <a href="https://github.com/t3chnicallyinclined/ai-visualized/blob/main/agent.js">agent.js</a>.</p>
 <div class="ctl" id="aCtl" hidden>
   <div class="in">
+    <button type="button" id="aBack" disabled aria-label="Back to the previous step">◀</button>
     <button type="button" id="aCont" class="go cont" disabled>Continue ▶</button>
     <button type="button" id="aPlay" class="go" hidden>Pause</button>
     <div class="speed" role="group" aria-label="Speed"><button type="button" data-sp="0.5" aria-pressed="false">0.5×</button><button type="button" data-sp="1" aria-pressed="true">1×</button><button type="button" data-sp="2" aria-pressed="false">2×</button><button type="button" data-sp="6" aria-pressed="false">fast</button></div>
@@ -563,17 +573,29 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
   let STEP = true, cont = null;
   const goW = () => { if (cont) { const r = cont; cont = null; r(); } };
   async function slide(ms) { if (!STEP) return beat(ms); $('#cont').disabled = false; $('#now').firstChild.textContent = 'Read this, then press Continue'; await new Promise(r => { cont = r; }); $('#cont').disabled = true; }
-  $('#cont').addEventListener('click', goW);
+  // one screen at a time: Back looks at an earlier step; Continue comes back to the current one first, then moves on
+  let curK = null, viewK = null;
+  const railKeys = () => [...document.querySelectorAll('#rail li')].map(li => li.dataset.s);
+  function show(k) {
+    viewK = k; const ks = railKeys(), ci = ks.indexOf(curK);
+    document.querySelectorAll('#writeMode .sec').forEach(x => x.classList.toggle('on', x.id === 's-' + k));
+    document.querySelectorAll('#rail li').forEach((li, i) => { li.classList.toggle('on', li.dataset.s === curK); li.classList.toggle('done', i < ci); li.classList.toggle('seen', li.dataset.s === k && k !== curK); });
+    $('#walk').classList.toggle('viewing', k !== curK); $('#wBack').disabled = ks.indexOf(k) <= 0 || !$('#walk').classList.contains('imm');
+    $('#walk').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+  }
+  const back = () => { const ks = railKeys(), i = ks.indexOf(viewK); if (i > 0 && $('#walk').classList.contains('imm')) show(ks[i - 1]); };
+  $('#wBack').addEventListener('click', back);
+  $('#cont').addEventListener('click', () => { if (viewK !== curK) show(curK); else goW(); });
+  document.querySelectorAll('#rail li').forEach(li => li.addEventListener('click', () => { if (li.classList.contains('done') || li.dataset.s === curK) show(li.dataset.s); }));
+  addEventListener('keydown', e => { if (e.key !== 'ArrowLeft' || $('#walk').closest('[hidden]') || !$('#walk').classList.contains('imm') || /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return; e.preventDefault(); back(); });
   $('#auto').addEventListener('change', e => { STEP = !e.target.checked; $('#play').hidden = STEP; $('#cont').hidden = !STEP; goW(); });
-  addEventListener('keydown', e => { if ($('#ctl').hidden || !cont || /INPUT|TEXTAREA|SELECT|BUTTON/.test(e.target.tagName)) return; if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowRight') { e.preventDefault(); goW(); } });
+  addEventListener('keydown', e => { if ($('#ctl').hidden || !cont || /INPUT|TEXTAREA|SELECT|BUTTON/.test(e.target.tagName)) return; if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowRight') { e.preventDefault(); $('#cont').click(); } });
   $('#play').addEventListener('click', () => { paused = !paused; $('#play').textContent = paused ? 'Play' : 'Pause'; if (!paused && unpause) { unpause(); unpause = null; } });
   document.querySelectorAll('#ctl .speed button').forEach(b => b.addEventListener('click', () => { SPEED = +b.dataset.sp; document.querySelectorAll('#ctl .speed button').forEach(x => x.setAttribute('aria-pressed', x === b)); }));
   const NAMES = { pieces: 'Your words become pieces', sounds: 'Each piece gets its spot in the cloud', one: 'One layer, up close', all: 'Through every layer', lights: 'The wall of lights', dice: 'The weighted dice', again: 'Again, word by word' };
   function focus(k, cap) {
-    document.querySelectorAll('#writeMode .sec').forEach(s => s.classList.toggle('on', s.id === 's-' + k));
-    let past = true; document.querySelectorAll('#rail li').forEach(li => { const on = li.dataset.s === k; li.classList.toggle('on', on); if (on) past = false; li.classList.toggle('done', past && !on); });
     const sec = $('#s-' + k); if (cap != null) sec.querySelector('.cap').textContent = cap;
-    sec.scrollIntoView({ behavior: reduce || SPEED > 3 ? 'auto' : 'smooth', block: 'center' });
+    curK = k; show(k);
     $('#now').firstChild.textContent = NAMES[k];
   }
   const cap = (k, t) => { $('#s-' + k + ' .cap').textContent = t; };
@@ -586,7 +608,8 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
     for (let i = 0; i < vals.length; i++) { const a = Math.max(-1, Math.min(1, vals[i] / sc)); c.fillStyle = a >= 0 ? `rgba(242,154,74,${0.1 + 0.9 * a})` : `rgba(91,139,216,${0.1 - 0.9 * a})`; c.fillRect(i * w, 0, Math.ceil(w), cv.height); }
   }
   const rowEl = (label, vals, scale) => { const d = document.createElement('div'); d.className = 'numrow'; const s = document.createElement('span'); s.textContent = label; const cv = document.createElement('canvas'); cv.className = 'strip'; d.append(s, cv); requestAnimationFrame(() => strip(cv, vals, scale)); return d; };
-  function knob(v) { const a = Math.max(-1, Math.min(1, v)) * 0.75 * Math.PI - Math.PI / 2; return `<svg viewBox="0 0 30 30" aria-hidden="true"><circle cx="15" cy="15" r="11" fill="#1b2034" stroke="#9d90ff" stroke-width="1.5"/><line x1="15" y1="15" x2="${(15 + Math.cos(a) * 9).toFixed(1)}" y2="${(15 + Math.sin(a) * 9).toFixed(1)}" stroke="#e7e9f3" stroke-width="2.2" stroke-linecap="round"/></svg>`; }
+  const arcD = (cx, cy, r, a0, a1) => { const p = a => `${(cx + Math.cos(a) * r).toFixed(1)} ${(cy + Math.sin(a) * r).toFixed(1)}`; return `M${p(a0)}A${r} ${r} 0 ${Math.abs(a1 - a0) > Math.PI ? 1 : 0} ${a1 > a0 ? 1 : 0} ${p(a1)}`; };
+  function knob(v) { const t = Math.max(-1, Math.min(1, v)), top = -Math.PI / 2; return `<svg viewBox="0 0 30 30" aria-hidden="true"><path d="${arcD(15, 15, 10, 0.75 * Math.PI, 2.25 * Math.PI)}" fill="none" stroke="#2c3350" stroke-width="4" stroke-linecap="round"/><path d="${arcD(15, 15, 10, top, top + (Math.abs(t) < 0.04 ? 0.04 * Math.sign(t || 1) : t) * 0.75 * Math.PI)}" fill="none" stroke="${t >= 0 ? '#f29a4a' : '#5b8bd8'}" stroke-width="4" stroke-linecap="round"/></svg>`; } // a level gauge: orange clockwise above zero, blue anticlockwise below
   const layerKnobs = l => Object.values(M.mats.layers[l]).reduce((a, t) => a + ((t && t.length) || 0), 0);
   const mainGrid = l => { const ly = M.mats.layers[l]; return ly.q || ly.qkv || ly.attn || Object.values(ly).find(t => t && t.length > 1000); };
   function meanAtt(ly) { const Tn = ly.attn.length / ly.heads, w = new Float32Array(Tn); for (let h = 0; h < ly.heads; h++) for (let j = 0; j < Tn; j++) w[j] += ly.attn[h * Tn + j] / ly.heads; return w; }
@@ -666,7 +689,7 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
 
   // ---------- the walk-through ----------
   async function walk(text) {
-    running = true; paused = false; $('#play').textContent = 'Pause'; $('#ctl').hidden = false; $('#walk').classList.add('live');
+    running = true; paused = false; $('#play').textContent = 'Pause'; $('#ctl').hidden = false; $('#walk').classList.add('live', 'imm');
     [$('#cloud0'), $('#cloud'), $('#cloud2')].forEach(cv => drawCloud(cv, null, null, null));
     $('#mbBox').hidden = true; ['#chips', '#rows', '#lookChips', '#knobs', '#beforeAfter', '#layers', '#lights', '#chances', '#sentence', '#picks'].forEach(q => { $(q).innerHTML = ''; });
     document.querySelectorAll('#writeMode .cap').forEach(c => { c.textContent = ''; }); $('#knobNote').textContent = ''; $('#baNote').textContent = ''; $('#lightsNote').textContent = ''; $('#diceNote').textContent = '';
@@ -702,7 +725,7 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
     const grid = mainGrid(0), knobsN = layerKnobs(0); let ks = 0; for (let k = 0; k < 400; k++) ks = Math.max(ks, Math.abs(grid[(k * 7919) % grid.length]));
     cap('one', `Then its list of numbers goes through this layer's knobs: ${nf(knobsN)} of them in layer 1. Each one multiplies a number and they are added up, row by row. Nothing you typed moved a single one.`);
     for (let k = 0; k < 24; k++) { $('#knobs').insertAdjacentHTML('beforeend', knob(grid[(k * 104729) % grid.length] / ks * 2)); await beat(60); }
-    $('#knobNote').textContent = `24 of layer 1's ${nf(knobsN)} knobs, at their real settings (a weight is just a number; the needle shows its sign and size).`;
+    $('#knobNote').textContent = `24 of layer 1's ${nf(knobsN)} knobs, at their real settings (a weight is just a number; the arc shows its size: orange clockwise above zero, blue the other way below).`;
     await slide(2200);
     const v = ly0.vec || {}, before = v.xin || M.embedding(ids[last], M.D), after = v.xout || before;
     const scale = Array.from(after, Math.abs).sort((a, b) => a - b)[Math.floor(after.length * 0.98)] || 1;
@@ -782,7 +805,7 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
       sizeBox($('#mbBox'), `Where the model's ${Math.round(M.weightBytes / 1e6)} MB goes`, parts, `When you hear a model's size (“15M”, “70B”), it is this count of fixed numbers, set in training. They all sit in memory while it runs; your words are just a few lists of numbers passing through. ${outT ? '' : 'Here the wall of lights reuses the cloud table, so it is counted once. '}The bigger the model, the smaller the table's share: Llama 3 70B spends about 3% of its 70 billion knobs on its tables.`);
       $('#mbBox').hidden = false;
     }
-    running = false; $('#walk').classList.remove('live'); document.querySelectorAll('#rail li').forEach(li => li.classList.remove('on'));
+    running = false; $('#walk').classList.remove('live', 'imm', 'viewing'); $('#wBack').disabled = true; document.querySelectorAll('#rail li').forEach(li => li.classList.remove('on'));
     $('#now').firstChild.textContent = 'Finished'; $('#nowSub').textContent = 'press “Watch it write” again for a new run';
   }
   window.__walk = { start: () => $('#form').requestSubmit(), get running() { return running; }, speed: v => { SPEED = v; }, get ready() { return !!M; } }; // for testing
@@ -818,9 +841,23 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
   let STEP = true, cont = null;
   const goA = () => { if (cont) { const r = cont; cont = null; r(); } };
   async function slide(ms) { if (!STEP) return beat(ms); $('#aCont').disabled = false; await new Promise(r => { cont = r; }); $('#aCont').disabled = true; }
-  $('#aCont').addEventListener('click', goA);
+  // one screen at a time: Back looks at an earlier step; Continue comes back to the current one first, then moves on
+  let curK = null, viewK = null;
+  const railKeys = () => [...document.querySelectorAll('#aRail li')].map(li => li.dataset.s);
+  function show(k) {
+    viewK = k; const ks = railKeys(), ci = ks.indexOf(curK);
+    document.querySelectorAll('#agentMode .sec').forEach(x => x.classList.toggle('on', x.id === 's-' + k));
+    document.querySelectorAll('#aRail li').forEach((li, i) => { li.classList.toggle('on', li.dataset.s === curK); li.classList.toggle('done', i < ci); li.classList.toggle('seen', li.dataset.s === k && k !== curK); });
+    $('#aWalk').classList.toggle('viewing', k !== curK); $('#aBack').disabled = ks.indexOf(k) <= 0 || !$('#aWalk').classList.contains('imm');
+    $('#aWalk').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+  }
+  const back = () => { const ks = railKeys(), i = ks.indexOf(viewK); if (i > 0 && $('#aWalk').classList.contains('imm')) show(ks[i - 1]); };
+  $('#aBack').addEventListener('click', back);
+  $('#aCont').addEventListener('click', () => { if (viewK !== curK) show(curK); else goA(); });
+  document.querySelectorAll('#aRail li').forEach(li => li.addEventListener('click', () => { if (li.classList.contains('done') || li.dataset.s === curK) show(li.dataset.s); }));
+  addEventListener('keydown', e => { if (e.key !== 'ArrowLeft' || $('#aWalk').closest('[hidden]') || !$('#aWalk').classList.contains('imm') || /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return; e.preventDefault(); back(); });
   $('#aAuto').addEventListener('change', e => { STEP = !e.target.checked; $('#aPlay').hidden = STEP; $('#aCont').hidden = !STEP; goA(); });
-  addEventListener('keydown', e => { if ($('#aCtl').hidden || !cont || /INPUT|TEXTAREA|SELECT|BUTTON/.test(e.target.tagName)) return; if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowRight') { e.preventDefault(); goA(); } });
+  addEventListener('keydown', e => { if ($('#aCtl').hidden || !cont || /INPUT|TEXTAREA|SELECT|BUTTON/.test(e.target.tagName)) return; if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowRight') { e.preventDefault(); $('#aCont').click(); } });
   $('#aPlay').addEventListener('click', () => { paused = !paused; $('#aPlay').textContent = paused ? 'Play' : 'Pause'; if (!paused && unpause) { unpause(); unpause = null; } });
   document.querySelectorAll('#aCtl .speed button').forEach(b => b.addEventListener('click', () => { SPEED = +b.dataset.sp; document.querySelectorAll('#aCtl .speed button').forEach(x => x.setAttribute('aria-pressed', x === b)); }));
 
@@ -828,10 +865,8 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
   const STEP_NAMES = { sys: 'The hidden instructions', task: 'Your task', ctx: 'The context', model: 'The model', words: 'The model writes', prog: 'The program', shell: 'The shell', back: 'Back into the context', done: 'What actually happened' };
   let round = 1;
   function focus(k, cap) {
-    document.querySelectorAll('#agentMode .sec').forEach(s => s.classList.toggle('on', s.id === 's-' + k));
-    let past = true; document.querySelectorAll('#aRail li').forEach(li => { const on = li.dataset.s === k; li.classList.toggle('on', on); if (on) past = false; li.classList.toggle('done', past && !on); });
     const sec = $('#s-' + k); if (cap != null) sec.querySelector('.cap').textContent = cap;
-    sec.scrollIntoView({ behavior: reduce || SPEED > 3 ? 'auto' : 'smooth', block: 'center' });
+    curK = k; show(k);
     $('#aNow').firstChild.textContent = STEP_NAMES[k]; $('#aNowSub').textContent = round > 1 ? `round ${round}` : '';
   }
   const capOf = k => $('#s-' + k + ' .cap');
@@ -958,7 +993,7 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
     if (running) return;
     replay = !model; if (replay && !(RUNS && RUN_OF[task])) return;
     running = true; round = 1; paused = false; $('#aPlay').textContent = 'Pause';
-    $('#aCtl').hidden = false; $('#aWalk').classList.add('live', 'started'); $('#approve').closest('label').hidden = replay;
+    $('#aCtl').hidden = false; $('#aWalk').classList.add('live', 'started', 'imm'); $('#approve').closest('label').hidden = replay;
     Object.assign(S, { toks: [], sysEnd: 0, replyStart: 0, cur: -1, att: null, readFrom: 0, readTo: 0, lens: null, newFrom: 0, pulse: 0 });
     $('#bubble').textContent = ''; $('#words').textContent = ''; $('#cands').innerHTML = ''; $('#look').innerHTML = ''; $('#prog').textContent = ''; $('#back').textContent = ''; $('#gauge').textContent = '';
     $('#said').textContent = ''; $('#happened').textContent = ''; $('#lesson').textContent = ''; termReset(); filesView();
@@ -1093,7 +1128,7 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
         break;
       }
     }
-    running = false; $('#aCont').disabled = true; $('#aWalk').classList.remove('live'); document.querySelectorAll('#aRail li').forEach(li => li.classList.remove('on'));
+    running = false; $('#aCont').disabled = true; $('#aWalk').classList.remove('live', 'imm', 'viewing'); $('#aBack').disabled = true; document.querySelectorAll('#aRail li').forEach(li => li.classList.remove('on'));
     $('#aNow').firstChild.textContent = 'Finished'; $('#aNowSub').textContent = '';
   }
 

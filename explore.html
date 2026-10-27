@@ -1087,7 +1087,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
     }
     pipeBtns.forEach((b, i) => { b.className = i === st ? 'on' : i < st || st === PIPE.length ? 'done' : ''; if (i === 4) b.textContent = MODELS[S.mode].layers + ' layers'; });
   }
-  const NOTE_REAL = () => `Real model: ${RM().name} (${RM().license}), running in your browser from its published weights with 32-bit maths. Attention lines, bursts, guesses, ball colours, the cloud's light and the scores come from its actual numbers; the knobs' needles are real weights. The dice only choose among the top five.`;
+  const NOTE_REAL = () => `Real model: ${RM().name} (${RM().license}), running in your browser from its published weights with 32-bit maths. Attention lines, bursts, guesses, ball colours, the cloud's light and the scores come from its actual numbers; the knobs' gauges are real weights. The dice only choose among the top five.`;
   function renderModel() {
     $('#hwSum').textContent = 'Memory and speed in your browser';
     $('#modeNote').textContent = NOTE_REAL();
@@ -1452,7 +1452,7 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
   }
   // a layer's knob bank: a row of dials across the band (two rows, talk above think, when the band is tall enough).
   // Each dial is one real weight, sampled evenly through the layer's grids (talk: q, k, v, o; think: gate, up, down);
-  // its needle shows the setting against that grid's spread. Drawn once per model, layer and size.
+  // its gauge shows the setting against that grid's spread. Drawn once per model, layer and size.
   function knobBank(l, w, h) {
     const key = [S.llm.meta.key, l, Math.round(w), Math.round(h)].join(':'); S.banks = S.banks || {}; if (S.banks[key]) return S.banks[key];
     const sp = pSpec(), k2 = 2, cv = document.createElement('canvas');
@@ -1468,8 +1468,9 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
       for (let k = 0; k < n; k++) {
         let at = Math.floor((k + 0.5) / n * tot), j = 0; while (at >= mats[j][1]) at -= mats[j++][1];
         const [m] = mats[j], v = Math.max(-1, Math.min(1, m[at] / m.sc)), cx = 4 + (k + 0.5) * step, ang = v * 0.75 * Math.PI - Math.PI / 2;
-        c.strokeStyle = wt; c.lineWidth = 1; c.beginPath(); c.arc(cx, cy, r, 0.75 * Math.PI, 2.25 * Math.PI); c.stroke();
-        c.strokeStyle = ink; c.lineWidth = Math.max(1, r / 4); c.lineCap = 'round'; c.beginPath(); c.moveTo(cx, cy); c.lineTo(cx + Math.cos(ang) * r * 0.9, cy + Math.sin(ang) * r * 0.9); c.stroke();
+        // a level gauge: a faint track, and an arc from the top (orange clockwise above zero, blue anticlockwise below)
+        c.lineCap = 'round'; c.lineWidth = Math.max(1.2, r / 3); c.strokeStyle = wt; c.globalAlpha = 0.45; c.beginPath(); c.arc(cx, cy, r, 0.75 * Math.PI, 2.25 * Math.PI); c.stroke(); c.globalAlpha = 1;
+        const vv = Math.abs(v) < 0.04 ? 0.04 * Math.sign(v || 1) : v; c.strokeStyle = v >= 0 ? '#f29a4a' : '#5b8bd8'; c.beginPath(); c.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + vv * 0.75 * Math.PI, vv < 0); c.stroke();
       }
     });
     return (S.banks[key] = cv.toDataURL());

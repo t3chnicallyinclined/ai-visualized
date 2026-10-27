@@ -460,6 +460,7 @@
     return { parts, y };
   }
   // the model: 24 columns of real knobs, the sweep for each token, and the logit lens of the turn's first token
+  const arcD = (cx, cy, r, a0, a1) => { const p = a => `${(cx + Math.cos(a) * r).toFixed(1)} ${(cy + Math.sin(a) * r).toFixed(1)}`; return `M${p(a0)}A${r} ${r} 0 ${Math.abs(a1 - a0) > Math.PI ? 1 : 0} ${a1 > a0 ? 1 : 0} ${p(a1)}`; };
   function modelParts(S, model, W, DIALS, y, VWd = VW) {
     const parts = [];
     // the model: 24 layers with real knobs
@@ -472,8 +473,9 @@
       const cx = gx + (l % per) * gw, y = rowsY[Math.floor(l / per)];
       parts.push(`<rect x="${cx + 1}" y="${y}" width="${gw - 3}" height="${colH}" rx="5" fill="#131726" stroke="#262e45"/><text x="${cx + gw / 2}" y="${y + 12}" font-size="9.5" fill="var(--s-ink3)" text-anchor="middle">${l + 1}</text>`);
       if (DIALS) DIALS[l].forEach((v, k) => {
-        const dx = cx + 8 + (k % 2) * (gw - 18), dy = y + 26 + Math.floor(k / 2) * 22, ang = Math.max(-1, Math.min(1, v * 2.2)) * 0.8 * Math.PI - Math.PI / 2;
-        parts.push(`<circle cx="${dx.toFixed(1)}" cy="${dy}" r="6.5" fill="#1b2034" stroke="#9d90ff" stroke-width="1"/><line x1="${dx.toFixed(1)}" y1="${dy}" x2="${(dx + Math.cos(ang) * 5.5).toFixed(1)}" y2="${(dy + Math.sin(ang) * 5.5).toFixed(1)}" stroke="#e7e9f3" stroke-width="1.6" stroke-linecap="round"/>`);
+        // a level gauge: a grey track, and an arc from the top, clockwise and orange for a positive knob, blue for a negative one
+        const dx = cx + 8 + (k % 2) * (gw - 18), dy = y + 26 + Math.floor(k / 2) * 22, t = Math.max(-1, Math.min(1, v * 2.2)), top = -Math.PI / 2;
+        parts.push(`<path d="${arcD(dx, dy, 6, 0.75 * Math.PI, 2.25 * Math.PI)}" fill="none" stroke="#2c3350" stroke-width="2.4" stroke-linecap="round"/><path d="${arcD(dx, dy, 6, top, top + (Math.abs(t) < 0.04 ? 0.04 * Math.sign(t || 1) : t) * 0.75 * Math.PI)}" fill="none" stroke="${t >= 0 ? '#f29a4a' : '#5b8bd8'}" stroke-width="2.4" stroke-linecap="round"/>`);
       });
     }
     if (S.pulse) rowsY.forEach((ry, r) => parts.push(`<rect class="sweep" style="--sw:${(VWd - 2 * PAD - gw).toFixed(0)}px;animation-delay:${r * 0.35}s" x="${gx}" y="${ry}" width="${gw}" height="${colH}" rx="5" fill="var(--c-attn)" opacity=".5" data-p="${S.pulse}"/>`));
