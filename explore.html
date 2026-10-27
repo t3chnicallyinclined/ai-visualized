@@ -179,7 +179,7 @@ svg#board { width: 100%; height: auto; display: block; }
 /* phones: the board follows the action, and the narrator bar sits right under it and stays on screen */
 @media (max-width: 1180px) {
   .cloudp { position: sticky; top: 0; z-index: 6; background: var(--st-bg); margin: 0 -12px; padding: 8px 12px 6px; box-shadow: 0 8px 18px rgb(0 0 0 / 0.55); gap: 4px; }
-  .cloudp:not(.open) #cBar, .cloudp:not(.open) #cInfo, .cloudp:not(.open) .cnote, .cloudp:not(.open) .dice { display: none; }
+  .cloudp:not(.open) #cBar, .cloudp:not(.open) #cInfo, .cloudp:not(.open) .cnote, .cloudp:not(.open) .dice, .cloudp:not(.open) #tempNote { display: none; }
   .cloudp.open { position: static; box-shadow: none; }
   #cTitle { font-size: 13px; height: 2.6em; } .cguess { font-size: 12px; min-height: 2.6em; }
   .ctools { display: inline-block !important; }
@@ -420,6 +420,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
       <div class="ribbon" id="gStrip" aria-hidden="true"></div>
       <p class="cguess" id="gLine"></p>
       <div class="dice"><label for="temp">Dice: temperature</label><input id="temp" type="range" min="0" max="1.5" step="0.1" value="0.7"><span class="mono" id="tempVal">0.7</span></div>
+      <p class="note" id="tempNote">This model comes with no suggested setting; 0.7 is this page's choice. At 0 the top token always wins.</p>
       <p class="note" id="cInfo"></p>
       <details class="cnote"><summary>What am I looking at?</summary><p class="note" id="cNote"></p></details>
     </section>
@@ -683,6 +684,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
     for (let k = 0; k < 6; k++) {
       const { cands, pick } = LLM.sampleTopK(res.logits, 5, T, r);
       steps.push({ c: cands.map(c => ({ w: tok.piece(c.id), id: c.id, p: c.p, s: c.logit, full: c.full })), pick });
+      if (m.meta.eos.includes(cands[pick].id)) break; // it wrote its end token: the reply is finished, nothing comes after
       if (k < 5) { res = await m.step(st, cands[pick].id, true); recs.push(res.rec); rowRecs.push(res.rec); ms.push(res.ms); onStatus(++done, total); }
     }
     // the comparison: the same message read with the second system prompt (compared for the first new token)
@@ -727,7 +729,9 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
       ['Repeat', (kind === 'mamba' ? 'Only the new lane moves now. Each layer just reads and updates its memory, which stays the same size however long the text gets (no cache of keys and values),' : 'Only the new lane moves now. Each layer reads the keys and values it kept for earlier lanes (the teal dashes) instead of redoing them,') + ` but every layer's knobs and the output table are read again for every new token. The loop runs until the model writes an end token or reaches a length limit.`],
     ];
   };
-  const DONE = ['Done', 'Six new tokens, six passes. A real model keeps going until it writes an end-of-text token or hits a length limit. Press Replay, or type a new prompt.'];
+  const DONE = () => S.data && S.data.steps.length < 6 && S.llm && S.llm.meta.eos.includes(S.data.steps[S.data.steps.length - 1].c[S.data.steps[S.data.steps.length - 1].pick].id)
+    ? ['Done', `It wrote its end token after ${S.data.steps.length} new tokens, so the reply is finished: a model stops when it picks that token. Press Replay, or type a new prompt.`]
+    : ['Done', 'Six new tokens, six passes. A real model keeps going until it writes an end-of-text token or hits a length limit; this page stops at six. Press Replay, or type a new prompt.'];
   const S = { mode: 'tiny', wantMode: 'tiny', speed: 1, data: null, llm: null, loading: null, wantReal: false, hover: null, pinned: false, mem: [], nb: {} };
   let tl = null, CAPS = [], INFOS = [], LENS = [], PASSES = [], STEPLOG = [], CHOOSE = [], G = null;
   const RKEY = { real: 'smollm2-instruct', tiny: 'tiny-stories', pythia: 'pythia-14m', gpt2: 'distilgpt2', mamba: 'mamba-130m' };
@@ -775,7 +779,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
   // the vertical stack: header, your device, the wire, the prompt, tokens, embedding, the layers, the exit, the output
   function layout() {
     VBW = Math.max(320, Math.round($('.boardscroll').clientWidth || 900));
-    const D = S.data, L = MODELS[S.mode].layers, N = D ? D.nP + 6 : 16, x0 = GUT, x1 = VBW - 8, LW = (x1 - x0) / N;
+    const D = S.data, L = MODELS[S.mode].layers, N = D ? D.nP + D.steps.length : 16, x0 = GUT, x1 = VBW - 8, LW = (x1 - x0) / N;
     const G2 = { L, N, x0, x1, LW, laneX: i => x0 + (i + 0.5) * LW };
     G2.vertical = LW < 44; // narrow lanes: token text runs vertically in a tall chip
     G2.chipW = Math.min(LW - 3, 64); G2.chipH = G2.vertical ? 58 : 22;
@@ -863,7 +867,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
     if (tl) tl.kill();
     drawStatic();
     const dyn = $('#dyn'); dyn.innerHTML = ''; $('#sel').innerHTML = '';
-    const { nP, all, steps } = D, NG = 6, N = nP + NG, L = G.L, X = G.laneX;
+    const { nP, all, steps } = D, NG = steps.length, N = nP + NG, L = G.L, X = G.laneX;
     const base = all.map((w, i) => idColour(D.ids[i])), color = i => rgbStr(base[i]);
     const gWait = el('g', {}, dyn), gRows = el('g', {}, dyn), gArcs = el('g', {}, dyn), gScore = el('g', {}, dyn), gBalls = el('g', {}, dyn);
     const rows = [], ball = [], burst = [], ticks = [], wait = [];
@@ -1074,7 +1078,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
   // ---- panels ----
   function setStage(st) {
     const list = STAGES_REAL();
-    const [title, text] = list[st] || DONE;
+    const [title, text] = list[st] || DONE();
     if (!S.hover) {
       const shown = PIPE.map((n, i) => i).filter(i => PIPE[i] !== 'Send' && PIPE[i] !== 'Stream back'); // the steps this page shows
       $('#capStep').textContent = st < list.length ? 'Step ' + (shown.indexOf(st) + 1 || shown.filter(i => i < st).length) + ' of ' + shown.length : 'Finished';
@@ -1483,7 +1487,11 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
   function settle() { build(); tl.progress(1); sync(); }
 
   // ---- real model: download, run, then build the board from its numbers ----
+  // the dice's starting temperature: what the model's makers use where they say (SmolLM2-Instruct's card: 0.2, with
+  // top-p 0.9); the base models come with none, so 0.7 is this page's choice
+  const TEMP = { real: [0.2, 'SmolLM2’s makers use 0.2 in their example (with top-p 0.9); this page keeps the top 5.'] };
   function setMode(mode) {
+    if (S.mode !== mode) { const [t, why] = TEMP[mode] || [0.7, 'This model comes with no suggested setting; 0.7 is this page’s choice. At 0 the top token always wins.']; $('#temp').value = t; $('#tempVal').textContent = t.toFixed(1); $('#tempNote').textContent = why; }
     S.mode = mode;
     document.querySelectorAll('.seg button').forEach(x => x.setAttribute('aria-pressed', x.dataset.mode === mode));
   }
@@ -1617,8 +1625,8 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
     if (tl.isActive()) { tl.pause(); setPlayLabel(); }
     E.row = row; if (tab) E.tab = tab;
     const toks = $('#eToks'); toks.innerHTML = '';
-    for (let i = 0; i < S.data.nP + 6; i++) {
-      if (i >= S.data.nP + 5) break;
+    for (let i = 0; i < S.data.nP + S.data.steps.length; i++) {
+      if (i >= S.data.nP + S.data.steps.length - 1) break;
       const b = document.createElement('button'); b.type = 'button'; b.textContent = S.data.all[i]; b.setAttribute('aria-pressed', i === row);
       b.addEventListener('click', () => { E.row = i; openEmb(i); }); toks.appendChild(b);
     }
@@ -2811,7 +2819,7 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
     const svg = $('#board'), pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY;
     const p = pt.matrixTransform(svg.getScreenCTM().inverse());
     const l = Math.max(0, Math.min(G.L - 1, Math.floor((p.y - G.Y0) / G.LH))), row = Math.floor((p.x - G.x0) / G.LW);
-    if (row < 0 || row >= S.data.nP + 5) return null; // the last new token is never fed back through the layers
+    if (row < 0 || row >= S.data.nP + S.data.steps.length - 1) return null; // the last new token is never fed back through the layers
     return { si: 0, l, row, which: p.y - G.Y0 - l * G.LH > G.LH * 0.53 ? 1 : 0 };
   }
   const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);

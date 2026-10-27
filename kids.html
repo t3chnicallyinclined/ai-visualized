@@ -429,7 +429,7 @@ otherwise: do nothing</div></div>
     for (let l = 0; l < L; l++) {
       const ly = rec.layers[l], knobs = Object.values(M.mats.layers[l]).reduce((a, t) => a + ((t && t.length) || 0), 0);
       const w = new Float32Array(T); if (ly.attn) for (let h = 0; h < ly.heads; h++) for (let j = 0; j < T; j++) w[j] += ly.attn[h * T + j] / ly.heads;
-      let top = 0; for (let j = 1; j < T; j++) if (w[j] > w[top]) top = j;
+      let top = Math.min(1, T - 1); for (let j = top + 1; j < T; j++) if (w[j] > w[top]) top = j; // not the first piece: AIs park spare attention there
       const d = document.createElement('div'); d.className = 'tunnel';
       d.innerHTML = `<div class="thead"><span>Tunnel ${l + 1}</span><small>${knobs.toLocaleString('en-US')} knobs</small></div><div class="trow"><span class="tl">looked back at</span><div class="look"></div></div><div class="trow"><span class="tl">its numbers now</span><canvas class="tstrip"></canvas></div><div class="trow"><span class="tl">guess so far</span><span class="tguess"></span></div>`;
       const look = d.querySelector('.look');

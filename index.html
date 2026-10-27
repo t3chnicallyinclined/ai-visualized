@@ -325,12 +325,13 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
     // 3 one layer up close (layer 1, the last piece)
     const rec = res.rec, ly0 = rec.layers[0], w0 = meanAtt(ly0), focusPiece = piece(ids[last]);
     focus('one', `Layer 1 of ${L}. Follow the last piece, “${focusPiece}”. First it listens back to the pieces before it: the pink bars show how much attention it gives each one (averaged over the layer's ${ly0.heads} heads).`);
-    let mx = 0; for (let j = 0; j < last; j++) mx = Math.max(mx, w0[j]);
+    let mx = 0; for (let j = last > 1 ? 1 : 0; j < last; j++) mx = Math.max(mx, w0[j]); // the first piece is left out of the scale: models park spare attention there
     for (let i = 0; i < n; i++) {
       const c = document.createElement('span'); c.className = 'chip' + (i === last ? ' focus' : ''); c.textContent = piece(ids[i]);
-      if (i < last) { const bar = document.createElement('span'); bar.className = 'bar'; bar.style.width = (100 * w0[i] / (mx || 1)).toFixed(0) + '%'; c.appendChild(bar); if (w0[i] >= mx * 0.6) { const pc = document.createElement('span'); pc.className = 'pc'; pc.textContent = pct(w0[i]); c.appendChild(pc); } }
+      if (i < last) { const bar = document.createElement('span'); bar.className = 'bar'; bar.style.width = Math.min(100, 100 * w0[i] / (mx || 1)).toFixed(0) + '%'; c.appendChild(bar); if (w0[i] >= mx * 0.6) { const pc = document.createElement('span'); pc.className = 'pc'; pc.textContent = pct(w0[i]); c.appendChild(pc); } }
       $('#lookChips').appendChild(c); await beat(120);
     }
+    if (last > 1 && w0[0] >= 0.1) cap('one', `Layer 1 of ${L}. The last piece, “${focusPiece}”, listens back to the pieces before it (pink bars, averaged over the layer's ${ly0.heads} heads). The first piece takes ${pct(w0[0])} of its attention: models park spare attention on the first piece (an “attention sink”), so the bars leave it out of their scale.`);
     await beat(3000);
     const grid = mainGrid(0), knobsN = layerKnobs(0); let ks = 0; for (let k = 0; k < 400; k++) ks = Math.max(ks, Math.abs(grid[(k * 7919) % grid.length]));
     cap('one', `Then its list of numbers goes through this layer's knobs: ${nf(knobsN)} of them in layer 1. Each one multiplies a number and they are added up, row by row. Nothing you typed moved a single one.`);
@@ -353,11 +354,11 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
     }
     const sc2 = Math.max(...rec.layers.map(q => { const x = (q.vec && q.vec.xout) || q.first; return Array.from(x, Math.abs).sort((a, b) => a - b)[Math.floor(x.length * 0.98)] || 1; }));
     for (let l = 0; l < L; l++) {
-      const q = rec.layers[l], d = rowsEls[l], g = q.lens[0], w = meanAtt(q), j0 = M.meta.bos != null && last > 1 ? 1 : 0; let top = j0; for (let j = j0 + 1; j < last; j++) if (w[j] > w[top]) top = j;
+      const q = rec.layers[l], d = rowsEls[l], g = q.lens[0], w = meanAtt(q), j0 = last > 1 ? 1 : 0; let top = j0; for (let j = j0 + 1; j < last; j++) if (w[j] > w[top]) top = j;
       rowsEls.forEach((e, i) => { e.classList.toggle('on', i === l); e.classList.toggle('done', i < l); });
       strip(d.querySelector('canvas'), Array.from((q.vec && q.vec.xout) || q.first), sc2);
       const gEl = d.querySelector('.g'); gEl.textContent = `${piece(g.id)} ${pct(g.p)}`; gEl.classList.toggle('final', l >= from);
-      d.querySelector('.detail').textContent = `listened most to “${piece(ids[top])}” (${pct(w[top])}${j0 ? ', not counting the start marker' : ''}) · ${nf(layerKnobs(l))} knobs · would say “${piece(g.id)}” (${pct(g.p)})`;
+      d.querySelector('.detail').textContent = `listened most to “${piece(ids[top])}” (${pct(w[top])}${j0 ? ', not counting the first piece, where models park spare attention' : ''}) · ${nf(layerKnobs(l))} knobs · would say “${piece(g.id)}” (${pct(g.p)})`;
       d.scrollIntoView({ block: 'nearest', behavior: reduce || SPEED > 3 ? 'auto' : 'smooth' });
       drawCloud($('#cloud'), q.watch, q.lens.slice(0, 3).map(x => [x.id, `${piece(x.id)} ${pct(x.p)}`]), rec.layers.slice(0, l + 1).map(x => x.lens[0].id));
       $('#cloudNote').textContent = `After layer ${l + 1}: every piece it might say lights up, brighter for more likely. The line follows its best guess from layer to layer.`;
@@ -400,7 +401,7 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
     for (let k = 2; k <= 8; k++) {
       res = await M.step(st, next, false);
       const r = LLM.sampleTopK(res.logits, 5, T, Math.random); next = r.cands[r.pick].id;
-      if (next === M.meta.eos || (M.meta.bos === 1 && next === 2)) break;
+      if (M.meta.eos.includes(next)) break; // the model wrote its end token: the reply is finished
       out += M.tok.decode([next], true);
       $('#sentence').innerHTML = esc(text) + `<span class="new">${esc(out)}</span>`; addPick(next, r.cands[r.pick].p, k);
       await beat(900);
