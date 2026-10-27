@@ -128,12 +128,22 @@ body.playing { overflow: hidden; }
 :is(#writeMode, #agentMode) .walk.imm .sec:not(.on) { display: none; }
 :is(#writeMode, #agentMode) .walk.imm .sec.on { height: 100%; min-height: 0; overflow: hidden; display: flex; flex-direction: column; background: transparent; border: 0; box-shadow: none; padding: 0 3px; opacity: 1; animation: secin .5s cubic-bezier(.2, .8, .2, 1) both; }
 :is(#writeMode, #agentMode) .walk.imm .sec.on.scroll { overflow-y: auto; }
-:is(#writeMode, #agentMode) .walk.imm .sec.on h2 { font-size: 12px; margin-bottom: 8px; color: var(--attn); }
+:is(#writeMode, #agentMode) .walk.imm .sec.on h2 { font-size: 12px; margin-bottom: 8px; color: var(--attn); padding: 2px 96px 0 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+:is(#writeMode, #agentMode) .walk.imm .sec.on h2 .agtag { margin-left: 6px; }
 :is(#writeMode, #agentMode) .walk.imm .sec.on h2 i { display: none; }
 :is(#writeMode, #agentMode) .walk.imm .sec.on .cap { font: 600 clamp(17px, 2.3vw, 24px)/1.4 var(--body); color: #fff; margin: 0 0 12px; min-height: 0; text-wrap: pretty; animation: capin .5s ease-out both; }
 :is(#writeMode, #agentMode) .walk.imm .fitbox { transform-origin: top center; transition: transform .35s ease; flex: none; }
 :is(#writeMode, #agentMode) .walk.imm .sec.on > * { flex: none; }
 :is(#writeMode, #agentMode) .walk.imm:not(.pics) .pic { display: none; }
+/* a panel appears only once it has real numbers in it, and fades in */
+.walk.imm .box:has(#knobs:empty), .walk.imm .box:has(#beforeAfter:empty), .walk.imm .why > div:has(#cands:empty), .walk.imm .why > div:has(#look:empty), .walk.imm #words:empty { display: none; }
+.walk.imm .box, .walk.imm .why > div, .walk.imm .cloudbox, .walk.imm #words { animation: secin .45s cubic-bezier(.2, .8, .2, 1) both; }
+/* the program's code: on a phone screen only the line it is on, and its value, at a readable size; (i) shows it all */
+#agentMode .walk.imm:not(.pics) .code .ln:not(.on), #agentMode .walk.imm:not(.pics) .code .val { display: none; }
+#agentMode .walk.imm:not(.pics) .code .ln.on, #agentMode .walk.imm:not(.pics) .code .ln.on + .val { display: grid; font-size: 16px; }
+#agentMode .walk.imm:not(.pics) .code .ln.on + .val { display: block; animation: valin .3s ease-out both; }
+#agentMode .walk.imm:not(.pics) .code::after { content: "(i) shows the whole program"; display: block; padding: 6px 12px 0; font: 12px var(--body); color: var(--s-ink3); }
+#agentMode .walk.imm:not(.pics) #aMbBox { display: none; }
 @keyframes capin { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 body.playing .ctl, body.playing :is(#writeMode, #agentMode) .ctl { z-index: 50; background: rgb(10 11 17 / .92); }
 body.playing .ctl .now { display: none; }
@@ -149,7 +159,7 @@ body.playing .ctl .now { display: none; }
 .walk.imm .rail li.done { cursor: pointer; } .walk.imm .rail li.done:hover { color: #fff; }
 .lookback { display: none; } .walk.imm.viewing .lookback { display: block; margin: 0 0 10px; padding: 6px 10px; border-radius: 8px; background: rgb(255 92 138 / .12); color: #ffd0de; font-size: 13.5px; }
 @media (prefers-reduced-motion: reduce) { .walk.imm .sec.on { animation: none; } }
-.cont { font-size: 16px; padding: 10px 22px; } .cont:not(:disabled) { animation: contpulse 1.6s ease-in-out infinite; } .cont:disabled { animation: none; }
+.cont { font-size: 16px; padding: 10px 22px; } .cont:not(:disabled) { animation: contpulse 1.6s ease-in-out 4s infinite; } /* pulses only after 4 s of waiting */ .cont:disabled { animation: none; }
 @keyframes contpulse { 50% { box-shadow: 0 0 0 6px rgb(255 92 138 / .25); } }
 .autol { font-size: 13px; color: var(--s-ink2); display: flex; gap: 6px; align-items: center; }
 .ctl .now { flex: 1 1 200px; min-width: 0; font: 600 14px var(--body); } .ctl .now small { display: block; font: 12px var(--mono); color: var(--s-ink2); }
@@ -528,7 +538,7 @@ body.playing .ctl .now { display: none; }
     <div class="secs">
       <section class="sec" id="s-task"><h2><i>1</i>Your task</h2><p class="lookback">Looking back at an earlier step. Press Continue to return to where you were.</p><p class="cap"></p><div class="bubble" id="bubble"></div></section>
       <section class="sec" id="s-sys"><h2><i>2</i>The hidden instructions <b class="agtag">agent</b></h2><p class="lookback">Looking back at an earlier step. Press Continue to return to where you were.</p><p class="cap"></p>
-        <p class="note" style="margin-bottom:10px">Before your task, the program puts text you never see in front of it: the <b>system prompt</b>. Apps do this too. Here it has three parts:</p>
+        <p class="note pic" style="margin-bottom:10px">Before your task, the program puts text you never see in front of it: the <b>system prompt</b>. Apps do this too. Here it has three parts:</p>
         <div class="sysparts" id="sysparts"></div>
         <details class="why2" id="whyBox"><summary>Why does a bit of text make it use a shell? Test it.</summary>
           <p>The text does not switch anything on inside the model: the 494 million knobs are the same with or without it. It is just more tokens to read. It works because, after its first training on ordinary text, the Qwen team trained this model further on example conversations, and Qwen publishes exactly this chat form and tool format for it (the training data itself is not published). So when the model reads this pattern, a <code>&lt;tool_call&gt;</code> becomes a likely next token, and when it writes the tool's name it reads the list through attention (the arcs reach into the green squares).</p>
@@ -734,32 +744,32 @@ body.playing .ctl .now { display: none; }
     const st = M.newState(); await M.prefill(st, ids.slice(0, -1)); M.setWatch('all'); let res = await M.step(st, ids[last], true, 3); M.setWatch(null);
 
     // 1 pieces
-    focus('pieces', `The model can't read letters. First its tokenizer cuts your words into pieces it knows: ${n} pieces here, each with its number in a dictionary of ${nf(M.V)} pieces.` + (M.meta.bos != null ? ' The first one, <s>, just marks the start.' : ''));
+    focus('pieces', `The model can't read letters. It cuts your words into ${n} pieces from a dictionary of ${nf(M.V)}.` + (M.meta.bos != null ? ' <s> marks the start.' : ''));
     for (let i = 0; i < n; i++) { const c = document.createElement('span'); c.className = 'chip'; c.textContent = piece(ids[i]); const s = document.createElement('small'); s.textContent = '#' + ids[i]; c.appendChild(s); $('#chips').appendChild(c); await beat(220); }
     await slide(2600);
 
     // 2 sounds
-    focus('sounds', `Each piece looks up its row in the embedding table: a list of ${M.D} numbers, set during training. Here is every number of every row, as colour: orange above zero, blue below.`);
+    focus('sounds', `Each piece looks up its ${M.D} numbers, set in training. Orange is above zero, blue below.`);
     for (let i = 0; i < n; i++) { $('#rows').appendChild(rowEl(piece(ids[i]), M.embedding(ids[i], M.D))); await beat(260); }
     const marks = []; for (let i = last; i >= 0; i--) if (!marks.some(x => x[0] === ids[i]) && marks.length < ($('#cloud0').clientWidth < 500 ? 5 : 8) && !(M.meta.bos != null && i === 0)) marks.push([ids[i], piece(ids[i])]);
     drawCloud($('#cloud0'), null, marks, null);
     await beat(1200);
-    cap('sounds', `Those ${M.D} numbers are the piece's address: its spot in the cloud. Pieces used in similar ways get similar rows, so they sit close together. This list is what goes into the layers, one list per piece.`);
+    cap('sounds', `Those ${M.D} numbers are the piece's spot in the cloud. Pieces used alike sit close together.`);
     await slide(2800);
 
     // 3 one layer up close (layer 1, the last piece)
     const rec = res.rec, ly0 = rec.layers[0], w0 = meanAtt(ly0), focusPiece = piece(ids[last]);
-    focus('one', `Layer 1 of ${L}. Follow the last piece, “${focusPiece}”. First it listens back to the pieces before it: the pink bars show how much attention it gives each one (averaged over the layer's ${ly0.heads} heads).`);
+    focus('one', `Layer 1 of ${L}: “${focusPiece}” looks back at the earlier pieces. Longer pink bar, more attention.`);
     let mx = 0; for (let j = last > 1 ? 1 : 0; j < last; j++) mx = Math.max(mx, w0[j]); // the first piece is left out of the scale: models park spare attention there
     for (let i = 0; i < n; i++) {
       const c = document.createElement('span'); c.className = 'chip' + (i === last ? ' focus' : ''); c.textContent = piece(ids[i]);
       if (i < last) { const bar = document.createElement('span'); bar.className = 'bar'; bar.style.width = Math.min(100, 100 * w0[i] / (mx || 1)).toFixed(0) + '%'; c.appendChild(bar); if (w0[i] >= mx * 0.6) { const pc = document.createElement('span'); pc.className = 'pc'; pc.textContent = pct(w0[i]); c.appendChild(pc); } }
       $('#lookChips').appendChild(c); await beat(120);
     }
-    if (last > 1 && w0[0] >= 0.1) cap('one', `Layer 1 of ${L}. The last piece, “${focusPiece}”, listens back to the pieces before it (pink bars, averaged over the layer's ${ly0.heads} heads). The first piece takes ${pct(w0[0])} of its attention: models park spare attention on the first piece (an “attention sink”), so the bars leave it out of their scale.`);
+    if (last > 1 && w0[0] >= 0.1) cap('one', `Layer 1 of ${L}: “${focusPiece}” looks back at the earlier pieces. The first piece takes ${pct(w0[0])}: a resting spot, left out of the bars' scale.`);
     await slide(3000);
     const grid = mainGrid(0), knobsN = layerKnobs(0); let ks = 0; for (let k = 0; k < 400; k++) ks = Math.max(ks, Math.abs(grid[(k * 7919) % grid.length]));
-    cap('one', `Then its list of numbers goes through this layer's knobs: ${nf(knobsN)} of them in layer 1. Each one multiplies a number and they are added up, row by row. Nothing you typed moved a single one.`);
+    cap('one', `Then ${nf(knobsN)} fixed knobs reshape its numbers. Nothing you typed moves a single one.`);
     for (let k = 0; k < 24; k++) { $('#knobs').insertAdjacentHTML('beforeend', knob(grid[(k * 104729) % grid.length] / ks * 2)); await beat(60); }
     $('#knobNote').textContent = `24 of layer 1's ${nf(knobsN)} knobs, at their real settings (a weight is just a number; the arc shows its size: orange clockwise above zero, blue the other way below).`;
     await slide(2200);
@@ -771,7 +781,7 @@ body.playing .ctl .now { display: none; }
     await slide(4200);
 
     // 4 every layer
-    focus('all', `The same happens in every layer, one after another: ${L} layers here. Watch the last piece's numbers change, and what it would say after each layer.`);
+    focus('all', `The same happens in all ${L} layers. Watch its best guess change, layer by layer.`);
     const fin = rec.layers[L - 1].lens[0].id; let from = L - 1; for (let l = L - 1; l >= 0; l--) { if (rec.layers[l].lens[0].id === fin) from = l; else break; }
     const rowsEls = [];
     for (let l = 0; l < L; l++) {
@@ -794,7 +804,7 @@ body.playing .ctl .now { display: none; }
     await slide(3200);
 
     // 5 the wall of lights (unembed): final norm, then one score per piece of the dictionary
-    focus('lights', `Now every one of the ${nf(M.V)} pieces in the dictionary gets a score: the final list of numbers is compared with that piece's row in the output table (multiply number by number, add it all up). Here are the brightest lights.`);
+    focus('lights', `All ${nf(M.V)} pieces get a score: its final numbers against each piece's row. Here are the brightest.`);
     const lg = res.logits; let lmx = -Infinity; for (let i = 0; i < lg.length; i++) if (lg[i] > lmx) lmx = lg[i]; let z = 0; for (let i = 0; i < lg.length; i++) z += Math.exp(lg[i] - lmx);
     const top5 = LLM.sampleTopK(lg, 5, T, () => 0).cands;
     for (const c of top5) {
@@ -807,7 +817,7 @@ body.playing .ctl .now { display: none; }
     await slide(4200);
 
     // 6 the dice
-    focus('dice', `The dice: this page keeps the 5 brightest lights, and the temperature (${T}) decides how loaded the dice is. These are the chances it rolls with.`);
+    focus('dice', `The 5 brightest go on the dice. Temperature ${T} sets how loaded it is.`);
     const { cands, pick } = LLM.sampleTopK(lg, 5, T, Math.random);
     cands.forEach((c, i) => { const d = document.createElement('div'); d.className = 'light'; d.style.setProperty('--g', Math.min(1, c.p * 1.2 + 0.05).toFixed(2)); d.innerHTML = `<i></i><span></span><span class="b"><em style="width:${(c.p * 100).toFixed(1)}%"></em></span><span>${pct(c.p)}</span>`; d.children[1].textContent = piece(c.id); $('#chances').appendChild(d); });
     await slide(2000);
@@ -817,7 +827,7 @@ body.playing .ctl .now { display: none; }
     await slide(3200);
 
     // 7 again
-    focus('again', 'The picked piece is added to the sentence, and the whole thing runs again for the next piece: pieces, spots, every layer, the wall of lights, the dice.');
+    focus('again', 'The new piece joins the sentence, and it all runs again.');
     $('#sentence').innerHTML = esc(text) + `<span class="new">${esc(M.tok.decode([cands[pick].id], true))}</span>`;
     const addPick = (id, p, i) => { const d = document.createElement('div'); d.innerHTML = `word ${i}: <b></b> · its chance on the dice ${pct(p)}`; d.querySelector('b').textContent = piece(id); $('#picks').appendChild(d); };
     addPick(cands[pick].id, cands[pick].p, 1);
@@ -1086,7 +1096,7 @@ body.playing .ctl .now { display: none; }
         let pTool = e.d.pTool; if (pTool == null) { let z = 0; for (let i = 0; i < lg.length; i++) z += Math.exp(lg[i] - mx); pTool = Math.exp(lg[TOOL_ID] - mx) / z; }
         const fin = e.d.lens[23][0].id; let from = 23; for (let l = 23; l >= 0; l--) { if (e.d.lens[l][0].id === fin) from = l; else break; }
         $('#gauge').innerHTML = `The model gives &lt;tool_call&gt; (a request to use the shell) <b>${pct(pTool)}</b> as its first token; it always takes its most likely token.`;
-        capOf('model').textContent = `Before writing anything, it decides: answer, or ask for the shell? The row under the layers shows what it would say if it stopped after each one. Its choice, “${view.tok.piece(fin)}”, only appears at layer ${from + 1}.`;
+        capOf('model').textContent = `Answer, or ask for the shell? The row under the layers is its best guess after each one: “${view.tok.piece(fin)}” only appears at layer ${from + 1}.`;
         await slide(5200);
         focus('words', firstTurn ? 'Now it writes, one token at a time. Each token is its most likely next token.' : 'It writes again, now with the shell\'s output in front of it.');
         await slide(1400);
@@ -1371,9 +1381,9 @@ ${A.SYSTEM}<|im_end|>`; p.hidden = !p.hidden; } });
       if (!box) { box = document.createElement('div'); box.className = 'fitbox'; [...sec.children].filter(c => !/^H2$/.test(c.tagName) && !c.classList.contains('cap') && !c.classList.contains('lookback')).forEach(c => box.appendChild(c)); sec.appendChild(box); }
       const head = [...sec.children].filter(c => c !== box).reduce((a, c) => a + c.offsetHeight + parseFloat(getComputedStyle(c).marginBottom || 0), 0);
       const avail = sec.clientHeight - head - 16, nat = box.scrollHeight;
-      let k = nat > 0 ? Math.min(1, avail / nat) : 1; const tooBig = k < 0.6; if (tooBig) k = 0.6;
-      box.style.transform = k < 0.999 ? `scale(${k.toFixed(3)})` : ''; box.style.width = k < 0.999 ? (100 / k).toFixed(2) + '%' : ''; box.style.marginLeft = k < 0.999 ? ((100 - 100 / k) / 2).toFixed(2) + '%' : '';
-      box.style.marginBottom = k < 0.999 ? (-(nat * (1 - k))).toFixed(0) + 'px' : '';
+      let k = nat > 0 ? Math.min(1.35, avail / nat) : 1; const tooBig = k < 0.6; if (tooBig) k = 0.6; if (k > 1 && box.querySelector('canvas')) k = 1; // canvases are drawn at their size: grow text, not pixels
+      const on = Math.abs(k - 1) > 0.001; box.style.transform = on ? `scale(${k.toFixed(3)})` : ''; box.style.width = on ? (100 / k).toFixed(2) + '%' : ''; box.style.marginLeft = on ? ((100 - 100 / k) / 2).toFixed(2) + '%' : '';
+      box.style.marginBottom = on ? (-(nat * (1 - k))).toFixed(0) + 'px' : '';
       sec.classList.toggle('scroll', tooBig);
     }
     function sync() {
