@@ -137,7 +137,7 @@ details.live { margin-top: 12px; } details.live summary { cursor: pointer; font-
   <header>
     <h1>How does an AI really work?</h1>
     <p class="lead">An AI that writes is like the autocomplete on a phone, only much bigger: it guesses the next word, adds it, and guesses again. Let's look inside a real one while it writes a story, one word at a time. You will see that it is <b>a very good guesser, built by people</b>: numbers and a dice roll, no magic, no secret mind. The thinking is still yours. Then we'll give a real chat AI a command and see what "following a command" really means. Then let's see why it is still a powerful tool, and how to use it to <b>learn more, not think less</b>.</p>
-    <p class="note">This AI is a small real model called TinyStories (15 million numbers, trained only on simple children's stories). It runs right here in your web browser: nothing you type is sent anywhere. The first visit downloads its numbers (30 MB). Grown-ups and teachers: <a href="explore.html">the full version</a> shows every detail.</p>
+    <p class="note">This AI is a small real model called TinyStories (15 million numbers, trained only on simple children's stories). It runs right here in your web browser: nothing you type is sent anywhere. The first visit downloads its numbers (30 MB). Grown-ups and teachers: <a href="explore.html">the full version</a> shows every detail, and all the code is <a href="https://github.com/t3chnicallyinclined/ai-visualized">on GitHub</a>.</p>
   </header>
 
   <section class="khero" aria-labelledby="khT">
@@ -169,8 +169,8 @@ details.live { margin-top: 12px; } details.live summary { cursor: pointer; font-
     <div>
       <h2>Turn each piece into a list of numbers</h2>
       <p>Each piece looks up its own list of <b data-n="dim">288</b> numbers, which were set while the AI was being made. Here are the first 32 for each piece, as colours (blue = below zero, orange = above). Pieces used in similar ways get similar lists.</p>
-      <p>Think of the list as the word's <b>secret sound</b> to the AI. It is not how you say the word: it comes from how the word is used. So to the AI, <i>two</i> and <i>three</i> sound alike, but <i>two</i> and <i>too</i> don't. Test it with the real AI:</p>
-      <div class="start" style="margin:6px 0"><input id="sndA" value="cat" maxlength="16" aria-label="First word" style="flex:1 1 100px;min-width:0;font:600 18px var(--body);padding:8px 12px;border-radius:12px;border:2px solid var(--line);background:var(--card);color:var(--ink)"><input id="sndB" value="dog" maxlength="16" aria-label="Second word" style="flex:1 1 100px;min-width:0;font:600 18px var(--body);padding:8px 12px;border-radius:12px;border:2px solid var(--line);background:var(--card);color:var(--ink)"><button type="button" id="sndGo">Do they sound alike?</button></div>
+      <p>Think of the list as the word's <b>secret address</b> in a giant cloud of words, where words used in the same way live close together. It comes from how the word is used, not how you say it. So to the AI, <i>two</i> and <i>three</i> are neighbours, but <i>two</i> and <i>too</i> are not. Test it with the real AI:</p>
+      <div class="start" style="margin:6px 0"><input id="sndA" value="cat" maxlength="16" aria-label="First word" style="flex:1 1 100px;min-width:0;font:600 18px var(--body);padding:8px 12px;border-radius:12px;border:2px solid var(--line);background:var(--card);color:var(--ink)"><input id="sndB" value="dog" maxlength="16" aria-label="Second word" style="flex:1 1 100px;min-width:0;font:600 18px var(--body);padding:8px 12px;border-radius:12px;border:2px solid var(--line);background:var(--card);color:var(--ink)"><button type="button" id="sndGo">Are they neighbours?</button></div>
       <p class="note" id="sndOut">Try <i>two / three</i>, then <i>two / too</i>.</p>
       <div class="rows" id="rows"></div>
     </div>
@@ -402,14 +402,14 @@ otherwise: do nothing</div></div>
   }).then(m => { M = m; fillFacts(m); $('#load').hidden = true; $('#startRow').hidden = false; fitAll(); })
     .catch(err => { $('#loadText').textContent = 'Could not download the model: ' + err.message + '. Check the internet connection and reload.'; });
 
-  // how alike two words "sound" to the AI: how much their lists of numbers point the same way (the real table)
+  // how close two words live in the AI's cloud: how much their lists of numbers point the same way (the real table)
   $('#sndGo').addEventListener('click', () => {
     if (!M) return; const one = w => M.tok.encode(w.trim()).filter(id => M.tok.piece(id).replace(/·/g, '') !== '');
     const a = $('#sndA').value.trim(), b = $('#sndB').value.trim(), ia = one(a), ib = one(b), out = $('#sndOut');
     if (ia.length !== 1 || ib.length !== 1) { out.textContent = 'One of those words is more than one piece for this AI. Try a shorter, common word.'; return; }
     const E = M.mats.E, D = M.D; let s = 0, na = 0, nb = 0; for (let c = 0; c < D; c++) { const x = E[ia[0] * D + c], y = E[ib[0] * D + c]; s += x * y; na += x * x; nb += y * y; }
     const cs = s / Math.sqrt(na * nb), pctv = Math.max(0, Math.round(cs * 100));
-    out.textContent = `“${a}” and “${b}” match ${cs < 0 ? 'less than 0' : pctv} out of 100 (this page calls 45 and up alike). ` + (cs > 0.45 ? 'They sound alike to the AI: they are used in similar ways.' : cs > 0.25 ? 'A little alike.' : 'Not alike at all to the AI, even if they sound the same to you.');
+    out.textContent = `“${a}” and “${b}” match ${cs < 0 ? 'less than 0' : pctv} out of 100 (this page calls 45 and up neighbours). ` + (cs > 0.45 ? 'Neighbours in the AI’s cloud: they are used in similar ways.' : cs > 0.25 ? 'Not far apart.' : 'Far apart in the AI’s cloud, even if they sound the same to you.');
   });
   // run the start of the story through the model; keep what each tunnel (layer) points to for the last piece
   async function read(text) {

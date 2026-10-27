@@ -110,6 +110,8 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
 .ctl .now { flex: 1 1 200px; min-width: 0; font: 600 14px var(--body); } .ctl .now small { display: block; font: 12px var(--mono); color: var(--s-ink2); }
 .speed { display: flex; gap: 4px; } .speed button { padding: 6px 10px; font: 500 13px var(--mono); } .speed button[aria-pressed="true"] { background: var(--s-ink); color: var(--s-bg); }
 @media (max-width: 700px) { .ctl .now { flex-basis: 100%; order: -1; } }
+.mbbox { margin-top: 14px; } .mbbar { display: flex; height: 16px; border-radius: 99px; overflow: hidden; background: var(--s-2); margin: 6px 0 8px; } .mbbar i { display: block; height: 100%; min-width: 2px; }
+.mbleg { display: grid; gap: 4px; font: 13px/1.4 var(--mono); color: var(--s-ink2); } .mbleg b { color: var(--s-ink); font-weight: 600; } .mbleg i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
 .explore { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
 @media (prefers-reduced-motion: reduce) { .sec, .lay { transition: none; } .chip, .numrow, .picks div { animation: none; } }
 </style>
@@ -118,7 +120,7 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
 <main>
   <div class="top">
     <a class="logo" href="index.html" aria-label="AI Visualized">A<span class="vz" aria-hidden="true">(visualized)</span>I</a>
-    <nav><a href="explore.html">Explorer: everything at once</a><a href="kids.html">For kids and classrooms</a></nav>
+    <nav><a href="explore.html">Explorer: everything at once</a><a href="kids.html">For kids and classrooms</a><a href="https://github.com/t3chnicallyinclined/ai-visualized">Code on GitHub</a></nav>
   </div>
   <h1>How does an AI write? Watch a real one, one step at a time.</h1>
   <p class="lead"><b>It's autocomplete:</b> a language model guesses the next word, adds it, and guesses again. Here a real one runs in your browser, slowed down so you can follow every step. Every number you see is its own.</p>
@@ -140,7 +142,7 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
   <div class="walk" id="walk">
     <ol class="rail" id="rail">
       <li data-s="pieces">Your words become pieces</li>
-      <li data-s="sounds">Each piece gets its sound</li>
+      <li data-s="sounds">Each piece gets its spot in the cloud</li>
       <li data-s="one">One layer, up close</li>
       <li data-s="all">Through every layer</li>
       <li data-s="lights">The wall of lights</li>
@@ -150,26 +152,28 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
     <div class="secs">
       <section class="sec" id="s-pieces"><h2><i>1</i>Your words become pieces</h2><p class="cap"></p><div class="chips" id="chips"></div>
         <p class="pic"><b>The picture:</b> a big dictionary of pieces, each with a number. The model never sees letters, only these numbers.</p></section>
-      <section class="sec" id="s-sounds"><h2><i>2</i>Each piece gets its sound</h2><p class="cap"></p><div class="rows" id="rows"></div>
-        <p class="pic"><b>The picture:</b> each piece goes in as its own “sound”: a list of numbers. Not how the word is pronounced; it comes from how the word is used, so words used alike sound alike to the model.</p></section>
+      <section class="sec" id="s-sounds"><h2><i>2</i>Each piece gets its spot in the cloud</h2><p class="cap"></p>
+        <div class="allgrid"><div class="rows" id="rows"></div><div class="cloudbox"><canvas id="cloud0" aria-label="The cloud: every piece in the dictionary as a dot, similar pieces close together; your pieces are marked"></canvas><p class="note" id="cloud0Note">Your pieces, each at its spot in the cloud.</p></div></div>
+        <p class="pic"><b>The picture:</b> a cloud with one dot for every piece in the dictionary. A piece's list of numbers is its address in the cloud, and pieces used alike sit close together: it comes from how a word is used, not how it sounds. The real cloud has one direction per number (from 128 to 768 in these models); the map squashes it flat, so distances on it are rough.</p></section>
       <section class="sec" id="s-one"><h2><i>3</i>One layer, up close</h2><p class="cap"></p>
         <div class="chips" id="lookChips"></div>
         <div class="twocol" style="margin-top:14px">
           <div class="box"><h3>The knobs</h3><div class="knobs" id="knobs"></div><p class="note" id="knobNote"></p></div>
-          <div class="box"><h3>Its sound, before and after this layer</h3><div class="rows" id="beforeAfter"></div><p class="note" id="baNote"></p></div>
+          <div class="box"><h3>Its numbers, before and after this layer</h3><div class="rows" id="beforeAfter"></div><p class="note" id="baNote"></p></div>
         </div>
         <p class="pic"><b>The picture:</b> rows of volume knobs, set at the factory and glued. Before each row, the newest word listens back to the earlier words (pink) and blends in what matters. That listening is the only step whose mixing depends on what you type.</p></section>
       <section class="sec" id="s-all"><h2><i>4</i>Through every layer</h2><p class="cap"></p>
         <div class="allgrid"><div class="layers" id="layers"></div><div class="cloudbox"><canvas id="cloud" aria-label="The thought cloud: every piece in the dictionary as a dot, similar pieces close together; the pieces it would say after this layer light up"></canvas><p class="note" id="cloudNote">The thought cloud: every piece in the dictionary is a dot, and pieces used alike sit close together.</p></div></div>
-        <p class="pic"><b>The picture:</b> the same thing, row after row of knobs. Next to each layer: what it would say if it stopped there (the “logit lens”), and in the cloud, every piece it might say lights up. Early layers are not built to be read this way, so their guesses look odd. The cloud is a flat map of the model's own embedding rows (made with t-SNE); distances on it are approximate.</p></section>
+        <p class="pic"><b>The picture:</b> the same thing, row after row of knobs. Next to each layer: what it would say if it stopped there (the “logit lens”), and in the cloud, every piece it might say lights up. Early layers are not built to be read this way, so their guesses look odd. The guess after each layer is a peek we take by running the model's final scoring early: the model itself only scores once, after the last layer, and never looks anything up in between. The cloud is a flat map of the model's own embedding rows (made with t-SNE); distances on it are approximate.</p></section>
       <section class="sec" id="s-lights"><h2><i>5</i>The wall of lights</h2><p class="cap"></p>
         <div class="allgrid"><div class="lights" id="lights"></div><div class="cloudbox"><canvas id="cloud2" aria-label="The wall of lights laid out as the thought cloud: every piece's final chance as light"></canvas><p class="note">The same wall of lights, laid out as the thought cloud.</p></div></div><p class="note" id="lightsNote" style="margin-top:8px"></p>
-        <p class="pic"><b>The picture:</b> a wall with one light for every piece in the dictionary. Each glows by how well the final sound matches that piece's row in the output table.</p></section>
+        <p class="pic"><b>The picture:</b> a wall with one light for every piece in the dictionary. Each glows by how closely the final list of numbers points the same way as that piece's row in the output table.</p></section>
       <section class="sec" id="s-dice"><h2><i>6</i>The weighted dice</h2><p class="cap"></p>
         <div class="lights" id="chances"></div>
         <div class="dice"><div class="die" id="die" aria-hidden="true">🎲</div><p class="note" id="diceNote"></p></div>
         <p class="pic"><b>The picture:</b> a dice loaded by the brightest lights. Usually the brightest wins; sometimes a dimmer one does. That is why the same start can give different stories.</p></section>
       <section class="sec" id="s-again"><h2><i>7</i>Again, word by word</h2><p class="cap"></p><div class="sentence" id="sentence"></div><div class="picks" id="picks" style="margin-top:10px"></div>
+        <div class="box mbbox" id="mbBox" hidden></div>
         <div class="explore" style="margin-top:12px"><p class="note">That's the whole machine. Want every number at once, the chat model, attention arcs and the training view?</p><a href="explore.html"><button type="button">Open the Explorer →</button></a></div></section>
     </div>
   </div>
@@ -198,7 +202,7 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
   async function beat(ms) { let left = ms / SPEED; while (left > 0) { if (paused) await new Promise(r => { unpause = r; }); const dt = Math.min(left, 40); await sleep(dt); left -= dt; } }
   $('#play').addEventListener('click', () => { paused = !paused; $('#play').textContent = paused ? 'Play' : 'Pause'; if (!paused && unpause) { unpause(); unpause = null; } });
   document.querySelectorAll('.speed button').forEach(b => b.addEventListener('click', () => { SPEED = +b.dataset.sp; document.querySelectorAll('.speed button').forEach(x => x.setAttribute('aria-pressed', x === b)); }));
-  const NAMES = { pieces: 'Your words become pieces', sounds: 'Each piece gets its sound', one: 'One layer, up close', all: 'Through every layer', lights: 'The wall of lights', dice: 'The weighted dice', again: 'Again, word by word' };
+  const NAMES = { pieces: 'Your words become pieces', sounds: 'Each piece gets its spot in the cloud', one: 'One layer, up close', all: 'Through every layer', lights: 'The wall of lights', dice: 'The weighted dice', again: 'Again, word by word' };
   function focus(k, cap) {
     document.querySelectorAll('.sec').forEach(s => s.classList.toggle('on', s.id === 's-' + k));
     let past = true; document.querySelectorAll('#rail li').forEach(li => { const on = li.dataset.s === k; li.classList.toggle('on', on); if (on) past = false; li.classList.toggle('done', past && !on); });
@@ -270,6 +274,12 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
     });
   }
 
+  // where the model's size goes: every knob is one number, 2 bytes each in the download
+  function sizeBox(el, title, parts, foot) {
+    const total = parts.reduce((a, p) => a + p[1], 0), share = n => (n / total * 100 < 1 ? '<1' : Math.round(n / total * 100)) + '%';
+    el.innerHTML = `<h3>${title}</h3><div class="mbbar">${parts.map(p => `<i style="width:${(p[1] / total * 100).toFixed(2)}%;background:${p[2]}"></i>`).join('')}</div><div class="mbleg">${parts.map(p => `<span><i style="background:${p[2]}"></i><b>${p[0]}</b> · ${p[1].toLocaleString('en-US')} knobs · ${share(p[1])}</span>`).join('')}</div><p class="note" style="margin-top:6px">${foot}</p>`;
+  }
+
   // ---------- loading ----------
   function loadModel(k) {
     key = k; $('#start').disabled = true; $('#load').hidden = false; $('#loadText').textContent = 'Downloading the model\'s numbers…'; $('#loadBar').style.width = '0';
@@ -291,8 +301,8 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
   // ---------- the walk-through ----------
   async function walk(text) {
     running = true; paused = false; $('#play').textContent = 'Pause'; $('#ctl').hidden = false; $('#walk').classList.add('live');
-    [$('#cloud'), $('#cloud2')].forEach(cv => drawCloud(cv, null, null, null));
-    ['#chips', '#rows', '#lookChips', '#knobs', '#beforeAfter', '#layers', '#lights', '#chances', '#sentence', '#picks'].forEach(q => { $(q).innerHTML = ''; });
+    [$('#cloud0'), $('#cloud'), $('#cloud2')].forEach(cv => drawCloud(cv, null, null, null));
+    $('#mbBox').hidden = true; ['#chips', '#rows', '#lookChips', '#knobs', '#beforeAfter', '#layers', '#lights', '#chances', '#sentence', '#picks'].forEach(q => { $(q).innerHTML = ''; });
     document.querySelectorAll('.cap').forEach(c => { c.textContent = ''; }); $('#knobNote').textContent = ''; $('#baNote').textContent = ''; $('#lightsNote').textContent = ''; $('#diceNote').textContent = '';
     const ids = (M.meta.bos != null ? [M.meta.bos] : []).concat(M.tok.encode(text)), n = ids.length, L = M.L, last = n - 1;
     // the real run: read every piece; the last one keeps everything (every layer's numbers, attention and guesses)
@@ -306,8 +316,10 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
     // 2 sounds
     focus('sounds', `Each piece looks up its row in the embedding table: a list of ${M.D} numbers, set during training. Here is every number of every row, as colour: orange above zero, blue below.`);
     for (let i = 0; i < n; i++) { $('#rows').appendChild(rowEl(piece(ids[i]), M.embedding(ids[i], M.D))); await beat(260); }
+    const marks = []; for (let i = last; i >= 0; i--) if (!marks.some(x => x[0] === ids[i]) && marks.length < ($('#cloud0').clientWidth < 500 ? 5 : 8) && !(M.meta.bos != null && i === 0)) marks.push([ids[i], piece(ids[i])]);
+    drawCloud($('#cloud0'), null, marks, null);
     await beat(1200);
-    cap('sounds', `Pieces used in similar ways get similar rows. This list of ${M.D} numbers is what goes into the layers, one list per piece.`);
+    cap('sounds', `Those ${M.D} numbers are the piece's address: its spot in the cloud. Pieces used in similar ways get similar rows, so they sit close together. This list is what goes into the layers, one list per piece.`);
     await beat(2800);
 
     // 3 one layer up close (layer 1, the last piece)
@@ -321,7 +333,7 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
     }
     await beat(3000);
     const grid = mainGrid(0), knobsN = layerKnobs(0); let ks = 0; for (let k = 0; k < 400; k++) ks = Math.max(ks, Math.abs(grid[(k * 7919) % grid.length]));
-    cap('one', `Then its sound goes through this layer's knobs: ${nf(knobsN)} of them in layer 1. Each one multiplies a number and they are added up, row by row. Nothing you typed moved a single one.`);
+    cap('one', `Then its list of numbers goes through this layer's knobs: ${nf(knobsN)} of them in layer 1. Each one multiplies a number and they are added up, row by row. Nothing you typed moved a single one.`);
     for (let k = 0; k < 24; k++) { $('#knobs').insertAdjacentHTML('beforeend', knob(grid[(k * 104729) % grid.length] / ks * 2)); await beat(60); }
     $('#knobNote').textContent = `24 of layer 1's ${nf(knobsN)} knobs, at their real settings (a weight is just a number; the needle shows its sign and size).`;
     await beat(2200);
@@ -329,11 +341,11 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
     const scale = Array.from(after, Math.abs).sort((a, b) => a - b)[Math.floor(after.length * 0.98)] || 1;
     $('#beforeAfter').appendChild(rowEl('before', Array.from(before), scale)); await beat(700);
     $('#beforeAfter').appendChild(rowEl('after', Array.from(after), scale));
-    $('#baNote').textContent = `The listening and the knobs add changes onto the sound; it leaves the layer a little different. If the model stopped right here, its best guess would be “${piece(ly0.lens[0].id)}” (${pct(ly0.lens[0].p)}).`;
+    $('#baNote').textContent = `The listening and the knobs add changes onto its numbers, so it leaves the layer at a slightly different spot. If the model stopped right here, its best guess would be “${piece(ly0.lens[0].id)}” (${pct(ly0.lens[0].p)}).`;
     await beat(4200);
 
     // 4 every layer
-    focus('all', `The same happens in every layer, one after another: ${L} layers here. Watch the last piece's sound change, and what it would say after each layer.`);
+    focus('all', `The same happens in every layer, one after another: ${L} layers here. Watch the last piece's numbers change, and what it would say after each layer.`);
     const fin = rec.layers[L - 1].lens[0].id; let from = L - 1; for (let l = L - 1; l >= 0; l--) { if (rec.layers[l].lens[0].id === fin) from = l; else break; }
     const rowsEls = [];
     for (let l = 0; l < L; l++) {
@@ -356,7 +368,7 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
     await beat(3200);
 
     // 5 the wall of lights (unembed): final norm, then one score per piece of the dictionary
-    focus('lights', `Now every one of the ${nf(M.V)} pieces in the dictionary gets a score: the final sound is compared with that piece's row in the output table (multiply number by number, add it all up). Here are the brightest lights.`);
+    focus('lights', `Now every one of the ${nf(M.V)} pieces in the dictionary gets a score: the final list of numbers is compared with that piece's row in the output table (multiply number by number, add it all up). Here are the brightest lights.`);
     const lg = res.logits; let lmx = -Infinity; for (let i = 0; i < lg.length; i++) if (lg[i] > lmx) lmx = lg[i]; let z = 0; for (let i = 0; i < lg.length; i++) z += Math.exp(lg[i] - lmx);
     const top5 = LLM.sampleTopK(lg, 5, T, () => 0).cands;
     for (const c of top5) {
@@ -379,7 +391,7 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
     await beat(3200);
 
     // 7 again
-    focus('again', 'The picked piece is added to the sentence, and the whole thing runs again for the next piece: pieces, sounds, every layer, the wall of lights, the dice.');
+    focus('again', 'The picked piece is added to the sentence, and the whole thing runs again for the next piece: pieces, spots, every layer, the wall of lights, the dice.');
     $('#sentence').innerHTML = esc(text) + `<span class="new">${esc(M.tok.decode([cands[pick].id], true))}</span>`;
     const addPick = (id, p, i) => { const d = document.createElement('div'); d.innerHTML = `word ${i}: <b></b> · its chance on the dice ${pct(p)}`; d.querySelector('b').textContent = piece(id); $('#picks').appendChild(d); };
     addPick(cands[pick].id, cands[pick].p, 1);
@@ -394,6 +406,15 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
       await beat(900);
     }
     cap('again', 'That is all it ever does: one piece at a time, each one picked by a weighted dice from the lights.');
+    { // what the download is: the knobs, counted from this model's own tables
+      const mt = M.mats, total = M.weightBytes / 2, tab = mt.E.length, outT = mt.Eout && mt.Eout !== mt.E ? mt.Eout.length : 0, posT = mt.Pos ? mt.Pos.length : 0;
+      const parts = [['the cloud: one row per piece (embedding table)', tab, '#2fc6d8']];
+      if (outT) parts.push(['the output table (the wall of lights)', outT, '#7390ff']);
+      if (posT) parts.push(['the position table', posT, '#f2a93b']);
+      parts.push([`the ${L} layers of knobs`, total - tab - outT - posT, '#9d90ff']);
+      sizeBox($('#mbBox'), `Where the model's ${Math.round(M.weightBytes / 1e6)} MB goes`, parts, `When you hear a model's size (“15M”, “70B”), it is this count of fixed numbers, set in training. They all sit in memory while it runs; your words are just a few lists of numbers passing through. ${outT ? '' : 'Here the wall of lights reuses the cloud table, so it is counted once. '}The bigger the model, the smaller the table's share: Llama 3 70B spends about 3% of its 70 billion knobs on its tables.`);
+      $('#mbBox').hidden = false;
+    }
     running = false; $('#walk').classList.remove('live'); document.querySelectorAll('#rail li').forEach(li => li.classList.remove('on'));
     $('#now').firstChild.textContent = 'Finished'; $('#nowSub').textContent = 'press “Watch it write” again for a new run';
   }

@@ -112,7 +112,7 @@ button:hover { border-color: var(--ink); }
 .stage { --band: var(--st-2); --line: var(--st-rail); --ink: var(--st-ink); --muted: var(--st-ink2); --panel: var(--st-panel); --bg: var(--st-bg);
   background: var(--st-bg); color: var(--st-ink); border: 1px solid var(--st-rail); border-radius: 16px; padding: 12px;
   display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
-.smain { display: grid; grid-template-columns: 390px minmax(0, 1fr); gap: 12px; align-items: start; min-width: 0; }
+.smain { display: grid; grid-template-columns: minmax(390px, 2fr) minmax(0, 3fr); gap: 12px; align-items: start; min-width: 0; }
 .cloudp { order: 1; } .boardcol { order: 2; } .nbar { order: 3; }
 .boardcol { min-width: 0; display: flex; flex-direction: column; gap: 10px; }
 .ctxp { background: var(--st-2); border: 1px solid var(--st-rail); border-radius: 10px; padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; }
@@ -335,7 +335,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
 <div id="page">
   <header>
     <h1 aria-label="AI Visualized">A<span class="vz" aria-hidden="true">(visualized)</span>I</h1>
-    <p><b>It's autocomplete:</b> a language model guesses the next word, adds it, and guesses again. Here a real one runs in your browser, and every number about its work comes from its real weights (pictures and reference figures are labelled).<span class="hmore"> Your prompt becomes numbers, falls through every layer of knobs, and lands in the token cloud, where the model's options light up and a dice roll picks one.</span> <a href="kids.html">A version for kids and classrooms</a>.</p>
+    <p><b>It's autocomplete:</b> a language model guesses the next word, adds it, and guesses again. Here a real one runs in your browser, and every number about its work comes from its real weights (pictures and reference figures are labelled).<span class="hmore"> Your prompt becomes numbers, falls through every layer of knobs, and lands in the token cloud, where the model's options light up and a dice roll picks one.</span> <a href="kids.html">A version for kids and classrooms</a> · <a href="https://github.com/t3chnicallyinclined/ai-visualized">Code on GitHub</a>.</p>
   </header>
 
   <a class="agentbar" href="agent.html"><span class="ab-new">New</span><span class="ab-txt">Watch an AI agent work <em>· or make it go rogue</em></span><span class="ab-go" aria-hidden="true">→</span></a>
@@ -343,21 +343,21 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
   <details class="pic" id="pic">
     <summary class="pichead"><h2 id="picT">The picture in one minute</h2><p>A stereo with millions of volume knobs. Open it, then watch the real thing below.</p></summary>
     <ol class="tiles">
-      <li><span class="ic" aria-hidden="true">🔤</span><b>Your words go in as sounds</b><span>Each word is looked up and becomes its own list of numbers: its “sound”. Not how it is pronounced: a sound made from how the word is used.</span><em>On the board: tokens and the embed strips</em></li>
-      <li><span class="ic" aria-hidden="true">🎛️</span><b>Volume knobs, set at the factory and glued</b><span>Rows of knobs turn parts of the sound up or down and mix them. Training set every knob; nothing you type turns them.</span><em>On the board: the dials in every layer</em></li>
+      <li><span class="ic" aria-hidden="true">🔤</span><b>Each word gets a spot in a cloud</b><span>Each word is looked up and becomes its own list of numbers: its address in the token cloud. Words used alike sit close together (it comes from how a word is used, not how it sounds).</span><em>On the board: tokens and the embed strips</em></li>
+      <li><span class="ic" aria-hidden="true">🎛️</span><b>Volume knobs, set at the factory and glued</b><span>Rows of knobs turn parts of the list up or down and mix them. Training set every knob; nothing you type turns them.</span><em>On the board: the dials in every layer</em></li>
       <li><span class="ic" aria-hidden="true">👂</span><b>Before each row, it listens back</b><span>Each word listens to the earlier words and blends in the ones that matter. The only step whose mixing depends on what you type.</span><em>On the board: the pink arcs and the bars on the context tape</em></li>
-      <li><span class="ic" aria-hidden="true">💡</span><b>A wall of lights, one per word</b><span>At the end, every word in the dictionary gets a light that glows by how well the final sound matches it.</span><em>On the board: the unembed, then the token cloud</em></li>
+      <li><span class="ic" aria-hidden="true">💡</span><b>A wall of lights, one per word</b><span>At the end, every word in the dictionary gets a light that glows by how well the final list of numbers matches it.</span><em>On the board: the unembed, then the token cloud</em></li>
       <li><span class="ic" aria-hidden="true">🎲</span><b>A dice weighted by the brightest lights</b><span>Usually the brightest wins; sometimes a dimmer one does. The temperature slider sets how loaded the dice is.</span><em>On the board: choose</em></li>
       <li><span class="ic" aria-hidden="true">🔁</span><b>Add the word, and go again</b><span>The new word joins the line and the whole thing runs again for the next one. That is all it ever does.</span><em>On the board: repeat</em></li>
     </ol>
     <div class="picfoot">
       <div class="hear">
-        <b>How do two words sound to the machine?</b>
+        <b>How close are two words in the cloud?</b>
         <div class="hrow"><input id="hearA" value="two" maxlength="20" aria-label="First word"><input id="hearB" value="three" maxlength="20" aria-label="Second word"><button type="button" id="hearGo">Compare</button></div>
         <p class="note" id="hearOut">Compares the two words' rows in the loaded model's embedding table (1 = the same direction, 0 = unrelated). Try <i>two / too</i>, <i>red / read</i>, <i>cat / dog</i>.</p>
       </div>
       <details class="bends"><summary>Where the picture bends</summary>
-        <p>A real layer does more than turn parts up or down: it mixes every part with every other part, and it has bends that plain knobs cannot make. Listening back is not magic: it is worked out from the same glued knobs and the words themselves. And the wall of lights is one more set of knobs: one row of numbers per word, compared with the final sound.</p>
+        <p>A real layer does more than turn parts up or down: it mixes every part with every other part, and it has bends that plain knobs cannot make. Listening back is not magic: it is worked out from the same glued knobs and the words themselves. And the wall of lights is one more set of knobs: one row of numbers per word, compared with the final list of numbers.</p>
       </details>
     </div>
   </details>
@@ -545,7 +545,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
   <h3 class="eh3">GPT-NeoX and Pythia (2022–23)</h3>
   <p>EleutherAI's GPT-NeoX design rotates only the first quarter of each head's query and key (rotary embeddings, RoPE, from Su and others, 2021), computes attention and the feed-forward block side by side from the same ball and adds both (an idea from GPT-J), and keeps a separate output table. Pythia is a family of these models trained on the same public data in the same order, with 154 checkpoints each, so that training itself can be studied; Pythia-14M was added later with the same setup. On this page: one station per layer on the board, both changes added at once, and the real training checkpoints in the training view.</p>
   <h3 class="eh3">Llama-style models (2023–25)</h3>
-  <p>Meta's LLaMA settled the recipe most open models now use: RMSNorm before each step (a simpler rescaling), rotation of whole heads, and the SwiGLU feed-forward (a gate and an up grid multiplied together). SmolLM2 (Hugging Face, 2025) follows it, with grouped-query attention (several query heads share one key and value head, which shrinks the KV cache) and a tied output table; TinyStories 15M was trained by Andrej Karpathy (llama2.c) on the TinyStories dataset of simple stories (Eldan and Li, 2023).</p>
+  <p>Meta's LLaMA settled the recipe most open models now use: RMSNorm before each step (a simpler rescaling), rotation of whole heads, and the SwiGLU feed-forward (a gate and an up grid multiplied together). SmolLM2 (Hugging Face, released in late 2024) follows it, with grouped-query attention (several query heads share one key and value head, which shrinks the KV cache) and a tied output table; TinyStories 15M was trained by Andrej Karpathy (llama2.c) on the TinyStories dataset of simple stories (Eldan and Li, 2023).</p>
   <h3 class="eh3">Mamba (2023): a memory instead of attention</h3>
   <p>Gu and Dao's Mamba has no attention and no feed-forward block. Each layer keeps a fixed-size memory per channel; for every token it decides how much to keep and how much to replace (the step size), writes the token in, and reads it back, so a token learns about earlier ones only through that memory. Its cost grows in line with the text, not with its square, and nothing grows per token. On this page: the memory boxes on the board and the step-by-step memory update in the layer view.</p>
   <h3 class="eh3">Papers</h3>
@@ -1382,7 +1382,7 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
     $('#ueTitle').textContent = `The wall of lights (unembed) · one light for every one of the ${nf(u.V)} tokens`;
     $('#ueNote').textContent = `After the last layer the ball goes through one more norm. Then it is compared with every row of the output table: ${nf(u.V)} rows of ${u.Dm} numbers${G.kind === 'neox' ? ' (Pythia has its own output table)' : ' (here it is the same table as the embedding)'}. Each comparison is a dot product: multiply the ball and the row number by number, add it all up. Think of a wall of ${nf(u.V)} lights, one per token: each glows by how well the ball matches that token's row. “${m.tok.piece(top.id)}” reads highest (${top.s.toFixed(1)}). Softmax turns all the readings into chances (${fmtPct(top.p)} for it), and then the dice picks.`;
   }
-  // how two words "sound" to the machine: cosine similarity of their rows in the loaded model's embedding table
+  // how close two words are in the cloud: cosine similarity of their rows in the loaded model's embedding table
   function hear() {
     const m = S.llm, out = $('#hearOut'); if (!m || !m.mats) { out.textContent = 'The model is still loading.'; return; }
     const one = w => { const ids = m.tok.encode(' ' + w.trim()).filter(id => m.tok.piece(id).replace(/·/g, '') !== ''); return ids; };
@@ -1391,7 +1391,7 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
     if (ia.length !== 1 || ib.length !== 1) { out.innerHTML = `In ${m.name}, ${[[a, ia], [b, ib]].filter(([, i]) => i.length !== 1).map(([w, i]) => `“${w.replace(/[&<>]/g, '')}” is ${i.length} tokens`).join(' and ')}. Try shorter, common words (each must be one token).`; return; }
     const E = m.mats.E, D = m.D, ra = ia[0] * D, rb = ib[0] * D; let s2 = 0, na = 0, nb = 0;
     for (let c = 0; c < D; c++) { const x = E[ra + c], y = E[rb + c]; s2 += x * y; na += x * x; nb += y * y; }
-    const cs = s2 / Math.sqrt(na * nb), word = cs > 0.45 ? 'close: the machine treats them alike' : cs > 0.25 ? 'somewhat alike' : 'far apart: to the machine they sound different';
+    const cs = s2 / Math.sqrt(na * nb), word = cs > 0.45 ? 'close: the machine treats them alike' : cs > 0.25 ? 'somewhat alike' : 'far apart: the machine treats them differently';
     out.innerHTML = `${m.name}: “${a.replace(/[&<>]/g, '')}” and “${b.replace(/[&<>]/g, '')}” → <b>${cs.toFixed(2)}</b>, ${word}. (Rows of ${D} numbers each; “close” from 0.45 and “somewhat” from 0.25 are this page's cut-offs.)`;
   }
   $('#hearGo').addEventListener('click', hear);

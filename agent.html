@@ -27,7 +27,7 @@ a { color: var(--s-ink); }
 main { max-width: 1120px; margin: 0 auto; padding: 22px max(16px, env(safe-area-inset-left, 0px)) 140px; display: flex; flex-direction: column; gap: 18px; }
 .top { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: baseline; justify-content: space-between; }
 .logo { font: 800 26px/1 var(--display); text-decoration: none; letter-spacing: -0.02em; } .logo .vz { font-weight: 400; font-size: 0.62em; color: var(--s-ink2); margin: 0 0.06em; }
-.top nav { display: flex; gap: 14px; font-size: 14px; } .top nav a { color: var(--s-ink2); }
+.top nav { display: flex; gap: 6px 14px; font-size: 14px; flex-wrap: wrap; } .top nav a { color: var(--s-ink2); }
 h1 { font: 800 clamp(30px, 4.6vw, 48px)/1.05 var(--display); margin: 6px 0 0; letter-spacing: -0.02em; } h1 em { font-style: normal; color: var(--c-attn); }
 .lead { font-size: 18px; color: #c3c8e6; max-width: 72ch; margin: 0; text-wrap: pretty; }
 .note { font-size: 13.5px; color: var(--s-ink2); margin: 0; }
@@ -63,6 +63,8 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--c-attn); ou
 .bubble { display: inline-block; background: rgb(242 169 59 / 0.14); border: 1.5px solid var(--c-user); border-radius: 16px 16px 16px 4px; padding: 10px 14px; font: 500 18px var(--body); min-height: 1.5em; min-width: 3em; }
 .svgwrap { overflow-x: auto; } .svgwrap svg { width: 100%; height: auto; display: block; } #s-ctx .ag-svg, #s-model .ag-svg { min-width: 0; }
 .syspre { font: 12.5px/1.5 var(--mono); white-space: pre-wrap; background: #0f1322; color: var(--s-ink2); border-radius: 10px; padding: 8px 10px; margin: 8px 0 0; max-height: 260px; overflow: auto; }
+.mbbox { margin-top: 14px; } .mbbox h3 { font: 600 11.5px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--s-ink2); margin: 0; } .mbbar { display: flex; height: 16px; border-radius: 99px; overflow: hidden; background: var(--s-bg); margin: 6px 0 8px; } .mbbar i { display: block; height: 100%; min-width: 2px; }
+.mbleg { display: grid; gap: 4px; font: 13px/1.4 var(--mono); color: var(--s-ink2); } .mbleg b { color: var(--s-ink); font-weight: 600; } .mbleg i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
 .gauge { font: 14px var(--mono); color: var(--s-ink2); margin-top: 8px; } .gauge b { color: var(--c-tool); font-size: 16px; }
 .words { font: 500 20px/1.5 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; min-height: 1.5em; background: #0f1322; border-radius: 10px; padding: 10px 12px; }
 .words .tc { color: #8ff0ff; } .words .cur { background: rgb(255 92 138 / 0.35); border-radius: 4px; }
@@ -133,7 +135,7 @@ table.exp td:nth-child(3) { font: 12.5px/1.45 var(--mono); white-space: pre-wrap
 <main>
   <div class="top">
     <a class="logo" href="index.html" aria-label="AI Visualized">A<span class="vz" aria-hidden="true">(visualized)</span>I</a>
-    <nav><a href="index.html">How a model writes</a><a href="explore.html">Explorer</a><a href="kids.html">For kids and classrooms</a></nav>
+    <nav><a href="index.html">How a model writes</a><a href="explore.html">Explorer</a><a href="kids.html">For kids and classrooms</a><a href="https://github.com/t3chnicallyinclined/ai-visualized">Code on GitHub</a></nav>
   </div>
   <div>
     <h1>Watch an AI agent work, step by step. Or try to make it <em>go rogue</em>.</h1>
@@ -184,7 +186,7 @@ table.exp td:nth-child(3) { font: 12.5px/1.45 var(--mono); white-space: pre-wrap
         </details>
       </section>
       <section class="sec" id="s-ctx"><h2><i>3</i>The context: everything the model reads</h2><p class="cap"></p><div class="svgwrap"><svg id="tape" class="ag-svg" viewBox="0 0 900 120" role="img" aria-label="Everything the model reads, as a tape of real tokens, with the newest token's attention as pink arcs"></svg></div><pre class="syspre" id="syspre" hidden></pre></section>
-      <section class="sec" id="s-model"><h2><i>4</i>The model: 24 layers of fixed knobs</h2><p class="cap"></p><div class="svgwrap"><svg id="model" class="ag-svg" viewBox="0 0 900 160" role="img" aria-label="The model's 24 layers with real knobs, and the logit lens of the first token of each turn"></svg></div><div class="gauge" id="gauge"></div></section>
+      <section class="sec" id="s-model"><h2><i>4</i>The model: 24 layers of fixed knobs</h2><p class="cap"></p><div class="svgwrap"><svg id="model" class="ag-svg" viewBox="0 0 900 160" role="img" aria-label="The model's 24 layers with real knobs, and the logit lens of the first token of each turn"></svg></div><div class="gauge" id="gauge"></div><div class="mbbox" id="mbBox"></div></section>
       <section class="sec" id="s-words"><h2><i>5</i>The model writes</h2><p class="cap"></p><div class="words" id="words"></div>
         <div class="why"><div><h3>Its next-token chances</h3><div class="cands" id="cands"></div></div><div><h3>Where it looked back (attention)</h3><div class="look" id="look"></div></div></div></section>
       <section class="sec" id="s-prog"><h2><i>6</i>The program (written by people)</h2><p class="cap"></p>
@@ -363,6 +365,16 @@ table.exp td:nth-child(3) { font: 12.5px/1.45 var(--mono); white-space: pre-wrap
   // ---------- one run: the real model works in the background; events queue up; the page plays them slowly ----------
   function queue() { const q = []; let wake = null; return { push: e => { q.push(e); if (wake) { wake(); wake = null; } }, next: async () => { while (!q.length) await new Promise(r => { wake = r; }); return q.shift(); } }; }
 
+  // where the model's size goes: every knob is one number, 2 bytes each in the download
+  function sizeBox(el, title, parts, foot) {
+    const total = parts.reduce((a, p) => a + p[1], 0), share = n => (n / total * 100 < 1 ? '<1' : Math.round(n / total * 100)) + '%';
+    el.innerHTML = `<h3>${title}</h3><div class="mbbar">${parts.map(p => `<i style="width:${(p[1] / total * 100).toFixed(2)}%;background:${p[2]}"></i>`).join('')}</div><div class="mbleg">${parts.map(p => `<span><i style="background:${p[2]}"></i><b>${p[0]}</b> · ${p[1].toLocaleString('en-US')} knobs · ${share(p[1])}</span>`).join('')}</div><p class="note" style="margin-top:6px">${foot}</p>`;
+  }
+  function sizeOf() { // Qwen2.5-0.5B-Instruct: 151,936 token rows of 896 numbers (config.json), reused as the output table
+    const total = view.weightBytes / 2, tab = model ? model.mats.E.length : 151936 * 896;
+    sizeBox($('#mbBox'), `Where the model's ${Math.round(view.weightBytes / 1e6)} MB goes`, [['the table of token rows (embedding table, reused to score every token at the end)', tab, '#2fc6d8'], [`the ${view.L} layers of knobs`, total - tab, '#9d90ff']],
+      'When you hear a model’s size (“0.5B”, “70B”), it is this count of fixed numbers, 2 bytes each here. They all sit in memory while it runs; the agent’s whole task is just the context above, passing through. The bigger the model, the smaller the table’s share: Llama 3 70B spends about 3% of its 70 billion knobs on its tables.');
+  }
   async function start(task) {
     if (running) return;
     replay = !model; if (replay && !(RUNS && RUN_OF[task])) return;
@@ -371,7 +383,7 @@ table.exp td:nth-child(3) { font: 12.5px/1.45 var(--mono); white-space: pre-wrap
     Object.assign(S, { toks: [], sysEnd: 0, replyStart: 0, cur: -1, att: null, readFrom: 0, readTo: 0, lens: null, newFrom: 0, pulse: 0 });
     $('#bubble').textContent = ''; $('#words').textContent = ''; $('#cands').innerHTML = ''; $('#look').innerHTML = ''; $('#prog').textContent = ''; $('#back').textContent = ''; $('#gauge').textContent = '';
     $('#said').textContent = ''; $('#happened').textContent = ''; $('#lesson').textContent = ''; termReset(); filesView();
-    document.querySelectorAll('.cap').forEach(c => { c.textContent = ''; }); render();
+    document.querySelectorAll('.cap').forEach(c => { c.textContent = ''; }); render(); sizeOf();
     const before = A.SHELL.files(), ran = [], ev = queue(), asking = !replay && $('#approve').checked;
     if (replay) unpack(RUNS.runs[RUN_OF[task]]).forEach(ev.push);
     else A.run({ model, task, maxTurns: 5,

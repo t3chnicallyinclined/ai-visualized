@@ -238,7 +238,7 @@
       sysLabel: n => `hidden instructions + tool list: ${n} tokens (one square each; click to read)`,
       knobs: n => `${n} knobs in all (24 layers plus the table of token rows), set in training; they never change while the agent runs. Everything it learns during the task lives in the context above.`,
       lensTitle: 'The first token of each turn decides: tool request or answer. The logit lens: what the model would say if it stopped after each layer.',
-      lensNote: (l, w) => l ? `Its final choice, ${q1(w)}, only appears from layer ${l}; the early layers' guesses look like noise (the lens can only read the later layers well).` : '',
+      lensNote: (l, w) => l ? `The last layer's top guess, ${q1(w)}, only appears from layer ${l}; the early layers' guesses look like noise (the lens can only read the later layers well).` : '',
       gauge: p => `The model gives <tool_call> ${pct(p)} as its first token (and then takes its top token)`,
       attNote: s => `The first token of the context soaks up ${pct(s)} of all attention (an "attention sink", common in these models); it is left out of the arcs.`,
       narr: {
@@ -277,7 +277,7 @@
       sysLabel: n => `secret instructions + tool list: ${n} pieces (one square each; click to read)`,
       knobs: n => `${n} knobs in all (24 tunnels plus the table of word rows). They were set while the AI was made and never move. The only thing that changes is what it reads, above.`,
       lensTitle: 'The first piece of each answer decides: use a tool, or just answer? Here is what the AI would say after each tunnel.',
-      lensNote: (l, w) => l ? `Its choice, ${q1(w)}, only shows up from tunnel ${l}. Before that the guesses are a jumble.` : '',
+      lensNote: (l, w) => l ? `Its top guess at the end, ${q1(w)}, only shows up from tunnel ${l}. Before that the guesses are a jumble.` : '',
       gauge: p => `How likely the AI thinks a tool request is: ${pct(p)}`,
       attNote: s => `The very first piece gets ${pct(s)} of all the looking (AIs like this park extra attention there); the arcs leave it out.`,
       narr: {
