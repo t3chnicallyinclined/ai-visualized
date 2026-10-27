@@ -434,7 +434,7 @@ body.playing .ctl .now { display: none; }
     </ol>
     <div class="secs">
       <section class="sec" id="s-pieces"><h2><i>1</i>Your words become pieces</h2><p class="lookback">Looking back at an earlier step. Press Continue to return to where you were.</p><p class="cap"></p><div class="chips" id="chips"></div>
-        <p class="pic"><b>The picture:</b> a big dictionary of pieces, each with a number. The model never sees letters, only these numbers.</p></section>
+        <p class="pic"><b>The picture:</b> a big list of pieces, each with a number. The list was built before training by finding the most common chunks of text, so common words are one piece and rare words are several. The model never sees letters: only these numbers, which in memory are bits, 0s and 1s, like everything else in a computer.</p></section>
       <section class="sec" id="s-sounds"><h2><i>2</i>Each piece gets its spot in the cloud</h2><p class="lookback">Looking back at an earlier step. Press Continue to return to where you were.</p><p class="cap"></p>
         <div class="allgrid"><div class="rows" id="rows"></div><div class="cloudbox"><canvas id="cloud0" aria-label="The cloud: every piece in the dictionary as a dot, similar pieces close together; your pieces are marked"></canvas><p class="note" id="cloud0Note">Your pieces, each at its spot in the cloud.</p></div></div>
         <p class="pic"><b>The picture:</b> a cloud with one dot for every piece in the dictionary. A piece's list of numbers is its address in the cloud, and pieces used alike sit close together: it comes from how a word is used, not how it sounds. The real cloud has one direction per number (from 128 to 768 in these models); the map squashes it flat, so distances on it are rough.</p></section>
@@ -750,7 +750,7 @@ body.playing .ctl .now { display: none; }
     const st = M.newState(); await M.prefill(st, ids.slice(0, -1)); M.setWatch('all'); let res = await M.step(st, ids[last], true, 3); M.setWatch(null);
 
     // 1 pieces
-    focus('pieces', `The model can't read letters. It cuts your words into ${n} pieces from a dictionary of ${nf(M.V)}.` + (M.meta.bos != null ? ' <s> marks the start.' : ''));
+    focus('pieces', `A computer only works on numbers, and this model is arithmetic, so your text has to become numbers first. Its tokenizer looks your words up in a fixed list of ${nf(M.V)} pieces and hands the model their numbers: ${n} here.` + (M.meta.bos != null ? ' <s> is the number for “a text starts here”.' : ''));
     for (let i = 0; i < n; i++) { const c = document.createElement('span'); c.className = 'chip'; c.textContent = piece(ids[i]); const s = document.createElement('small'); s.textContent = '#' + ids[i]; c.appendChild(s); $('#chips').appendChild(c); await beat(220); }
     await slide(2600);
 
