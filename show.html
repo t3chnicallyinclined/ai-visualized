@@ -51,6 +51,7 @@ button:focus-visible, textarea:focus-visible { outline: 2px solid var(--attn); o
 h1 { font: 800 clamp(30px, 5vw, 50px)/1.05 var(--display); letter-spacing: -.02em; margin: 0 0 10px; }
 h1 em { font-style: normal; color: var(--pick); }
 .lead { font-size: 17px; color: #c3c8e6; margin: 0 0 18px; max-width: 46ch; }
+.nudge { font-size: 14px; color: var(--amber); margin: 0 0 8px; } .nudge b { color: #fff; }
 textarea { width: 100%; box-sizing: border-box; font: 500 18px/1.4 var(--mono); padding: 12px 14px; border-radius: 12px; border: 1.5px solid var(--line); background: #11141f; color: var(--ink); resize: none; }
 .row { display: flex; gap: 10px; margin-top: 12px; align-items: center; flex-wrap: wrap; }
 .note { font-size: 13px; color: var(--ink2); margin: 10px 0 0; }
@@ -88,7 +89,6 @@ textarea { width: 100%; box-sizing: border-box; font: 500 18px/1.4 var(--mono); 
 <div id="bar" hidden><div class="in">
   <button type="button" id="back" aria-label="Back">◀</button>
   <button type="button" id="next" class="go">Continue ▶</button>
-  <label class="autol"><input type="checkbox" id="detail"> <span>Details</span></label>
   <label class="autol"><input type="checkbox" id="auto"> <span>Autoplay</span></label>
 </div></div>
 
@@ -96,6 +96,7 @@ textarea { width: 100%; box-sizing: border-box; font: 500 18px/1.4 var(--mono); 
   <div class="in">
     <h1>Watch an AI pick <em>one word</em>.</h1>
     <p class="lead">A real language model runs in your browser. It takes the start of a sentence, and in a few seconds of arithmetic chooses the next word. This show slows that down and draws every step from the model's own numbers: nothing here is staged.</p>
+    <p class="nudge">The sentence below is only a suggestion. <b>Type your own</b>: the whole show is computed fresh for it.</p>
     <textarea id="prompt" rows="2" maxlength="100" aria-label="The start of a sentence">Once upon a time, there was a little</textarea>
     <div class="row"><button type="button" class="go" id="begin" disabled>Begin ▶</button><span class="note" id="status">Downloading the model (30 MB, once)…</span></div>
     <div class="load" id="load"><div class="track"><i id="loadBar"></i></div></div>
@@ -106,7 +107,7 @@ textarea { width: 100%; box-sizing: border-box; font: 500 18px/1.4 var(--mono); 
   <div class="in">
     <h1>That is all it <em>ever</em> does.</h1>
     <p>Tokens, spots in the cloud, listening back, layers of fixed knobs, a wall of lights, a weighted dice. One token at a time, from the same frozen numbers. Every frame you saw was drawn from them.</p><p id="endSize"></p><p>Every language model runs this same loop. The big ones just have more of everything: more layers, far more knobs, a bigger dictionary, and years of reading instead of children's stories. The step is the same; the scale is not.</p>
-    <div class="row" style="justify-content:center"><button type="button" class="go" id="replay">Replay</button><button type="button" id="another">Another sentence</button></div>
+    <div class="row" style="justify-content:center"><button type="button" class="go" id="replay">Replay</button><button type="button" id="another">Try your own sentence</button></div>
     <p class="note">Want the numbers themselves? <a href="index.html">The step-by-step walk-through</a> shows every one; <a href="explore.html">the Explorer</a> shows the whole machine at once.</p>
   </div>
 </div>
@@ -197,7 +198,7 @@ textarea { width: 100%; box-sizing: border-box; font: 500 18px/1.4 var(--mono); 
     c.fillStyle = 'rgba(255,255,255,.55)'; font(10 * k, 400); c.fillText(sub, 0, 11 * k);
     c.restore();
   }
-  let PLACED = [], HIT = [], DETAIL = false; // the labels drawn this frame (none covers another); the tappable things; the Details toggle
+  let PLACED = [], HIT = [], DETAIL = true; // the labels drawn this frame (none covers another); the tappable things; the Details toggle
   const hit = (x, y, r, html) => HIT.push({ x, y, r, html });
   function place(x, y, txt, size) { font(size, 600); const w = c.measureText(txt).width, h = size + 4; let ly = y; for (let k = 0; k < 12; k++) { if (!PLACED.some(p => Math.abs(p.y - ly) < h && x < p.x + p.w + 6 && x + w > p.x - 6)) break; ly += h; } PLACED.push({ x, y: ly, w, h }); return ly; }
   function dot(x, y, r, color, label, lblAlpha) {
@@ -229,7 +230,8 @@ textarea { width: 100%; box-sizing: border-box; font: 500 18px/1.4 var(--mono); 
       c.fillStyle = `hsla(${HEAD_HUES[h % 6]},95%,80%,${(alpha * Math.min(1, w * 2)).toFixed(2)})`; c.beginPath(); c.arc(qx, qy, 1.5 + w * 4, 0, Math.PI * 2); c.fill();
     }
   }
-  const ringY = l => H * (0.26 + 0.46 * l / Math.max(1, M.L - 1)), ringRX = () => Math.min(W * 0.26, H * 0.3);
+  const stageTop = () => Math.min(H * 0.45, ($('#capbox').getBoundingClientRect().bottom || H * 0.2) + 24); // under the caption, however long it is
+  const ringY = l => lerp(stageTop() + 10, H * 0.76, l / Math.max(1, M.L - 1)), ringRX = () => Math.min(W * 0.26, H * 0.3);
   const lensLabel = (l, txt, color, alpha) => { const x = W / 2 + ringRX() + 16; if (x + (DETAIL ? 260 : 130) < W) label(x, ringY(l), txt, color, alpha, 13); else if (DETAIL) label(W / 2, ringY(l) + ringRX() * 0.22 + 11, txt, color, alpha, 11, 'center'); else label(W - 14, ringY(l), txt, color, alpha, 13, 'right'); }; // Details on a narrow screen: the three guesses sit under the ring
   let KN = null; // per layer: a sample of its real weights, each scaled by its grid's spread
   function knobsOf(l) {
@@ -269,7 +271,7 @@ textarea { width: 100%; box-sizing: border-box; font: 500 18px/1.4 var(--mono); 
   // what tapping a thing on the stage shows
   const nbCache = {}; const nbr = id => nbCache[id] || (nbCache[id] = M.neighbors(id, 4).map(n => `${M.tok.piece(n.id)} ${n.sim.toFixed(2)}`));
   const headPulls = j => { const ly = R.words[0].rec.layers[0], Tn = R.n; return Array.from({ length: ly.heads }, (_, h) => ly.attn[h * Tn + j]); };
-  const pieceTip = i => `<b>${esc(piece(i))}</b><small>piece #${R.ids[i]} · neighbours in the cloud: ${esc(nbr(R.ids[i]).join(', '))}</small>` + (scene === 3 && i < R.n - 1 ? `<small>attention from each head: ${headPulls(i).map((w, h) => `<span class="sw" style="background:hsl(${HEAD_HUES[h]},90%,65%)"></span>${pct(w)}`).join(' ')}</small>` : '');
+  const pieceTip = i => `<b>${esc(piece(i))}</b><small>piece #${R.ids[i]} · neighbours in the cloud: ${esc(nbr(R.ids[i]).join(', '))}</small>` + (SCENES[scene].k === 'listen' && i < R.n - 1 ? `<small>attention from each head: ${headPulls(i).map((w, h) => `<span class="sw" style="background:hsl(${HEAD_HUES[h]},90%,65%)"></span>${pct(w)}`).join(' ')}</small>` : '');
   const chanceTip = cd => `<b>${esc(M.tok.piece(cd.id))}</b><small>chance ${pct(cd.full)} of all ${nf(M.V)} pieces · score ${cd.logit.toFixed(1)}</small>`;
   const layerTip = l => { const w = R.words[0], q = w.rec.layers[l], g = q.lens, Tn = R.n; let top = Tn > 1 ? 1 : 0; const a = new Float32Array(Tn); for (let h = 0; h < q.heads; h++) for (let jj = 0; jj < Tn; jj++) a[jj] += q.attn[h * Tn + jj] / q.heads; for (let jj = top + 1; jj < Tn - 1; jj++) if (a[jj] > a[top]) top = jj;
     return `<b>layer ${l + 1}</b><small>if it stopped here: ${g.slice(0, 3).map(x => `${esc(M.tok.piece(x.id))} ${pct(x.p)}`).join(', ')}</small><small>listened most to “${esc(piece(top))}” (${pct(a[top])}) · ${nf(layerKnobs(l))} knobs</small>`; };
@@ -282,27 +284,30 @@ textarea { width: 100%; box-sizing: border-box; font: 500 18px/1.4 var(--mono); 
       more: () => `<p>The model is <b>TinyStories 15M</b>: ${nf(M.weightBytes / 2)} fixed numbers, set once by reading children's stories. It has no memory of you and no idea what you mean: it only gets these ${R.text.length} characters.</p><p class="pic">The picture: a machine with millions of volume knobs, set at the factory and glued. Your words go in; one word comes out. Then it runs again.</p>`,
       draw(t) { const k = Math.min(W / 420, 1.4); font(Math.round(26 * k), 600, 'sans'); c.fillStyle = '#fff'; c.textAlign = 'center'; c.textBaseline = 'middle';
         const shown = R.text.slice(0, Math.floor(R.text.length * seg(t, 100, 1200))); wrap(shown, W / 2, H * 0.5, Math.min(W - 40, 640), 36 * k); } },
-    { k: 'pieces', lbl: 'Pieces', cap: () => `The model can't read letters. Its tokenizer cuts your words into ${R.n} pieces it knows, called tokens, each with its number in a dictionary of ${nf(M.V)}.`, sub: () => 'From here on the model only sees numbers. The dot means "starts with a space"; rare words are cut into several pieces. Tap a piece.', dur: 2400,
+    { k: 'pieces', lbl: 'Pieces', cap: () => `The model can't read letters. Its tokenizer cuts your words into ${R.n} pieces it knows, called tokens, each with its number in a dictionary of ${nf(M.V)}.`, sub: () => `A token is just a number: its place in the tokenizer's list of ${nf(M.V)} pieces. From here on the model only sees these numbers. The dot means "starts with a space"; rare words are cut into several pieces. Tap a piece.`, dur: 2400,
       more: () => `<h4>Your tokens</h4>${table(R.ids.map((id, i) => [esc(piece(i)), '#' + id]))}<p>The dot means the piece starts with a space. ${M.meta.bos != null ? '<code>&lt;s&gt;</code> is the marker the model always gets first: "a text starts here".' : ''}</p><h4>Try a rare word</h4><div class="try"><input id="tryW" value="dragonfruit" maxlength="24" aria-label="A word to cut into pieces"><button type="button" id="tryGo">Cut it</button></div><p id="tryOut" class="pic">How the model would cut it.</p>`,
       draw(t) { chipRow(t, 1); } },
-    { k: 'cloud', lbl: 'The cloud', cap: () => `Each token looks up its spot in the cloud: a list of ${M.D} numbers, set once in training. This is the embedding.`, sub: () => `The cloud is the model's whole dictionary, ${nf(MAP ? MAP.cat.filter(v => v !== 255).length : M.V)} tokens, laid out so tokens used alike sit close: “${piece(R.n - 1)}” sits near ${nbr(R.ids[R.n - 1]).slice(0, 3).map(x => x.split(' ')[0]).join(', ')}. Tap any token to see its neighbours.`, dur: 3400,
+    { k: 'memory', lbl: 'In memory', cap: () => `The model is ${nf(M.weightBytes / 2)} numbers sitting in memory. ${nf(M.mats.E.length)} of them are the embedding table: one row of ${M.D} numbers for every token.`, sub: () => `Here the numbers sit in your computer's memory (${(M.weightBytes * 2 / 1e6).toFixed(0)} MB as 32-bit numbers); in a data centre they sit in a GPU's memory. They were set in training and do not change now. Your ${R.n} tokens pick out ${R.n} rows.`, dur: 4200,
+      more: () => `<p>Everything the model knows is this block of numbers, loaded once. Nothing else is stored: no text, no rules, no memory of past sentences.</p><h4>What is in the block</h4>${table([['the embedding table', `${nf(M.V)} rows × ${M.D} = ${nf(M.mats.E.length)} numbers`]].concat(Array.from({ length: M.L }, (_, l) => [`layer ${l + 1}`, `${nf(layerKnobs(l))} knobs`])).concat([['the output table', 'the embedding table again (shared)']]))}<p class="pic">Your tokens are not stored anywhere in it. A token number is an address: row #${R.ids[R.n - 1]} is “${esc(piece(R.n - 1))}”. The model reads that row's ${M.D} numbers, and that list is what the token becomes.</p>`,
+      draw(t) { memoryScene(t); } },
+    { k: 'cloud', lbl: 'The cloud', cap: () => `Lay the table out so rows that point the same way sit close, and it becomes this cloud: one dot per token, ${nf(MAP ? MAP.cat.filter(v => v !== 255).length : M.V)} of them. This is the embedding.`, sub: () => `Each dot is one row of ${M.D} numbers. Tokens used alike got similar rows in training, so they sit together: “${piece(R.n - 1)}” sits near ${nbr(R.ids[R.n - 1]).slice(0, 3).map(x => x.split(' ')[0]).join(', ')}. Your tokens are the amber dots. Tap any token.`, dur: 3400,
       more: () => `<p>Every token in the dictionary has its own row of <b>${M.D} numbers</b>, its embedding. The rows were set during training and never change now: the cloud is frozen. Tokens that appeared in the same kinds of places got similar rows, so they sit near each other. It comes from how a word is <i>used</i>, not how it sounds or is spelled.</p><p>Your text has become ${R.n} points in this cloud. Everything that follows is arithmetic on those points.</p><h4>Your tokens and their nearest neighbours</h4>${table(R.ids.map((id, i) => [esc(piece(i)), esc(nbr(id).map(x => x.split(' ')[0]).join(' · '))]))}<p class="pic">The map is flat (made with t-SNE) and the real cloud has ${M.D} directions, so distances on it are rough. The number after a neighbour above (in the tooltips) is how closely the two addresses point the same way: 1 = identical.</p>`,
-      enter() { camTo.x = 0.5; camTo.y = 0.5; camTo.z = 1; },
+      enter() { cam.z = 0.55; camTo.x = 0.5; camTo.y = 0.5; camTo.z = 1; },
       draw(t) { drawCloudLayer(seg(t, 0, 900) * 0.9, null, 0); flyToCloud(t); } },
-    { k: 'listen', lbl: 'Listening back', cap: () => `Before guessing, the newest token, “${piece(R.n - 1)}”, listens back to the earlier ones and blends in the ones that matter. This is attention.`, sub: () => `${R.words[0].rec.layers[0].heads} heads listen at once, each in its own way (one colour each). Thicker thread, more attention. This is the only step whose mixing depends on what you typed. Tap a token.`, dur: 3600,
+    { k: 'listen', lbl: 'Listening back', cap: () => `Before guessing, the newest token, “${piece(R.n - 1)}”, listens back to the earlier ones and blends in the ones that matter. This is attention.`, sub: () => `The threads are numbers: ${R.words[0].rec.layers[0].heads} heads × ${R.n - 1} earlier tokens = ${R.words[0].rec.layers[0].heads * (R.n - 1)} attention weights, worked out from your tokens' numbers by layer 1's own knobs. Thicker, more weight; one colour per head. This is the only step whose mixing depends on what you typed. Tap a token.`, dur: 3600,
       more: () => { const ly = R.words[0].rec.layers[0], Tn = R.n; const rows = Array.from({ length: ly.heads }, (_, h) => { let best = Tn > 1 ? 1 : 0; for (let jj = 1; jj < Tn - 1; jj++) if (ly.attn[h * Tn + jj] > ly.attn[h * Tn + best]) best = jj; return [`<span class="sw" style="background:hsl(${HEAD_HUES[h]},90%,65%)"></span>head ${h + 1}`, `listens most to “${esc(piece(best))}”`, pct(ly.attn[h * Tn + best])]; });
         return `<p><b>Attention</b>: the newest token compares its numbers with every earlier token's numbers and gets a weight for each, adding up to 100%. Then it blends in the earlier tokens by those weights. A <b>head</b> is one set of fixed knobs that does this in its own way; this model has ${ly.heads} heads per layer, so six different blends are made and added together. The threads are those weights, one colour per head.</p><h4>Layer 1, for “${esc(piece(Tn - 1))}”</h4>${table(rows)}<p class="pic">The first token, <code>${esc(piece(0))}</code>, gets ${pct(headPulls(0).reduce((a, b) => a + b, 0) / ly.heads)} on average: models park spare attention there (a resting spot), so it is drawn thin. The knobs themselves never move; only the weights, which come from your tokens, change from text to text.</p>`; },
       enter() { const b = bounds(); camTo.x = b.cx; camTo.y = b.cy; camTo.z = clamp(0.55 / Math.max(b.w, b.h, 0.08), 1.2, 4); },
       draw(t) { drawCloudLayer(0.55, null, 0); piecesOnCloud(1, 1); const [x, y] = scr(...piecePos(R.n - 1)); threads([x, y], 0, t, seg(t, 300, 1200)); ball(x, y, 30 + 10 * seg(t, 0, 600), R.words[0].rec.layers[0].vec.xin, vecScale(), seg(t, 0, 600)); if (DETAIL) headLegend(); } },
-    { k: 'layers', lbl: 'Through every layer', cap: () => `Then its numbers go through ${M.L} layers of fixed knobs, set in training and never moved by your words.`, sub: () => 'In every layer: listen back, then push the numbers through the knobs. After each layer we peek at what it would say; the model itself only scores once, at the end. Tap a ring.', dur: () => M.L * 1250 + 900,
+    { k: 'layers', lbl: 'Through every layer', cap: () => `Then its numbers go through ${M.L} layers of fixed knobs, set in training and never moved by your words.`, sub: () => `Each ring is one layer: ${nf(layerKnobs(0))} knobs in memory, a few of them drawn as gauges. The spoked ball is the token's ${M.D} numbers being pushed through them. After each layer we peek at what it would say; the model itself only scores once, at the end. Tap a ring.`, dur: () => M.L * 1250 + 900,
       more: () => { const w = R.words[0]; return `<p>The ring of spokes is the piece's <b>${M.D} numbers</b>: orange out for above zero, blue in for below. Every layer changes them a little: listen back (attention), then push them through the layer's own knobs (the feed-forward block). ${nf(w.rec.layers.reduce((a, _, l) => a + layerKnobs(l), 0))} knobs in all, none of them moved by your words.</p><h4>Its best guess after each layer</h4>${table(w.rec.layers.map((q, l) => [`layer ${l + 1}`, q.lens.slice(0, 3).map(x => `${esc(M.tok.piece(x.id))} ${pct(x.p)}`).join(' · ')]))}<p class="pic">The guess after each layer is a peek we take by running the model's final scoring early (the "logit lens"). Early layers are not built to be read this way, so their guesses can look odd.</p>`; },
       enter() { camTo.x = 0.5; camTo.y = 0.52; camTo.z = 1; },
       draw(t) { descent(t); } },
-    { k: 'lights', lbl: 'The wall of lights', cap: () => `At the end, every one of the ${nf(M.V)} tokens gets a light: the final numbers are compared with that token's own row in the cloud. Only ${above(R.words[0].rec.layers[M.L - 1].watch, 0.01)} shine above 1%.`, sub: () => 'Brighter means a closer match. The whole wall is scored at once; the model never looks anything up. Tap a light.', dur: 3000,
+    { k: 'lights', lbl: 'The wall of lights', cap: () => `At the end, every one of the ${nf(M.V)} tokens gets a light: the final numbers are compared with that token's own row in the cloud. Only ${above(R.words[0].rec.layers[M.L - 1].watch, 0.01)} shine above 1%.`, sub: () => `${nf(M.V)} comparisons, one per row of the same table you saw in memory: multiply the ${M.D} numbers pair by pair and add them up. Brighter means a closer match. The model never looks anything up. Tap a light.`, dur: 3000,
       more: () => { const w = R.words[0], watch = w.rec.layers[M.L - 1].watch; return `<p>Each piece's row in the dictionary (the same ${M.D} numbers from the cloud) is compared with the final numbers: multiply number by number, add it all up. That is one score per piece. Softmax turns the scores into chances that add up to 100%.</p><h4>The brightest lights</h4>${table(topList(w, 10).map(([id, p]) => [esc(M.tok.piece(id)), pct(p)]))}<p class="pic">${above(watch, 0.01)} pieces have 1% or more; ${above(watch, 0.001)} have 0.1% or more; the other ${nf(M.V - above(watch, 0.001))} are almost dark. The whole wall is lit at once: the model never looks anything up.</p>`; },
       enter() { const b = topBounds(); camTo.x = b.cx; camTo.y = b.cy; camTo.z = clamp(0.5 / Math.max(b.w, b.h, 0.06), 1.4, 5); },
       draw(t) { drawCloudLayer(0.8, R.words[0].rec.layers[M.L - 1].watch, seg(t, 0, 900)); topLabels(seg(t, 900, 1500), DETAIL ? 10 : 5); } },
-    { k: 'dice', lbl: 'The weighted dice', cap: () => `The 5 brightest go on a weighted dice. The temperature (${T}) sets how loaded it is.`, sub: () => 'Usually the brightest wins. Sometimes a dimmer one does: that is why the same start can give different stories. Tap an orb.', dur: 3600,
+    { k: 'dice', lbl: 'The weighted dice', cap: () => `The 5 brightest go on a weighted dice. The temperature (${T}) sets how loaded it is.`, sub: () => 'A random number is drawn and matched against the five chances. Usually the brightest wins; sometimes a dimmer one does, which is why the same start can give different stories. Tap an orb.', dur: 3600,
       more: () => { const w = R.words[0]; return `<p>Apps rarely take the top light every time: that reads as stiff and repetitive. This page keeps the five brightest and rolls a dice loaded by their scores. <b>Temperature</b> is the knob on that dice: at 0 the brightest always wins; higher flattens the odds so dimmer lights win more often.</p><h4>This roll</h4>${table(w.cands.map((cd, i) => [(i === w.pick ? '<span class="wn">●</span> ' : '') + esc(M.tok.piece(cd.id)), `${pct(cd.p)} on the dice`, `${pct(cd.full)} of all pieces`]))}<p class="pic">The roll landed on “${esc(M.tok.piece(w.id))}”${w.pick ? ', not the brightest light' : ', the brightest light'}. Replay the show for a new roll on the same lights.</p>`; },
       enter() { camTo.z = 1; camTo.x = 0.5; camTo.y = 0.5; },
       draw(t) { drawCloudLayer(0.25, null, 0); dice(t, R.words[0], 1); } },
@@ -311,6 +316,30 @@ textarea { width: 100%; box-sizing: border-box; font: 500 18px/1.4 var(--mono); 
       enter() { camTo.z = 1; camTo.x = 0.5; camTo.y = 0.52; },
       draw(t) { again(t); } },
   ];
+  function memoryScene(t) { // the model as one block of numbers; the table lit; your tokens' rows pulled out of it, as colour
+    const segs = [['the embedding table', M.mats.E.length, '#2fc6d8']].concat(Array.from({ length: M.L }, (_, l) => [`layer ${l + 1}`, layerKnobs(l), '#9d90ff']));
+    const tot = M.weightBytes / 2, x0 = 20, bw = W - 40, by = stageTop() + 22, bh = clamp(H * 0.05, 26, 44); let x = x0;
+    font(11, 500); c.textAlign = 'left'; c.textBaseline = 'bottom'; c.fillStyle = 'rgba(255,255,255,.6)'; c.fillText(`${nf(tot)} numbers in memory`, x0, by - 8);
+    segs.forEach(([name, n, col], i) => { const w = bw * n / tot, a = eo(seg(t, i * 140, i * 140 + 500)); if (a <= 0) return;
+      c.save(); c.globalAlpha = a; c.fillStyle = col; c.globalAlpha = a * (i === 0 ? 0.75 + 0.25 * Math.sin(t / 300) * (t > 1200 ? 1 : 0) : 0.45); c.fillRect(x, by, Math.max(1, w - 2), bh);
+      if (w > 44) { c.globalAlpha = a; c.fillStyle = '#07080d'; font(10, 600); c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(name, x + w / 2, by + bh / 2); }
+      c.restore(); x += w; });
+    const ew = bw * M.mats.E.length / tot;
+    if (t > 1200) { label(x0, by + bh + 16, `${nf(M.V)} rows × ${M.D} numbers`, '#8ff0ff', seg(t, 1200, 1700), 12); }
+    // the rows your tokens pick out, drawn from the real table
+    const rows = Math.min(R.n, 12), ry0 = by + bh + 44, rh = clamp((H * 0.84 - ry0 - 30) / rows, 12, 28), lx = Math.min(90, W * 0.2), sw = W - 40 - lx;
+    for (let i = 0; i < rows; i++) {
+      const a = eo(seg(t, 1700 + i * 160, 2300 + i * 160)); if (a <= 0) continue;
+      const y = ry0 + i * rh, fx = x0 + ew * (R.ids[i] / M.V); // where in the table this row sits
+      c.save(); c.globalAlpha = a * 0.35; c.strokeStyle = '#2fc6d8'; c.lineWidth = 1; c.beginPath(); c.moveTo(fx, by + bh); c.lineTo(20 + lx, y + rh / 2); c.stroke(); c.restore();
+      label(20, y + rh / 2, piece(i), i === R.n - 1 ? '#ff5c8a' : '#f2a93b', a, 12);
+      const vals = M.embedding(R.ids[i], M.D), sc = vecScale(), n = vals.length, cw = sw / n;
+      c.save(); c.globalAlpha = a;
+      for (let k = 0; k < n; k++) { const v = clamp(vals[k] / sc, -1, 1); c.fillStyle = v >= 0 ? `rgba(242,154,74,${(0.15 + 0.85 * Math.abs(v)).toFixed(2)})` : `rgba(91,139,216,${(0.15 + 0.85 * Math.abs(v)).toFixed(2)})`; c.fillRect(20 + lx + k * cw, y + 2, Math.max(1, cw), rh - 5); }
+      c.restore();
+    }
+    if (t > 2300) { label(20, ry0 + rows * rh + 10, `each row: ${M.D} numbers, orange above zero, blue below`, 'rgba(255,255,255,.55)', seg(t, 2300, 2900), 11); label(20, ry0 + rows * rh + 26, 'next: the whole table, laid out as a cloud', 'rgba(255,255,255,.55)', seg(t, 2600, 3200), 11); }
+  }
   function headLegend() { // Details: each head and the token it listens to most (layer 1)
     const ly = R.words[0].rec.layers[0], Tn = R.n, x = 14, y0 = H - 92 - env() - ly.heads * 18;
     for (let h = 0; h < ly.heads; h++) { let best = Tn > 1 ? 1 : 0; for (let jj = 1; jj < Tn - 1; jj++) if (ly.attn[h * Tn + jj] > ly.attn[h * Tn + best]) best = jj;
@@ -352,7 +381,7 @@ textarea { width: 100%; box-sizing: border-box; font: 500 18px/1.4 var(--mono); 
     for (let l = 0; l <= lyr; l++) { const g = lensOf(w, l), a = l < lyr ? 0.5 : seg(u, 0.5, 0.9); if (a > 0) lensLabel(l, DETAIL ? w.rec.layers[l].lens.slice(0, 3).map(x => `${M.tok.piece(x.id)} ${pct(x.p)}`).join('  ') : `${M.tok.piece(g.id)} ${pct(g.p)}`, l === lyr ? '#fff' : '#c9b8ff', a); }
   }
   function dice(t, w, alpha) { // the five on a ring, sized by chance; a marker spins, slows, and lands on the real pick
-    const cx = W / 2, cy = H * 0.5, R0 = Math.min(W, H) * 0.3, n = w.cands.length;
+    const cx = W / 2, cy = Math.max(H * 0.5, stageTop() + Math.min(W, H) * 0.3 + 40), R0 = Math.min(W, H) * 0.3, n = w.cands.length;
     const spin = seg(t, 900, 2800), turns = 3 + w.pick / n, ang = -Math.PI / 2 + eo(spin) * turns * Math.PI * 2, landed = t > 2800;
     w.cands.forEach((cd, i) => {
       const a = -Math.PI / 2 + i / n * Math.PI * 2, x = cx + Math.cos(a) * R0, y = cy + Math.sin(a) * R0, r = (10 + 34 * Math.sqrt(cd.p)) * eo(seg(t, i * 100, 600 + i * 100));
@@ -423,7 +452,6 @@ textarea { width: 100%; box-sizing: border-box; font: 500 18px/1.4 var(--mono); 
   $('#begin').addEventListener('click', begin);
   $('#next').addEventListener('click', next); $('#back').addEventListener('click', back);
   $('#auto').addEventListener('change', e => { auto = e.target.checked; });
-  $('#detail').addEventListener('change', e => { DETAIL = e.target.checked; });
   // the sheet: what this screen shows, with the numbers behind it
   function openSheet() { const s = SCENES[scene]; $('#shT').textContent = s.lbl; $('#shBody').innerHTML = s.more ? s.more() : ''; $('#sheet').hidden = false; $('#tip').hidden = true;
     const tw = $('#tryW'); if (tw) { const cut = () => { const w = tw.value.trim(); if (!w) return; const ids = M.tok.encode(' ' + w); $('#tryOut').innerHTML = `“${esc(w)}” → ${ids.length} piece${ids.length === 1 ? '' : 's'}: ${ids.map(id => `<b>${esc(M.tok.piece(id))}</b> <small>#${id}</small>`).join(' + ')}`; }; $('#tryGo').addEventListener('click', cut); tw.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); cut(); } }); cut(); } }
@@ -445,7 +473,7 @@ textarea { width: 100%; box-sizing: border-box; font: 500 18px/1.4 var(--mono); 
   addEventListener('touchstart', e => { const t = e.touches[0]; sx = t.clientX; sy = t.clientY; st = Date.now(); }, { passive: true });
   addEventListener('touchend', e => { if (!playing || !st) return; const t = e.changedTouches[0], dx = t.clientX - sx, dy = t.clientY - sy; st = 0; if (Math.abs(dx) > 60 && Math.abs(dy) < 60) { if (dx < 0) next(); else back(); } }, { passive: true });
   $('#prompt').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); if (!$('#begin').disabled) begin(); } });
-  window.__show = { begin, next, back, get hits() { return HIT; }, detail: v => { DETAIL = v; $('#detail').checked = v; }, get scene() { return scene; }, get playing() { return playing; }, skip: () => { t0 = -1e9; }, R }; // for testing
+  window.__show = { begin, next, back, get hits() { return HIT; }, detail: v => { DETAIL = v; }, get keys() { return SCENES.map(x => x.k); }, get scene() { return scene; }, get playing() { return playing; }, skip: () => { t0 = -1e9; }, R }; // for testing
 })();
 </script>
 </body>
