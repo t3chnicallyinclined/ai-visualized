@@ -233,7 +233,7 @@ textarea { width: 100%; box-sizing: border-box; font: 500 18px/1.4 var(--mono); 
     c.restore();
   }
   let PLACED = [], HIT = [], DETAIL = true; // the labels drawn this frame (none covers another); the tappable things; the Details toggle
-  const hit = (x, y, r, html) => HIT.push({ x, y, r, html });
+  const hit = (x, y, r, html, w, h) => HIT.push({ x, y, r, html, w, h }); // a circle, or a rectangle (w × h around x, y)
   function place(x, y, txt, size) { font(size, 600); const w = c.measureText(txt).width, h = size + 4; let ly = y; for (let k = 0; k < 12; k++) { if (!PLACED.some(p => Math.abs(p.y - ly) < h && x < p.x + p.w + 6 && x + w > p.x - 6)) break; ly += h; } PLACED.push({ x, y: ly, w, h }); return ly; }
   function dot(x, y, r, color, label, lblAlpha) {
     c.save(); c.shadowColor = color; c.shadowBlur = 14; c.fillStyle = color; c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill(); c.shadowBlur = 0;
@@ -266,8 +266,11 @@ textarea { width: 100%; box-sizing: border-box; font: 500 18px/1.4 var(--mono); 
   }
   const PER = () => clamp(Math.round(9000 / M.L), 320, 1250); // milliseconds per layer in the descent: six layers linger, thirty move
   const stageTop = () => Math.min(H * 0.45, ($('#capbox').getBoundingClientRect().bottom || H * 0.2) + 24); // under the caption, however long it is
-  const ringY = l => lerp(stageTop() + 10, H * 0.76, l / Math.max(1, M.L - 1)), ringRX = () => Math.min(W * 0.26, H * 0.3);
-  const lensLabel = (l, txt, color, alpha) => { const x = W / 2 + ringRX() + 16; if (x + (DETAIL ? 260 : 130) < W) label(x, ringY(l), txt, color, alpha, 13); else if (DETAIL) label(W / 2, ringY(l) + ringRX() * 0.22 + 11, txt, color, alpha, 11, 'center'); else label(W - 14, ringY(l), txt, color, alpha, 13, 'right'); }; // Details on a narrow screen: the three guesses sit under the ring
+  // the board: every layer as a band of its real knobs, the cloud lit beside it (below it on a phone)
+  const boardGeom = () => { const top = stageTop() + 6, bottom = H * 0.84, wide = W >= 700, sw = Math.min(W, 1000), sx = (W - sw) / 2;
+    if (wide) { const bw = Math.round(sw * 0.56) - 30; return { wide, top, bx: sx + 20, bw, bh: bottom - top, cloud: { x: sx + 20 + bw + 24, y: top, w: sw - bw - 64, h: bottom - top } }; }
+    const bh = Math.round((bottom - top) * 0.58); return { wide, top, bx: 16, bw: W - 32, bh, cloud: { x: 16, y: top + bh + 12, w: W - 32, h: bottom - top - bh - 12 } }; };
+  const bandY = (g, l) => g.top + (l + 0.5) * (g.bh / M.L);
   let KN = null; // per layer: a sample of its real weights, each scaled by its grid's spread
   function knobsOf(l) {
     if (!KN) KN = [];
@@ -284,17 +287,51 @@ textarea { width: 100%; box-sizing: border-box; font: 500 18px/1.4 var(--mono); 
     const vv = Math.abs(v) < 0.04 ? 0.04 * Math.sign(v || 1) : v; c.strokeStyle = v >= 0 ? '#f29a4a' : '#5b8bd8'; if (bright) { c.shadowColor = c.strokeStyle; c.shadowBlur = 8; }
     c.beginPath(); c.arc(x, y, r, -Math.PI / 2, -Math.PI / 2 + vv * 0.75 * Math.PI, vv < 0); c.stroke(); c.restore();
   }
-  function rings(alpha, lit) { // the layers as stacked rings of knobs; the lit one glows
-    for (let l = 0; l < M.L; l++) {
-      const y = ringY(l), rx = ringRX(), ry = rx * 0.22, on = lit === l; if (lit >= 0 && l <= lit) hit(W / 2, y, ry + 14, layerTip(l));
-      c.save(); c.globalAlpha = alpha; c.strokeStyle = on ? '#ff5c8a' : 'rgba(157,144,255,.45)'; c.lineWidth = on ? 2.5 : 1.2;
-      if (on) { c.shadowColor = '#ff5c8a'; c.shadowBlur = 22; }
-      c.beginPath(); c.ellipse(W / 2, y, rx, M.L > 12 ? Math.min(ry, 10) : ry, 0, 0, Math.PI * 2); c.stroke();
-      const every = Math.max(1, Math.ceil(16 / ((H * 0.76 - stageTop() - 10) / Math.max(1, M.L - 1)))); if (on || l % every === 0 || l === M.L - 1) { font(11, 500); c.fillStyle = on ? '#fff' : 'rgba(157,144,255,.8)'; c.textAlign = 'right'; c.textBaseline = 'middle'; c.fillText(`layer ${l + 1}`, W / 2 - rx - 10, y); }
-      c.restore();
-      const gap = (H * 0.76 - stageTop() - 10) / Math.max(1, M.L - 1), kn = knobsOf(l).slice(0, M.L > 12 ? 10 : 18), gr = clamp(Math.min(rx * 0.045, gap * 0.38), 2, 7); // the layer's knobs sit along the front of its ring
-      kn.forEach((v, k) => { const a = Math.PI * (0.08 + 0.84 * (k + 0.5) / kn.length), gx = W / 2 + Math.cos(a) * rx, gy = y + Math.sin(a) * (M.L > 12 ? Math.min(ry, 10) : ry); gauge(gx, gy, gr, v, alpha * (on ? 1 : 0.75), on); });
-    }
+  const KR = {}; // per layer and kind: a sample of its real weights, scaled by each grid's spread
+  function knobRow(l, kind, n) { const key = l + kind + n; if (KR[key]) return KR[key];
+    const re = kind === 'att' ? /^(q|k|v|o|qkv)$/ : /^(gate|up|down|fc|proj)$/, mats = Object.entries(M.mats.layers[l]).filter(([k, t]) => re.test(k) && t && t.length > 4096).map(([, t]) => t);
+    if (!mats.length) return (KR[key] = []);
+    mats.forEach(m => { if (!m.sc) { const a = Array.from(m.subarray(0, 65536), Math.abs).sort((x, y) => x - y); m.sc = a[Math.floor(a.length * 0.98)] || 1; } });
+    const tot = mats.reduce((a, m) => a + m.length, 0), out = [];
+    for (let k = 0; k < n; k++) { let at = Math.floor((k + 0.5) / n * tot), j = 0; while (at >= mats[j].length) at -= mats[j++].length; out.push(clamp(mats[j][at] / mats[j].sc, -1, 1)); }
+    return (KR[key] = out); }
+  function boardCam(g) { // the camera, so the cloud sits inside its panel
+    if (USER) return; const p = g.cloud, sc = Math.min(p.w, p.h) * 0.92; cam.z = sc / (Math.min(W, H) * 0.92); cam.x = 0.5 - (p.x + p.w / 2 - W / 2) / sc; cam.y = 0.5 - (p.y + p.h / 2 - H / 2) / sc; Object.assign(camTo, cam); }
+  function cloudPanel(g, watch, glow, path, top) { // the cloud, lit by a layer's chances, with the path of its best guess
+    const p = g.cloud; c.save(); c.beginPath(); c.roundRect(p.x, p.y, p.w, p.h, 10); c.clip();
+    c.fillStyle = 'rgba(255,255,255,.025)'; c.fillRect(p.x, p.y, p.w, p.h); drawCloudLayer(0.85, watch, glow); piecesOnCloud(0.9, 0);
+    if (path && path.length > 1) { c.strokeStyle = 'rgba(255,233,184,.75)'; c.lineWidth = 1.5; c.beginPath(); let first = true; path.forEach(id => { if (!onMap(id)) return; const [x, y] = scr(MAP.x[id], MAP.y[id]); first ? c.moveTo(x, y) : c.lineTo(x, y); first = false; }); c.stroke(); }
+    if (top && onMap(top.id)) { const [x, y] = scr(MAP.x[top.id], MAP.y[top.id]); dot(x, y, 5, '#ffe9b8', `${M.tok.piece(top.id)} ${pct(top.p)}`, 1); }
+    c.restore(); c.save(); c.strokeStyle = 'rgba(255,255,255,.12)'; c.lineWidth = 1; c.beginPath(); c.roundRect(p.x, p.y, p.w, p.h, 10); c.stroke(); c.restore();
+    label(p.x + 8, p.y + 12, 'the cloud: what it would say if it stopped here', 'rgba(255,255,255,.5)', 1, 10.5);
+  }
+  const bandRows = g => { const h = g.bh / M.L; return { h, two: h >= 30, gr: clamp(h * (h >= 30 ? 0.14 : 0.3), 2, 7), labelW: g.bw > 520 ? 132 : 0 }; };
+  function band(g, l, lit, sweepA, sweepF, alpha) { // one layer: its attention knobs (top row) and feed-forward knobs (bottom row), lit as the ball passes
+    const { h, two, gr, labelW } = bandRows(g), y0 = g.top + l * h, x1 = g.bx + 62, x2 = g.bx + g.bw - 8 - labelW, n = Math.max(6, Math.min(26, Math.floor((x2 - x1) / (gr * 2.8))));
+    c.save(); c.globalAlpha = alpha; c.fillStyle = lit ? 'rgba(255,92,138,.08)' : 'rgba(157,144,255,.05)'; c.strokeStyle = lit ? '#ff5c8a' : 'rgba(157,144,255,.35)'; c.lineWidth = lit ? 1.5 : 1;
+    if (lit) { c.shadowColor = '#ff5c8a'; c.shadowBlur = 14; }
+    c.beginPath(); c.roundRect(g.bx, y0 + 1, g.bw, h - 2, 6); c.fill(); c.stroke(); c.restore();
+    const every = Math.max(1, Math.ceil(14 / h)); if (lit || l % every === 0 || l === M.L - 1) label(g.bx + 8, y0 + h / 2, `layer ${l + 1}`, lit ? '#fff' : 'rgba(199,184,255,.85)', alpha, 11);
+    const rows = two ? [['att', y0 + h * 0.3, sweepA], ['ff', y0 + h * 0.7, sweepF]] : [['att', y0 + h * 0.5, Math.max(sweepA, sweepF)]];
+    rows.forEach(([kind, y, sw]) => { const kn = knobRow(l, kind, n); kn.forEach((v, k) => { const x = x1 + (k + 0.5) * (x2 - x1) / n, on = sw > 0 && (k + 0.5) / n <= sw, fresh = on && (k + 0.5) / n > sw - 0.14; gauge(x, y, gr * (fresh ? 1.4 : 1), v, alpha * (on ? 1 : 0.65), on); }); });
+    if (two && h >= 44 && g.bw > 520) { label(x1 - 4, y0 + h * 0.3, 'attention', 'rgba(255,255,255,.35)', alpha, 9, 'right'); label(x1 - 4, y0 + h * 0.7, 'feed-fwd', 'rgba(255,255,255,.35)', alpha, 9, 'right'); }
+    hit(g.bx + g.bw / 2, y0 + h / 2, 0, layerTip(l), g.bw, h);
+  }
+  // one moment of the descent: the ball on layer lyr, u of the way through it (drops onto the band, runs along it past
+  // the knobs, and leaves at the right; the knobs light up as it passes; the cloud relights with that layer's guess)
+  function layerPass(w, lyr, u, sc, t, fast) {
+    const g = boardGeom(); boardCam(g); const L = M.L, { h, two, labelW } = bandRows(g);
+    const watch = w.rec.layers[lyr].watch, prev = lyr ? w.rec.layers[lyr - 1].watch : null, glowIn = seg(u, 0.7, 1), done = u >= 0.85;
+    cloudPanel(g, glowIn > 0 ? watch : prev, glowIn > 0 ? 0.6 * glowIn : (prev ? 0.6 : 0), w.rec.layers.slice(0, lyr + (done ? 1 : 0)).map(q => q.lens[0].id), done ? lensOf(w, lyr) : lyr ? lensOf(w, lyr - 1) : null);
+    for (let l = 0; l < L; l++) { const past = l < lyr, cur = l === lyr; band(g, l, cur, past ? 1 : cur ? seg(u, 0.15, 0.5) : 0, past ? 1 : cur ? seg(u, 0.5, 0.85) : 0, 1); }
+    const x1 = g.bx + 62, x2 = g.bx + g.bw - 8 - labelW, rad = clamp(h * 0.42, 10, 34), drop = ei(seg(u, 0, 0.15)), run = seg(u, 0.15, 0.85);
+    const y = lyr ? lerp(bandY(g, lyr - 1), bandY(g, lyr), drop) : lerp(g.top - rad, bandY(g, 0), drop), x = run > 0 ? lerp(x1 + 10, x2 - 10, eo(run)) : (lyr ? lerp(x2 - 10, x1 + 10, drop) : x1 + 10);
+    const from = lyr ? w.rec.layers[lyr - 1].vec.xout : w.rec.layers[0].vec.xin, to = w.rec.layers[lyr].vec.xout, m = eo(seg(u, 0.5, 0.85)), vec = from.map((v, i) => lerp(v, to[i], m));
+    if (u > 0.15 && u < 0.5 && !fast) threads([x, y], lyr, t, 0.6 * Math.sin(seg(u, 0.15, 0.5) * Math.PI));
+    ball(x, y, rad, vec, sc, 1);
+    // the peek after each layer, at the band's right end
+    for (let l = 0; l <= lyr; l++) { const a = l < lyr ? 0.75 : seg(u, 0.85, 1); if (a <= 0) continue; const gs = w.rec.layers[l].lens, txt = (labelW && two && (L <= 8 || l === lyr) ? gs.slice(0, 2) : gs.slice(0, 1)).map(q => `${M.tok.piece(q.id)} ${pct(q.p)}`).join('  ');
+      font(11, 600); const tw = c.measureText(txt).width + 10, ly = labelW ? g.top + (l + 0.5) * h : g.top + (l + 1) * h - 8; c.save(); c.globalAlpha = a; c.fillStyle = 'rgba(7,8,13,.8)'; c.fillRect(g.bx + g.bw - 6 - tw, ly - 8, tw, 16); c.restore(); label(g.bx + g.bw - 10, ly, txt, l === lyr ? '#fff' : '#c9b8ff', a, 11, 'right'); }
   }
   function label(x, y, txt, color, alpha, size = 13, align = 'left') { c.save(); c.globalAlpha = alpha; font(size, 600); c.fillStyle = color; c.textAlign = align; c.textBaseline = 'middle'; c.shadowColor = 'rgba(0,0,0,.9)'; c.shadowBlur = 8; c.fillText(txt, x, y); c.restore(); }
   const vecScale = () => { const w = R.words[0].rec, all = w.layers.flatMap(q => Array.from(q.vec.xout, Math.abs)).sort((a, b) => a - b); return all[Math.floor(all.length * 0.985)] || 1; };
@@ -307,10 +344,10 @@ textarea { width: 100%; box-sizing: border-box; font: 500 18px/1.4 var(--mono); 
   // what tapping a thing on the stage shows
   const nbCache = {}; const nbr = id => nbCache[id] || (nbCache[id] = M.neighbors(id, 4).map(n => `${M.tok.piece(n.id)} ${n.sim.toFixed(2)}`));
   const headPulls = j => { const ly = R.words[0].rec.layers[0], Tn = R.n; return Array.from({ length: ly.heads }, (_, h) => ly.attn[h * Tn + j]); };
-  const pieceTip = i => `<b>${esc(piece(i))}</b><small>piece #${R.ids[i]} · neighbours in the cloud: ${esc(nbr(R.ids[i]).join(', '))}</small>` + (SCENES[scene].k === 'listen' && i < R.n - 1 ? `<small>attention from each head: ${headPulls(i).map((w, h) => `<span class="sw" style="background:hsl(${hhue(h, headPulls(i).length)},90%,65%)"></span>${pct(w)}`).join(' ')}</small>` : '');
+  const pieceTip = i => `<b>${esc(piece(i))}</b><small>piece #${R.ids[i]} · neighbours in the cloud: ${esc(nbr(R.ids[i]).join(', '))}</small>` + (SCENES[scene].k === 'listen' && i < R.n - 1 ? `<small>weight from each head: ${headPulls(i).map((w, h) => `<span class="sw" style="background:hsl(${hhue(h, headPulls(i).length)},90%,65%)"></span>${pct(w)}`).join(' ')}</small>` : '');
   const chanceTip = cd => `<b>${esc(M.tok.piece(cd.id))}</b><small>chance ${pct(cd.full)} of all ${nf(M.V)} pieces · score ${cd.logit.toFixed(1)}</small>`;
   const layerTip = l => { const w = R.words[0], q = w.rec.layers[l], g = q.lens, Tn = R.n; let top = Tn > 1 ? 1 : 0; const a = new Float32Array(Tn); for (let h = 0; h < q.heads; h++) for (let jj = 0; jj < Tn; jj++) a[jj] += q.attn[h * Tn + jj] / q.heads; for (let jj = top + 1; jj < Tn - 1; jj++) if (a[jj] > a[top]) top = jj;
-    return `<b>layer ${l + 1}</b><small>if it stopped here: ${g.slice(0, 3).map(x => `${esc(M.tok.piece(x.id))} ${pct(x.p)}`).join(', ')}</small><small>listened most to “${esc(piece(top))}” (${pct(a[top])}) · ${nf(layerKnobs(l))} knobs</small>`; };
+    return `<b>layer ${l + 1}</b><small>if it stopped here: ${g.slice(0, 3).map(x => `${esc(M.tok.piece(x.id))} ${pct(x.p)}`).join(', ')}</small><small>most attention weight on “${esc(piece(top))}” (${pct(a[top])}, heads averaged) · ${nf(layerKnobs(l))} knobs</small>`; };
   const layerKnobs = l => Object.values(M.mats.layers[l]).reduce((a, t) => a + ((t && t.length) || 0), 0);
   const above = (watch, p) => { let n = 0; for (let i = 0; i < watch.length; i++) if (pOfQ(watch[i]) >= p) n++; return n; };
   const topList = (w, k) => { const lg = w.logits, ids = Array.from(lg.keys()).sort((a, b) => lg[b] - lg[a]).slice(0, k); let mx = -Infinity; for (const v of lg) if (v > mx) mx = v; let z = 0; for (const v of lg) z += Math.exp(v - mx); return ids.map(id => [id, Math.exp(lg[id] - mx) / z]); };
@@ -330,12 +367,12 @@ textarea { width: 100%; box-sizing: border-box; font: 500 18px/1.4 var(--mono); 
       more: () => `<p>Every token in the dictionary has its own row of <b>${M.D} numbers</b>, its embedding. The rows were set during training and never change now: the cloud is frozen. Tokens that appeared in the same kinds of places got similar rows, so they sit near each other. It comes from how a word is <i>used</i>, not how it sounds or is spelled.</p><p>Your text has become ${R.n} points in this cloud. Everything that follows is arithmetic on those points.</p><h4>Your tokens and their nearest neighbours</h4>${table(R.ids.map((id, i) => [esc(piece(i)), esc(nbr(id).map(x => x.split(' ')[0]).join(' · '))]))}<p class="pic">The map is flat (made with t-SNE) and the real cloud has ${M.D} directions, so distances on it are rough. The number after a neighbour above (in the tooltips) is how closely the two addresses point the same way: 1 = identical.</p>`,
       enter() { cam.z = 0.55; camTo.x = 0.5; camTo.y = 0.5; camTo.z = 1; },
       draw(t) { drawCloudLayer(seg(t, 0, 900) * 0.9, null, 0); flyToCloud(t); } },
-    { k: 'listen', lbl: 'Listening back', cap: () => `Before guessing, the newest token, “${piece(R.n - 1)}”, listens back to the earlier ones and blends in the ones that matter. This is attention.`, sub: () => `The threads are numbers: ${R.words[0].rec.layers[0].heads} heads × ${R.n - 1} earlier tokens = ${R.words[0].rec.layers[0].heads * (R.n - 1)} attention weights, worked out from your tokens' numbers by layer 1's own knobs. Thicker, more weight; one colour per head. This is the only step whose mixing depends on what you typed. Tap a token.`, dur: 3600,
-      more: () => { const ly = R.words[0].rec.layers[0], Tn = R.n; const rows = Array.from({ length: ly.heads }, (_, h) => { let best = Tn > 1 ? 1 : 0; for (let jj = 1; jj < Tn - 1; jj++) if (ly.attn[h * Tn + jj] > ly.attn[h * Tn + best]) best = jj; return [`<span class="sw" style="background:hsl(${hhue(h, ly.heads)},90%,65%)"></span>head ${h + 1}`, `listens most to “${esc(piece(best))}”`, pct(ly.attn[h * Tn + best])]; });
-        return `<p><b>Attention</b>: the newest token compares its numbers with every earlier token's numbers and gets a weight for each, adding up to 100%. Then it blends in the earlier tokens by those weights. A <b>head</b> is one set of fixed knobs that does this in its own way; this model has ${ly.heads} heads per layer, so ${ly.heads} different blends are made and added together. The threads are those weights, one colour per head.</p><h4>Layer 1, for “${esc(piece(Tn - 1))}”</h4>${table(rows)}<p class="pic">The first token, <code>${esc(piece(0))}</code>, gets ${pct(headPulls(0).reduce((a, b) => a + b, 0) / ly.heads)} on average: models park spare attention there (a resting spot), so it is drawn thin. The knobs themselves never move; only the weights, which come from your tokens, change from text to text.</p>`; },
+    { k: 'listen', lbl: 'Listening back', cap: () => `Before guessing, the newest token, “${piece(R.n - 1)}”, compares itself with every earlier token and pulls in a weighted mix of them. This is attention (“listening back” is our picture for it).`, sub: () => { const h = R.words[0].rec.layers[0].heads; return `A head is one set of fixed knobs. It turns the newest token into a query (what it is looking for) and every earlier token into a key (what that token can be matched on) and a value (what it hands over). Query × key gives a score per earlier token; softmax turns the scores into weights that add up to 100%; the head's result is the values added up by those weights. ${h} heads do this at once, each with its own knobs, and their results are added onto the token. The threads are the weights: ${h} × ${R.n - 1} = ${h * (R.n - 1)} numbers. Thicker, more weight. Tap a token.`; }, dur: 3600,
+      more: () => { const ly = R.words[0].rec.layers[0], Tn = R.n; const rows = Array.from({ length: ly.heads }, (_, h) => { let best = Tn > 1 ? 1 : 0; for (let jj = 1; jj < Tn - 1; jj++) if (ly.attn[h * Tn + jj] > ly.attn[h * Tn + best]) best = jj; return [`<span class="sw" style="background:hsl(${hhue(h, ly.heads)},90%,65%)"></span>head ${h + 1}`, `most weight on “${esc(piece(best))}”`, pct(ly.attn[h * Tn + best])]; });
+        return `<p><b>What attention does, step by step.</b> For each head: (1) the newest token's ${M.D} numbers are multiplied by the head's <i>query</i> knobs, giving a short list, the query. (2) Every earlier token's numbers were multiplied by the head's <i>key</i> knobs and <i>value</i> knobs when it was read, giving a key and a value per token, kept in the cache. (3) The query is compared with each key: multiply pair by pair and add up, one score per earlier token. (4) Softmax turns the scores into weights that add up to 100%: these are the threads. (5) The head's result is the values added up by those weights. (6) All ${ly.heads} heads' results are joined, multiplied by the <i>output</i> knobs, and added onto the newest token's numbers. Nothing is sent or looked up; it is multiplication and addition over the numbers already in memory.</p><p>“Head 1 most weight on ·a 30%” means: in head 1, 30% of the 100% went to the token “·a”, so 30% of head 1's result is “·a”'s value. Heads differ because their knobs differ; what each one ends up responding to was set in training, not chosen by anyone.</p><h4>Layer 1, for “${esc(piece(Tn - 1))}”</h4>${table(rows)}<p class="pic">The first token, <code>${esc(piece(0))}</code>, gets ${pct(headPulls(0).reduce((a, b) => a + b, 0) / ly.heads)} on average: models park spare weight there (a resting spot), so it is drawn thin. The knobs themselves never move; only the weights, which come from your tokens' numbers, change from text to text.</p>`; },
       enter() { const b = bounds(labelled()); camTo.x = b.cx; camTo.y = b.cy; camTo.z = clamp(0.55 / Math.max(b.w, b.h, 0.08), 1.2, 4); },
       draw(t) { drawCloudLayer(0.55, null, 0); piecesOnCloud(1, 1); const [x, y] = scr(...piecePos(R.n - 1)); threads([x, y], 0, t, seg(t, 300, 1200)); ball(x, y, 30 + 10 * seg(t, 0, 600), R.words[0].rec.layers[0].vec.xin, vecScale(), seg(t, 0, 600)); if (DETAIL) headLegend(); } },
-    { k: 'layers', lbl: 'Through every layer', cap: () => `Then its numbers go through ${M.L} layers of fixed knobs, set in training and never moved by your words.`, sub: () => `Each ring is one layer: ${nf(layerKnobs(0))} knobs in memory, a few of them drawn as gauges. The spoked ball is the token's ${M.D} numbers being pushed through them. After each layer we peek at what it would say; the model itself only scores once, at the end. Tap a ring.`, dur: () => M.L * PER() + 900,
+    { k: 'layers', lbl: 'Through every layer', cap: () => `Then its numbers pass through ${M.L} layers of fixed knobs, set in training and never moved by your words. Watch the knobs light up as it goes.`, sub: () => `Each band is one layer: ${nf(layerKnobs(0))} knobs in memory, a sample of them drawn as gauges (top row: the attention heads' knobs; bottom row: the feed-forward knobs every token goes through on its own). The ball is the token's ${M.D} numbers; every knob it passes multiplies one of them. Beside it, the cloud lights up with what the model would say if it stopped after that layer. Tap a band or a dot.`, dur: () => M.L * PER() + 900,
       more: () => { const w = R.words[0]; return `<p>The ring of spokes is the piece's <b>${M.D} numbers</b>: orange out for above zero, blue in for below. Every layer changes them a little: listen back (attention), then push them through the layer's own knobs (the feed-forward block). ${nf(w.rec.layers.reduce((a, _, l) => a + layerKnobs(l), 0))} knobs in all, none of them moved by your words.</p><h4>Its best guess after each layer</h4>${table(w.rec.layers.map((q, l) => [`layer ${l + 1}`, q.lens.slice(0, 3).map(x => `${esc(M.tok.piece(x.id))} ${pct(x.p)}`).join(' · ')]))}<p class="pic">The guess after each layer is a peek we take by running the model's final scoring early (the "logit lens"). Early layers are not built to be read this way, so their guesses can look odd.</p>`; },
       enter() { camTo.x = 0.5; camTo.y = 0.52; camTo.z = 1; },
       draw(t) { descent(t); } },
@@ -354,12 +391,22 @@ textarea { width: 100%; box-sizing: border-box; font: 500 18px/1.4 var(--mono); 
   ];
   const EXAMPLES = ['dragonfruit', 'Timothy', 'unbelievable', 'spaceship', 'grandmother']; // rare words, cut live by the real tokenizer
   const stageX = () => { const sw = Math.min(W, 1000); return [(W - sw) / 2 + 20, sw - 40]; }; // the stage's left edge and width: centred, never wider than 1000px
+  const GRID = { q: 'query', k: 'key', v: 'value', o: 'output', qkv: 'query, key and value (one grid)', gate: 'gate', up: 'up', down: 'down', fc: 'up', proj: 'down', ln1: 'rescaling before attention', ln2: 'rescaling before the feed-forward', ln: 'rescaling' };
+  function partInfo(kind, l) { // the tooltip for a part of the memory block
+    const bytes = n => `${nf(n * 4)} bytes here (4 per number)`;
+    if (kind === 'E') { const tied = !(M.mats.Eout && M.mats.Eout !== M.mats.E); return `<b>the embedding table</b><small>${nf(M.V)} rows × ${M.D} numbers = ${nf(M.mats.E.length)} · ${bytes(M.mats.E.length)}</small><small>row r holds token r's numbers; the cloud on the next screen is this table laid out flat</small>${tied ? '<small>at the end it is used again to score every token: this design shares it as the output table</small>' : ''}`; }
+    if (kind === 'P') return `<b>the position table</b><small>${nf(M.mats.Pos.length / M.D)} rows × ${M.D} numbers = ${nf(M.mats.Pos.length)} · ${bytes(M.mats.Pos.length)}</small><small>one row per place in the text (1st token, 2nd, …), added to the token's own row so the model knows where it is: the GPT-2 design's way of putting word order in</small>`;
+    if (kind === 'O') return `<b>the output table</b><small>${nf(M.V)} rows × ${M.D} numbers = ${nf(M.mats.Eout.length)} · ${bytes(M.mats.Eout.length)}</small><small>compared with the final numbers to score every token; this design keeps it separate from the embedding table</small>`;
+    const g = M.mats.layers[l], att = [], ff = [], other = [];
+    for (const [k, t] of Object.entries(g)) { if (!t || !t.length) continue; const row = `${GRID[k.replace(/b$/, '')] || k}${/b$/.test(k) && k !== 'qkvb' ? ' bias' : (k.endsWith('b') ? ' bias' : '')}: ${nf(t.length)}`; if (/^(q|k|v|o|qkv)b?$/.test(k)) att.push(row); else if (/^(gate|up|down|fc|proj)b?$/.test(k)) ff.push(row); else other.push(row); }
+    return `<b>layer ${l + 1}</b><small>${nf(layerKnobs(l))} knobs · ${bytes(layerKnobs(l))}</small><small>attention, ${M.H} heads (query, key, value and output grids): ${att.join(' · ')}</small><small>feed-forward (the knobs each token goes through on its own): ${ff.join(' · ')}</small>${other.length ? `<small>${other.join(' · ')}</small>` : ''}`;
+  }
   function memoryScene(t) { // the model as one block of numbers, filling up; then your tokens' rows read out of the table, one at a time
     const [x0, bw] = stageX();
-    const segs = [['the embedding table', M.mats.E.length, '#2fc6d8']].concat(M.mats.Pos ? [['positions', M.mats.Pos.length, '#f2a93b']] : []).concat(Array.from({ length: M.L }, (_, l) => [`layer ${l + 1}`, layerKnobs(l), '#9d90ff'])).concat(M.mats.Eout && M.mats.Eout !== M.mats.E ? [['the output table', M.mats.Eout.length, '#2fc6d8']] : []);
+    const segs = [['the embedding table', M.mats.E.length, '#2fc6d8', 'E']].concat(M.mats.Pos ? [['positions', M.mats.Pos.length, '#f2a93b', 'P']] : []).concat(Array.from({ length: M.L }, (_, l) => [`layer ${l + 1}`, layerKnobs(l), '#9d90ff', l])).concat(M.mats.Eout && M.mats.Eout !== M.mats.E ? [['the output table', M.mats.Eout.length, '#2fc6d8', 'O']] : []);
     const tot = M.weightBytes / 2, by = stageTop() + 22, bh = clamp(H * 0.05, 26, 44), fill = eo(seg(t, 0, 1400)); let x = x0;
-    font(11, 500); c.textAlign = 'left'; c.textBaseline = 'bottom'; c.fillStyle = 'rgba(255,255,255,.6)'; c.fillText(`${nf(Math.round(tot * fill))} numbers in memory`, x0, by - 8);
-    segs.forEach(([name, n, col], i) => { const w = bw * n / tot, a = clamp((fill * tot - (x - x0) / bw * tot) / n, 0, 1); if (a <= 0) return;
+    font(11, 500); c.textAlign = 'left'; c.textBaseline = 'bottom'; c.fillStyle = 'rgba(255,255,255,.6)'; c.fillText(`${nf(Math.round(tot * fill))} numbers in memory` + (fill >= 1 ? ' · tap any part' : ''), x0, by - 8);
+    segs.forEach(([name, n, col, kind], i) => { const w = bw * n / tot, a = clamp((fill * tot - (x - x0) / bw * tot) / n, 0, 1); if (a <= 0) return; hit(x + w / 2, by + bh / 2, 0, partInfo(kind, kind), Math.max(w, 10), bh);
       c.save(); c.globalAlpha = i === 0 ? 0.6 + 0.3 * (t > 1500 ? 0.5 + 0.5 * Math.sin(t / 260) : 0) : 0.45; c.fillStyle = col; c.fillRect(x, by, Math.max(1, (w - 2) * a), bh);
       if (w * a > 44) { c.globalAlpha = 1; c.fillStyle = '#07080d'; font(10, 600); c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(name, x + w * a / 2, by + bh / 2); }
       c.restore(); x += w; });
@@ -403,7 +450,7 @@ textarea { width: 100%; box-sizing: border-box; font: 500 18px/1.4 var(--mono); 
     const ly = R.words[0].rec.layers[0], Tn = R.n, x = 14, lh = ly.heads > 8 ? 14 : 18, y0 = H - 92 - env() - ly.heads * lh;
     for (let h = 0; h < ly.heads; h++) { let best = Tn > 1 ? 1 : 0; for (let jj = 1; jj < Tn - 1; jj++) if (ly.attn[h * Tn + jj] > ly.attn[h * Tn + best]) best = jj;
       c.save(); c.fillStyle = `hsl(${hhue(h, ly.heads)},90%,65%)`; c.beginPath(); c.arc(x + 5, y0 + h * lh, 4, 0, Math.PI * 2); c.fill(); c.restore();
-      label(x + 16, y0 + h * lh, `head ${h + 1} listens most to “${piece(best)}” ${pct(ly.attn[h * Tn + best])}`, '#eef0fa', 0.9, 12); }
+      label(x + 16, y0 + h * lh, `head ${h + 1}: ${pct(ly.attn[h * Tn + best])} of its weight on “${piece(best)}”`, '#eef0fa', 0.9, 12); }
   }
   const env = () => parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sab') || 0) || 0;
   // ---- scene helpers ----
@@ -432,17 +479,7 @@ textarea { width: 100%; box-sizing: border-box; font: 500 18px/1.4 var(--mono); 
   function bounds(only) { let x0 = 1, y0 = 1, x1 = 0, y1 = 0; for (let i = 0; i < R.n; i++) { if (only && !only.has(i)) continue; const [x, y] = piecePos(i); x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); } return { cx: (x0 + x1) / 2, cy: (y0 + y1) / 2, w: x1 - x0, h: y1 - y0 }; }
   function topBounds() { let x0 = 1, y0 = 1, x1 = 0, y1 = 0; for (const cd of R.words[0].cands) { if (!onMap(cd.id)) continue; const x = MAP.x[cd.id], y = MAP.y[cd.id]; x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); } return { cx: (x0 + x1) / 2, cy: (y0 + y1) / 2, w: x1 - x0, h: y1 - y0 }; }
   function topLabels(alpha, k = 5) { const w = R.words[0], list = k > 5 ? topList(w, k).map(([id, p]) => ({ id, full: p, logit: w.logits[id] })) : w.cands; list.forEach((cd, i) => { if (!onMap(cd.id)) return; const [x, y] = scr(MAP.x[cd.id], MAP.y[cd.id]); dot(x, y, 5 + 6 * Math.sqrt(cd.full), i ? '#ffd58a' : '#ffe9b8', `${M.tok.piece(cd.id)} ${pct(cd.full)}`, alpha); hit(x, y, 16, chanceTip(cd)); }); }
-  function descent(t) { // the ball falls ring by ring; at each ring its spokes morph to that layer's numbers and the cloud relights
-    const w = R.words[0], L = M.L, per = PER(), sc = vecScale(), lyr = Math.min(L - 1, Math.floor(t / per)), u = seg(t - lyr * per, 0, per);
-    const watch = w.rec.layers[lyr].watch, prev = lyr ? w.rec.layers[lyr - 1].watch : null;
-    drawCloudLayer(0.3, watch, 0.6 * seg(u, 0.35, 0.8)); if (prev && u < 0.35) drawCloudLayer(0, prev, 0.6 * (1 - u / 0.35));
-    rings(0.9, u > 0.3 ? lyr : -1);
-    const y = lerp(lyr ? ringY(lyr - 1) : ringY(0) - 90, ringY(lyr), ei(seg(u, 0, 0.35))), rad = Math.min(W, H) * 0.13;
-    if (u > 0.3 && u < 0.7) { const [bx] = [W / 2]; threads([bx, y], lyr, t, 0.55 * Math.sin(seg(u, 0.3, 0.7) * Math.PI)); }
-    const from = lyr ? w.rec.layers[lyr - 1].vec.xout : w.rec.layers[0].vec.xin, to = w.rec.layers[lyr].vec.xout, m = eo(seg(u, 0.35, 0.8)), vec = from.map((v, i) => lerp(v, to[i], m));
-    ball(W / 2, y, rad, vec, sc, 1);
-    for (let l = 0; l <= lyr; l++) { const g = lensOf(w, l), a = l < lyr ? 0.5 : seg(u, 0.5, 0.9); if (a > 0 && (M.L <= 8 || l === lyr || l % Math.max(1, Math.ceil(M.L / 6)) === 0)) lensLabel(l, DETAIL && (M.L <= 8 || l === lyr) ? w.rec.layers[l].lens.slice(0, 3).map(x => `${M.tok.piece(x.id)} ${pct(x.p)}`).join('  ') : `${M.tok.piece(g.id)} ${pct(g.p)}`, l === lyr ? '#fff' : '#c9b8ff', a); }
-  }
+  function descent(t) { const w = R.words[0], per = PER(), sc = vecScale(), lyr = Math.min(M.L - 1, Math.floor(t / per)), u = seg(t - lyr * per, 0, per); layerPass(w, lyr, u, sc, t, false); }
   function dice(t, w, alpha) { // the five on a ring, sized by chance; a marker spins, slows, and lands on the real pick
     const cx = W / 2, cy = Math.max(H * 0.5, stageTop() + Math.min(W, H) * 0.3 + 40), R0 = Math.min(W, H, 1000) * 0.3, n = w.cands.length;
     const spin = seg(t, 900, 2800), turns = 3 + w.pick / n, ang = -Math.PI / 2 + eo(spin) * turns * Math.PI * 2, landed = t > 2800;
@@ -464,12 +501,9 @@ textarea { width: 100%; box-sizing: border-box; font: 500 18px/1.4 var(--mono); 
     const done = R.words.slice(0, Math.min(R.words.length, k + 1 + (u > 0.95 ? 1 : 0)));
     $('#sentence').hidden = false; $('#sentence').innerHTML = esc(R.text) + done.map(x => `<b>${esc(x.text)}</b>`).join('');
     if (t < 900 || k + 1 >= R.words.length) { drawCloudLayer(0.3, null, 0); return; } // before the first drop, and after the last word
-    // the loop in miniature for the next word: descent (0..0.55), lights (0.55..0.75), dice (0.75..1)
-    if (u < 0.55) { const L = M.L, v = seg(u, 0, 0.55), lyr = Math.min(L - 1, Math.floor(v * L)), uu = seg(v * L - lyr, 0, 1), sc = vecScale();
-      drawCloudLayer(0.3, w.rec.layers[lyr].watch, 0.5); rings(0.8, lyr);
-      const y = lerp(lyr ? ringY(lyr - 1) : ringY(0) - 60, ringY(lyr), ei(uu)); ball(W / 2, y, Math.min(W, H) * 0.11, w.rec.layers[lyr].vec.xout, sc, 1);
-      const g = lensOf(w, lyr); lensLabel(lyr, `${M.tok.piece(g.id)} ${pct(g.p)}`, '#fff', 1);
-    } else if (u < 0.75) { drawCloudLayer(0.8, w.rec.layers[M.L - 1].watch, 1); }
+    // the loop in miniature for the next word: descent (0..0.6), lights (0.6..0.75), dice (0.75..1)
+    if (u < 0.6) { const L = M.L, v = seg(u, 0, 0.6), lyr = Math.min(L - 1, Math.floor(v * L)), uu = seg(v * L - lyr, 0, 1), sc = vecScale(); layerPass(w, lyr, uu, sc, t, true); }
+    else if (u < 0.75) { const g = boardGeom(); boardCam(g); cloudPanel(g, w.rec.layers[M.L - 1].watch, 1, null, lensOf(w, M.L - 1)); for (let l = 0; l < M.L; l++) band(g, l, false, 1, 1, 0.5); }
     else { drawCloudLayer(0.25, null, 0); dice(seg(u, 0.75, 1) * 3400, w, 1); }
   }
   const esc = s => String(s).replace(/[&<>]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[ch]));
@@ -536,7 +570,7 @@ textarea { width: 100%; box-sizing: border-box; font: 500 18px/1.4 var(--mono); 
   const up = e => {
     PT.delete(e.pointerId); if (!drag) return; const tapped = !drag.moved; drag = PT.size ? drag : null; if (PT.size) return;
     if (!tapped) return;
-    let best = null, bd = 1e9; for (const h of HIT) { const d = Math.hypot(e.clientX - h.x, e.clientY - h.y); if (d < h.r + 12 && d < bd) { bd = d; best = h; } }
+    let best = null, bd = 1e9; for (const h of HIT) { const d = h.w ? (Math.abs(e.clientX - h.x) <= h.w / 2 && Math.abs(e.clientY - h.y) <= h.h / 2 ? 0 : 1e9) : Math.hypot(e.clientX - h.x, e.clientY - h.y); if (d < h.r + 12 && d < bd) { bd = d; best = h; } }
     const tip = $('#tip');
     if (!best && MAP && CLOUD_SCENES.has(SCENES[scene].k)) { // any dot of the cloud
       const [ux, uy] = unitAt(e.clientX, e.clientY), id = nearestToken(ux, uy, 14 / (Math.min(W, H) * 0.92 * cam.z));
