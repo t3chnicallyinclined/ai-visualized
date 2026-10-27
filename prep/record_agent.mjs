@@ -1,4 +1,4 @@
-// Records the three agent examples from the real model, so agent.html can play them at once on any device
+// Records the three agent examples from the real model, so the main page's Agent mode can play them at once on any device
 // (writes agent-runs.js). The model always takes its most likely token, so a live run gives the same events.
 // Needs playwright-core and a Chrome or Chromium. Serve the repository folder over http first, then:
 //   CHROME=/path/to/chrome node prep/record_agent.mjs http://localhost:8000/ [model folder URL]
@@ -13,7 +13,7 @@ const b = await chromium.launch({ executablePath: process.env.CHROME });
 const ctx = await b.newContext();
 if (modelBase) await ctx.addInitScript(base => { window.LLM_BASE = { 'qwen2.5-0.5b-instruct': base }; }, modelBase);
 const p = await ctx.newPage(); p.on('pageerror', e => console.error('page error:', e.message));
-await p.goto(new URL('agent.html', site).href); await p.waitForFunction(() => window.__agentPage);
+await p.goto(new URL('index.html?mode=agent', site).href); await p.waitForFunction(() => window.__agentPage);
 const data = await p.evaluate(async () => {
   const A = window.AGENT, m = await LLM.load(A.KEY, () => {}), page = window.__agentPage; page.setModel(m);
   const TOOL_ID = m.tok.encode('<tool_call>')[0], ids = new Set([TOOL_ID]), r5 = x => Math.round(x * 1e5) / 1e5;
@@ -43,6 +43,6 @@ const data = await p.evaluate(async () => {
   return { model: m.meta.repo + '@' + m.meta.rev, L: m.L, weightBytes: m.weightBytes, toolId: TOOL_ID, dials: A.dials(m).map(r => r.map(r5)), partTokens: parts.map(t => m.tok.encode(t).length), pieces, texts, runs, exp };
 });
 await b.close();
-writeFileSync(new URL('../agent-runs.js', import.meta.url), `// Recorded by prep/record_agent.mjs from ${data.model}: every event the real model produced for the three\n// examples in agent.html (tokens, chances, attention, logit lens, shell results). Do not edit by hand.\nwindow.AGENT_RUNS = ${JSON.stringify(data)};\n`);
+writeFileSync(new URL('../agent-runs.js', import.meta.url), `// Recorded by prep/record_agent.mjs from ${data.model}: every event the real model produced for the three\n// examples in the main page's Agent mode (tokens, chances, attention, logit lens, shell results). Do not edit by hand.\nwindow.AGENT_RUNS = ${JSON.stringify(data)};\n`);
 for (const [k, r] of Object.entries(data.runs)) console.log(k, r.events.length, 'events:', JSON.stringify(r.events.filter(e => e.t === 'done' || e.t === 'result').map(e => e.r || e.reply)));
 console.log('exp', JSON.stringify(data.exp));

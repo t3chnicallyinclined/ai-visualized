@@ -2,7 +2,7 @@
 
 A visualization of a language model writing, one token at a time, with the real numbers on screen.
 
-**Try it:** [guided walk-through](https://t3chnicallyinclined.github.io/ai-visualized/) · [Explorer](https://t3chnicallyinclined.github.io/ai-visualized/explore.html) · [agent, step by step](https://t3chnicallyinclined.github.io/ai-visualized/agent.html) · [kids and classroom](https://t3chnicallyinclined.github.io/ai-visualized/kids.html)
+**Try it:** [guided walk-through](https://t3chnicallyinclined.github.io/ai-visualized/) · [Explorer](https://t3chnicallyinclined.github.io/ai-visualized/explore.html) · [agent, step by step](https://t3chnicallyinclined.github.io/ai-visualized/?mode=agent) · [kids and classroom](https://t3chnicallyinclined.github.io/ai-visualized/kids.html)
 
 Plain HTML and JavaScript, no build step and no server. The models run in your browser and nothing you type leaves it. The first visit downloads a 30 MB model.
 
@@ -18,11 +18,11 @@ An agent is the same machine with a person next to it: a program that reads the 
 
 ## The pages
 
-**Guided walk-through** (`index.html`) — one run of a real model, slowed down and lit one step at a time: words into pieces, pieces into numbers, one layer close up, every layer, the wall of lights, the dice, repeat.
+**Guided walk-through** (`index.html`) — one run of a real model, slowed down and lit one step at a time, in two modes. **Write**: words into pieces, each piece a spot in the cloud, one layer close up, every layer, the wall of lights, the dice, repeat. **Agent**: the same steps on Qwen2.5-0.5B-Instruct, plus the ones only an agent has (marked *agent* on the page).
 
 **Explorer** (`explore.html`) — the whole loop on one board, read top to bottom. Type, tokenize, embed, layers, unembed, choose, detokenize, repeat. Around it: a map of the model's vocabulary that lights up after each layer (the logit lens), one token's trip through a single layer with every multiplication recomputed from the weights, every parameter drawn one square per number, nine real Pythia training checkpoints from random knobs to 300 billion tokens, and a family tree from *Attention Is All You Need* to Mamba.
 
-**Agent** (`agent.html`) — a real agent loop at reading speed. Qwen2.5-0.5B-Instruct gets a task and one tool, a pretend shell over three files. You watch the context tape, the layers, the attention, and the pipe from the model's words through the program into the shell and back. It is also where you can try to make it go rogue: told to send a file to the internet it announces it did, while "what actually happened" shows it never left. The examples play from recorded real runs so phones work; loading the full model runs it live.
+**Agent mode** (`index.html?mode=agent`; the old `agent.html` address opens it) — a real agent loop at reading speed. Qwen2.5-0.5B-Instruct gets a task and one tool, a pretend shell over three files. You watch the context tape, the layers, the attention, and the pipe from the model's words through the program into the shell and back. It is also where you can try to make it go rogue: told to send a file to the internet it announces it did, while "what actually happened" shows it never left. The examples play from recorded real runs so phones work; loading the full model runs it live.
 
 **Kids and classroom** (`kids.html`) — the same real model writing a story in five steps, then the myths tested against it: it is arithmetic, it is a machine, it does not know what is true, and it cannot act on its own. Part 2 adds a chat model and a web page a program repaints only when the reply contains an allowed colour word. Part 3 is the agent page. Notes for teachers by grade band.
 
@@ -71,10 +71,10 @@ Issues and pull requests welcome. No build step:
 
 | File | What it is |
 |---|---|
-| `index.html` | guided walk-through |
+| `index.html` | guided walk-through: Write mode and Agent mode |
 | `explore.html` | the Explorer (GSAP from a CDN for the board timeline) |
 | `kids.html` | kids and classroom version |
-| `agent.html` | step-by-step agent page |
+| `agent.html` | forwards the old agent address to Agent mode |
 | `llm.js` | the model engine, no libraries |
 | `agent.js` | agent loop, pretend shell, drawings |
 | `agent-runs.js` | recorded example runs (`prep/record_agent.mjs` remakes them) |

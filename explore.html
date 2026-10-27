@@ -338,7 +338,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
     <p><b>It's autocomplete:</b> a language model guesses the next word, adds it, and guesses again. Here a real one runs in your browser, and every number about its work comes from its real weights (pictures and reference figures are labelled).<span class="hmore"> Your prompt becomes numbers, falls through every layer of knobs, and lands in the token cloud, where the model's options light up and a dice roll picks one.</span> <a href="kids.html">A version for kids and classrooms</a> · <a href="https://github.com/t3chnicallyinclined/ai-visualized">Code on GitHub</a>.</p>
   </header>
 
-  <a class="agentbar" href="agent.html"><span class="ab-new">New</span><span class="ab-txt">Watch an AI agent work <em>· or make it go rogue</em></span><span class="ab-go" aria-hidden="true">→</span></a>
+  <a class="agentbar" href="index.html?mode=agent"><span class="ab-new">New</span><span class="ab-txt">Watch an AI agent work <em>· or make it go rogue</em></span><span class="ab-go" aria-hidden="true">→</span></a>
 
   <details class="pic" id="pic">
     <summary class="pichead"><h2 id="picT">The picture in one minute</h2><p>A machine with millions of glued knobs, and a cloud of words. Open it, then watch the real thing below.</p></summary>
@@ -2846,7 +2846,7 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
   $('#famBtn').addEventListener('click', () => { if (tl.isActive()) { tl.pause(); setPlayLabel(); } $('#family').showModal(); });
   $('#faClose').addEventListener('click', () => $('#family').close());
   // the agent has its own page
-  $('#agentBtn').addEventListener('click', () => { location.href = 'agent.html'; });
+  $('#agentBtn').addEventListener('click', () => { location.href = 'index.html?mode=agent'; });
   $('#lyClose').addEventListener('click', () => $('#layerDlg').close());
   $('#lyPrev').addEventListener('click', () => { LY.l--; lyRender(''); $('#layerDlg').scrollTop = 0; });
   $('#lyNext').addEventListener('click', () => { LY.l++; lyRender(''); $('#layerDlg').scrollTop = 0; });
