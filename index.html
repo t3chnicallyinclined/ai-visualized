@@ -105,6 +105,9 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
 .picks div { animation: pop .3s ease-out both; } .picks b { color: var(--pick); }
 .ctl { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: rgb(12 14 22 / .95); border-top: 1px solid var(--s-line); backdrop-filter: blur(8px); }
 .ctl .in { max-width: 1040px; margin: 0 auto; padding: 9px max(16px, env(safe-area-inset-left, 0px)) calc(9px + env(safe-area-inset-bottom, 0px)); display: flex; gap: 8px 12px; align-items: center; flex-wrap: wrap; }
+.cont { font-size: 16px; padding: 10px 22px; } .cont:not(:disabled) { animation: contpulse 1.6s ease-in-out infinite; } .cont:disabled { animation: none; }
+@keyframes contpulse { 50% { box-shadow: 0 0 0 6px rgb(255 92 138 / .25); } }
+.autol { font-size: 13px; color: var(--s-ink2); display: flex; gap: 6px; align-items: center; }
 .ctl .now { flex: 1 1 200px; min-width: 0; font: 600 14px var(--body); } .ctl .now small { display: block; font: 12px var(--mono); color: var(--s-ink2); }
 .speed { display: flex; gap: 4px; } .speed button { padding: 6px 10px; font: 500 13px var(--mono); } .speed button[aria-pressed="true"] { background: var(--s-ink); color: var(--s-bg); }
 @media (max-width: 700px) { .ctl .now { flex-basis: 100%; order: -1; } }
@@ -154,6 +157,7 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
 .cpipe li.on { border-color: var(--c-attn); background: rgb(255 92 138 / .12); } .cpipe li.on b { color: #fff; } .cpipe li.on span { color: #ffd0de; }
 .mpanel { margin-top: 14px; background: #0b0e19; border: 1px solid var(--s-line); border-radius: 14px; padding: 10px 12px; }
 .mhead { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.mhead .cont { margin-left: auto; } #mCont:not(:disabled) { position: fixed; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%); z-index: 30; font-size: 18px; padding: 12px 30px; box-shadow: 0 10px 30px rgb(0 0 0 / .6); } .mhead .mspeed[data-auto] + .cont { display: none; }
 .mhead h3 { margin: 0; font: 600 12px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--s-ink2); }
 #agentMode .mspeed button { font: 500 12px var(--mono); padding: 3px 9px; } #agentMode .mspeed button[aria-pressed="true"] { background: var(--s-ink); color: var(--s-bg); }
 .msteps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 8px; }
@@ -398,9 +402,11 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
   </div>
   <p class="note">Everything here is real: the pieces, the numbers, the knobs, the listening (attention, averaged over every head of the layer), the guesses after each layer, the scores and the dice. The model engine (<a href="https://github.com/t3chnicallyinclined/ai-visualized/blob/main/llm.js">llm.js</a>) is checked against the official transformers implementation, number by number inside every layer (<a href="https://github.com/t3chnicallyinclined/ai-visualized/blob/main/verify/README.md">the checks and their results</a>). Only the speed is changed.</p>
 <div class="ctl" id="ctl" hidden><div class="in">
-  <button type="button" id="play" class="go">Pause</button>
+  <button type="button" id="cont" class="go cont" disabled>Continue ▶</button>
+  <button type="button" id="play" class="go" hidden>Pause</button>
   <div class="speed" role="group" aria-label="Speed"><button type="button" data-sp="0.5" aria-pressed="false">0.5×</button><button type="button" data-sp="1" aria-pressed="true">1×</button><button type="button" data-sp="2" aria-pressed="false">2×</button><button type="button" data-sp="6" aria-pressed="false">fast</button></div>
   <div class="now" id="now">Ready<small id="nowSub"></small></div>
+  <label class="autol"><input type="checkbox" id="auto"> Autoplay</label>
 </div></div>
 
   </div>
@@ -426,7 +432,7 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
       </div>
     </div>
     <div class="mpanel" id="mpanel">
-      <div class="mhead"><h3>Inside the model, one piece at a time</h3><div class="mspeed" role="group" aria-label="Speed"><button type="button" data-sp="2.5">slow</button><button type="button" data-sp="1" aria-pressed="true">normal</button><button type="button" data-sp="0.25">fast</button></div></div>
+      <div class="mhead"><h3>Inside the model, one piece at a time</h3><div class="mspeed" role="group" aria-label="Speed"><button type="button" data-sp="step" aria-pressed="true">step by step</button><button type="button" data-sp="1">play</button><button type="button" data-sp="0.25">fast</button></div><button type="button" class="go cont" id="mCont" disabled>Continue ▶</button></div>
       <div class="msteps">
         <div class="mstep" data-k="pieces"><h4><i>1</i>Your words become pieces</h4><div class="mbig" id="mCount">0</div><div class="mtail" id="mTail"></div><p class="mnote" id="mPiecesNote">everything it reads: the hidden instructions, your task, and its reply so far</p></div>
         <div class="mstep" data-k="layers"><h4><i>2</i>Through every layer</h4><div class="mlay" id="mLay"></div><p class="mnote" id="mLayNote">24 layers of fixed knobs</p></div>
@@ -507,10 +513,12 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
   <p class="note">Everything here is real: the examples play back recorded runs of this same page (they come out the same live, because the model always takes its most likely token), the model is Qwen2.5-0.5B-Instruct (checked number by number against the official transformers implementation: <a href="https://github.com/t3chnicallyinclined/ai-visualized/blob/main/verify/README.md">the checks</a>), every token it writes is its most likely next token after Qwen's published repetition penalty, the attention and the logit lens are its own numbers, and in the chat every command runs on a real Linux computer emulated in this tab (v86, with a Linux built for this page: <a href="https://github.com/t3chnicallyinclined/ai-visualized/tree/main/linux">what is in it</a>). The slow step-by-step walk-through uses a small pretend shell in agent.js with the same three files; for these examples both print exactly the same. Only the speed is changed: the model works faster than you can read, so the page shows each step slowly. Source: <a href="https://github.com/t3chnicallyinclined/ai-visualized/blob/main/agent.js">agent.js</a>.</p>
 <div class="ctl" id="aCtl" hidden>
   <div class="in">
-    <button type="button" id="aPlay" class="go">Pause</button>
+    <button type="button" id="aCont" class="go cont" disabled>Continue ▶</button>
+    <button type="button" id="aPlay" class="go" hidden>Pause</button>
     <div class="speed" role="group" aria-label="Speed"><button type="button" data-sp="0.5" aria-pressed="false">0.5×</button><button type="button" data-sp="1" aria-pressed="true">1×</button><button type="button" data-sp="2" aria-pressed="false">2×</button><button type="button" data-sp="6" aria-pressed="false">fast</button></div>
     <div class="now" id="aNow">Ready<small id="aNowSub"></small></div>
     <label><input type="checkbox" id="approve"> Ask me before each command</label>
+    <label class="autol"><input type="checkbox" id="aAuto"> Autoplay</label>
   </div>
 </div>
 
@@ -550,6 +558,14 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
   // ---------- pacing ----------
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   async function beat(ms) { let left = ms / SPEED; while (left > 0) { if (paused) await new Promise(r => { unpause = r; }); const dt = Math.min(left, 40); await sleep(dt); left -= dt; } }
+  // step by step (the default): every reading pause waits for Continue (or Enter, Space, the right arrow); Autoplay
+  // waits the pause out instead. Animations in between still play.
+  let STEP = true, cont = null;
+  const goW = () => { if (cont) { const r = cont; cont = null; r(); } };
+  async function slide(ms) { if (!STEP) return beat(ms); $('#cont').disabled = false; $('#now').firstChild.textContent = 'Read this, then press Continue'; await new Promise(r => { cont = r; }); $('#cont').disabled = true; }
+  $('#cont').addEventListener('click', goW);
+  $('#auto').addEventListener('change', e => { STEP = !e.target.checked; $('#play').hidden = STEP; $('#cont').hidden = !STEP; goW(); });
+  addEventListener('keydown', e => { if ($('#ctl').hidden || !cont || /INPUT|TEXTAREA|SELECT|BUTTON/.test(e.target.tagName)) return; if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowRight') { e.preventDefault(); goW(); } });
   $('#play').addEventListener('click', () => { paused = !paused; $('#play').textContent = paused ? 'Play' : 'Pause'; if (!paused && unpause) { unpause(); unpause = null; } });
   document.querySelectorAll('#ctl .speed button').forEach(b => b.addEventListener('click', () => { SPEED = +b.dataset.sp; document.querySelectorAll('#ctl .speed button').forEach(x => x.setAttribute('aria-pressed', x === b)); }));
   const NAMES = { pieces: 'Your words become pieces', sounds: 'Each piece gets its spot in the cloud', one: 'One layer, up close', all: 'Through every layer', lights: 'The wall of lights', dice: 'The weighted dice', again: 'Again, word by word' };
@@ -661,7 +677,7 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
     // 1 pieces
     focus('pieces', `The model can't read letters. First its tokenizer cuts your words into pieces it knows: ${n} pieces here, each with its number in a dictionary of ${nf(M.V)} pieces.` + (M.meta.bos != null ? ' The first one, <s>, just marks the start.' : ''));
     for (let i = 0; i < n; i++) { const c = document.createElement('span'); c.className = 'chip'; c.textContent = piece(ids[i]); const s = document.createElement('small'); s.textContent = '#' + ids[i]; c.appendChild(s); $('#chips').appendChild(c); await beat(220); }
-    await beat(2600);
+    await slide(2600);
 
     // 2 sounds
     focus('sounds', `Each piece looks up its row in the embedding table: a list of ${M.D} numbers, set during training. Here is every number of every row, as colour: orange above zero, blue below.`);
@@ -670,7 +686,7 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
     drawCloud($('#cloud0'), null, marks, null);
     await beat(1200);
     cap('sounds', `Those ${M.D} numbers are the piece's address: its spot in the cloud. Pieces used in similar ways get similar rows, so they sit close together. This list is what goes into the layers, one list per piece.`);
-    await beat(2800);
+    await slide(2800);
 
     // 3 one layer up close (layer 1, the last piece)
     const rec = res.rec, ly0 = rec.layers[0], w0 = meanAtt(ly0), focusPiece = piece(ids[last]);
@@ -682,18 +698,18 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
       $('#lookChips').appendChild(c); await beat(120);
     }
     if (last > 1 && w0[0] >= 0.1) cap('one', `Layer 1 of ${L}. The last piece, “${focusPiece}”, listens back to the pieces before it (pink bars, averaged over the layer's ${ly0.heads} heads). The first piece takes ${pct(w0[0])} of its attention: models park spare attention on the first piece (an “attention sink”), so the bars leave it out of their scale.`);
-    await beat(3000);
+    await slide(3000);
     const grid = mainGrid(0), knobsN = layerKnobs(0); let ks = 0; for (let k = 0; k < 400; k++) ks = Math.max(ks, Math.abs(grid[(k * 7919) % grid.length]));
     cap('one', `Then its list of numbers goes through this layer's knobs: ${nf(knobsN)} of them in layer 1. Each one multiplies a number and they are added up, row by row. Nothing you typed moved a single one.`);
     for (let k = 0; k < 24; k++) { $('#knobs').insertAdjacentHTML('beforeend', knob(grid[(k * 104729) % grid.length] / ks * 2)); await beat(60); }
     $('#knobNote').textContent = `24 of layer 1's ${nf(knobsN)} knobs, at their real settings (a weight is just a number; the needle shows its sign and size).`;
-    await beat(2200);
+    await slide(2200);
     const v = ly0.vec || {}, before = v.xin || M.embedding(ids[last], M.D), after = v.xout || before;
     const scale = Array.from(after, Math.abs).sort((a, b) => a - b)[Math.floor(after.length * 0.98)] || 1;
     $('#beforeAfter').appendChild(rowEl('before', Array.from(before), scale)); await beat(700);
     $('#beforeAfter').appendChild(rowEl('after', Array.from(after), scale));
     $('#baNote').textContent = `The listening and the knobs add changes onto its numbers, so it leaves the layer at a slightly different spot. If the model stopped right here, its best guess would be “${piece(ly0.lens[0].id)}” (${pct(ly0.lens[0].p)}).`;
-    await beat(4200);
+    await slide(4200);
 
     // 4 every layer
     focus('all', `The same happens in every layer, one after another: ${L} layers here. Watch the last piece's numbers change, and what it would say after each layer.`);
@@ -716,7 +732,7 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
     }
     rowsEls.forEach(e => { e.classList.remove('on'); e.classList.add('done'); });
     cap('all', `After the last layer it points at “${piece(fin)}”` + (from < L - 1 ? `, and that guess first appeared in layer ${from + 1}.` : '. That guess only appeared at the very end.'));
-    await beat(3200);
+    await slide(3200);
 
     // 5 the wall of lights (unembed): final norm, then one score per piece of the dictionary
     focus('lights', `Now every one of the ${nf(M.V)} pieces in the dictionary gets a score: the final list of numbers is compared with that piece's row in the output table (multiply number by number, add it all up). Here are the brightest lights.`);
@@ -729,17 +745,17 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
     drawCloud($('#cloud2'), rec.layers[L - 1].watch, top5.slice(0, 3).map(x => [x.id, `${piece(x.id)} ${pct(Math.exp(lg[x.id] - lmx) / z)}`]), null);
     let above = 0; for (let i = 0; i < lg.length; i++) if (Math.exp(lg[i] - lmx) / z >= 0.01) above++;
     $('#lightsNote').textContent = `Scores turned into chances with softmax, over all ${nf(M.V)} pieces. Only ${above} of them have a chance of 1% or more; the rest of the wall is almost dark.`;
-    await beat(4200);
+    await slide(4200);
 
     // 6 the dice
     focus('dice', `The dice: this page keeps the 5 brightest lights, and the temperature (${T}) decides how loaded the dice is. These are the chances it rolls with.`);
     const { cands, pick } = LLM.sampleTopK(lg, 5, T, Math.random);
     cands.forEach((c, i) => { const d = document.createElement('div'); d.className = 'light'; d.style.setProperty('--g', Math.min(1, c.p * 1.2 + 0.05).toFixed(2)); d.innerHTML = `<i></i><span></span><span class="b"><em style="width:${(c.p * 100).toFixed(1)}%"></em></span><span>${pct(c.p)}</span>`; d.children[1].textContent = piece(c.id); $('#chances').appendChild(d); });
-    await beat(2000);
+    await slide(2000);
     $('#die').classList.remove('roll'); void $('#die').offsetWidth; $('#die').classList.add('roll'); await beat(900);
     $('#die').textContent = pick + 1; $('#chances').children[pick].style.outline = '2px solid var(--pick)';
     $('#diceNote').textContent = `It rolled “${piece(cands[pick].id)}”` + (pick ? `, not the top one: a dimmer light won this time.` : ', the brightest light.');
-    await beat(3200);
+    await slide(3200);
 
     // 7 again
     focus('again', 'The picked piece is added to the sentence, and the whole thing runs again for the next piece: pieces, spots, every layer, the wall of lights, the dice.');
@@ -747,7 +763,7 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
     const addPick = (id, p, i) => { const d = document.createElement('div'); d.innerHTML = `word ${i}: <b></b> · its chance on the dice ${pct(p)}`; d.querySelector('b').textContent = piece(id); $('#picks').appendChild(d); };
     addPick(cands[pick].id, cands[pick].p, 1);
     let next = cands[pick].id, out = M.tok.decode([next], true);
-    await beat(2600);
+    await slide(2600);
     for (let k = 2; k <= 8; k++) {
       res = await M.step(st, next, false);
       const r = LLM.sampleTopK(res.logits, 5, T, Math.random); next = r.cands[r.pick].id;
@@ -756,7 +772,7 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
       $('#sentence').innerHTML = esc(text) + `<span class="new">${esc(out)}</span>`; addPick(next, r.cands[r.pick].p, k);
       await beat(900);
     }
-    cap('again', 'That is all it ever does: one piece at a time, each one picked by a weighted dice from the lights.');
+    cap('again', 'That is all it ever does: one piece at a time, each one picked by a weighted dice from the lights.'); $('#cont').disabled = true;
     { // what the download is: the knobs, counted from this model's own tables
       const mt = M.mats, total = M.weightBytes / 2, tab = mt.E.length, outT = mt.Eout && mt.Eout !== mt.E ? mt.Eout.length : 0, posT = mt.Pos ? mt.Pos.length : 0;
       const parts = [['the cloud: one row per piece (embedding table)', tab, '#2fc6d8']];
@@ -799,6 +815,12 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
   // ---------- pacing: the model is fast; the page shows each step at reading speed ----------
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   async function beat(ms) { let left = ms / SPEED; while (left > 0) { if (paused) await new Promise(r => { unpause = r; }); const dt = Math.min(left, 40); await sleep(dt); left -= dt; } }
+  let STEP = true, cont = null;
+  const goA = () => { if (cont) { const r = cont; cont = null; r(); } };
+  async function slide(ms) { if (!STEP) return beat(ms); $('#aCont').disabled = false; await new Promise(r => { cont = r; }); $('#aCont').disabled = true; }
+  $('#aCont').addEventListener('click', goA);
+  $('#aAuto').addEventListener('change', e => { STEP = !e.target.checked; $('#aPlay').hidden = STEP; $('#aCont').hidden = !STEP; goA(); });
+  addEventListener('keydown', e => { if ($('#aCtl').hidden || !cont || /INPUT|TEXTAREA|SELECT|BUTTON/.test(e.target.tagName)) return; if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowRight') { e.preventDefault(); goA(); } });
   $('#aPlay').addEventListener('click', () => { paused = !paused; $('#aPlay').textContent = paused ? 'Play' : 'Pause'; if (!paused && unpause) { unpause(); unpause = null; } });
   document.querySelectorAll('#aCtl .speed button').forEach(b => b.addEventListener('click', () => { SPEED = +b.dataset.sp; document.querySelectorAll('#aCtl .speed button').forEach(x => x.setAttribute('aria-pressed', x === b)); }));
 
@@ -911,7 +933,7 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
   async function codeTakesReply(reply) { // the model's words drop into the function's input
     codeReset(); $('#incomingText').textContent = reply; $('#incoming').hidden = false; $('#incoming').classList.remove('drop');
     await beat(1600); $('#incoming').classList.add('drop'); await beat(700); $('#incoming').hidden = true;
-    codeOn('sig'); codeLit('reply'); codeVal('sig', `reply = ${qv(reply, 120)}`); await beat(1800);
+    codeOn('sig'); codeLit('reply'); codeVal('sig', `reply = ${qv(reply, 120)}`); await slide(1800);
   }
   codeReset();
   function filesView(before) {
@@ -959,18 +981,18 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
         if (firstTurn) {
           focus('task', 'This is what you asked. The agent program takes it from here.');
           for (const ch of task) { $('#bubble').textContent += ch; await beat(28); }
-          await beat(1400);
+          await slide(1400);
           focus('sys', 'First, the program puts its hidden instructions in front of your task. The model reads them as ordinary text.');
-          for (const sp of document.querySelectorAll('.sp')) { sp.classList.add('on'); await beat(2600); sp.classList.remove('on'); }
+          for (const sp of document.querySelectorAll('.sp')) { sp.classList.add('on'); await slide(2600); sp.classList.remove('on'); }
           capOf('sys').textContent = 'These words are why it will ask for the shell. Open “Why does a bit of text make it use a shell?” after the run to test it.';
-          await beat(1800);
+          await slide(1800);
           const sys = e.segs.find(s => s.kind === 'system'), usr = e.segs.find(s => s.kind === 'user');
           focus('ctx', `The program builds what the model will read: hidden instructions that describe its one tool, a shell (${sys.ids.length} tokens, the green squares), then your task (${usr.ids.length} tokens), then “assistant”: the model's turn.`);
         } else {
           round++;
           focus('back', null); $('#back').innerHTML = `The program wraps the shell's output in <b>&lt;tool_response&gt; … &lt;/tool_response&gt;</b> and adds it to the context: <b>${n} new tokens</b>. Nothing else changes. The model's knobs stay exactly the same; only what it reads grows.`;
           capOf('back').textContent = lastOut === '(no output)' ? 'The shell printed nothing, so the program sends back “(no output)”.' : `The shell printed ${lastOut.length} characters. They go back to the model.`;
-          await beat(3200);
+          await slide(3200);
           focus('ctx', `Round ${round}: the shell's output (teal) joins the end of the context. The model will read it next.`);
         }
         for (const s of e.segs) {
@@ -978,7 +1000,7 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
           if (s.kind === 'system') { S.sysEnd = S.toks.length; draw(); await beat(900); }
         }
         S.replyStart = S.toks.length; S.cur = -1; S.att = null; S.lens = null; S.readFrom = S.toks.length - n; S.readTo = S.readFrom; draw();
-        await beat(2200);
+        await slide(2200);
         focus('model', `The model reads the ${n} new tokens. Every token goes through all 24 layers, top to bottom; each layer has its own fixed knobs (the dials).`);
         reply = ''; $('#words').textContent = ''; $('#cands').innerHTML = ''; $('#look').innerHTML = ''; $('#gauge').textContent = '';
       } else if (e.t === 'read') {
@@ -986,7 +1008,7 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
       } else if (e.t === 'readDone') {
         S.readTo = S.readFrom + e.n; draw();
         capOf('model').textContent = (e.ms != null ? `Read ${e.n} new tokens in ${(e.ms / 1000).toFixed(1)} seconds.` : `Read ${e.n} new tokens.`) + ` The context now holds ${e.pos} tokens.`;
-        await beat(1600);
+        await slide(1600);
       } else if (e.t === 'decision') {
         S.lens = e.d.lens; S.readFrom = S.readTo = 0; draw();
         const lg = e.d.logits || []; let mx = -Infinity; for (let i = 0; i < lg.length; i++) if (lg[i] > mx) mx = lg[i];
@@ -994,20 +1016,20 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
         const fin = e.d.lens[23][0].id; let from = 23; for (let l = 23; l >= 0; l--) { if (e.d.lens[l][0].id === fin) from = l; else break; }
         $('#gauge').innerHTML = `The model gives &lt;tool_call&gt; (a request to use the shell) <b>${pct(pTool)}</b> as its first token; it always takes its most likely token.`;
         capOf('model').textContent = `Before writing anything, it decides: answer, or ask for the shell? The row under the layers shows what it would say if it stopped after each one. Its choice, “${view.tok.piece(fin)}”, only appears at layer ${from + 1}.`;
-        await beat(5200);
+        await slide(5200);
         focus('words', firstTurn ? 'Now it writes, one token at a time. Each token is its most likely next token.' : 'It writes again, now with the shell\'s output in front of it.');
-        await beat(1400);
+        await slide(1400);
       } else if (e.t === 'token') {
         const t = e.tok;
         $('#cands').innerHTML = t.cands.map((c, i) => `<div class="cand${i === 0 ? ' win' : ''}"><span>${esc(view.tok.piece(c.id))}</span><span class="b"><i style="width:${(c.full * 100).toFixed(1)}%"></i></span><span>${pct(c.full)}</span></div>`).join('');
-        if (t.end) { capOf('words').textContent = 'It writes <|im_end|>, its "I am done" token. The model can do nothing else: write, or stop writing.'; await beat(2200); continue; }
+        if (t.end) { capOf('words').textContent = 'It writes <|im_end|>, its "I am done" token. The model can do nothing else: write, or stop writing.'; await slide(2200); continue; }
         S.toks.push({ id: t.id, k: 'ai', p: view.tok.piece(t.id) }); S.cur = S.toks.length - 1; S.att = t.att; S.pulse++; draw();
         reply = t.sofar;
         const i = reply.indexOf('<tool_call>'), before2 = i < 0 ? reply : reply.slice(0, i), call = i < 0 ? '' : reply.slice(i);
         $('#words').innerHTML = esc(before2.slice(0, before2.length - (call ? 0 : t.text.length))) + (call ? `<span class="tc">${esc(call.slice(0, call.length - t.text.length))}</span>` : '') + `<span class="cur">${esc(t.text)}</span>`;
         const att = t.att, cand = []; for (let j = 1; j < Math.min(att.length, S.replyStart); j++) cand.push(j); cand.sort((a, b) => att[b] - att[a]);
         $('#look').innerHTML = cand.slice(0, 4).filter(j => att[j] > 0.004).map(j => `<span>${esc(S.toks[j].p)} · ${pct(att[j])}</span>`).join('');
-        if (t.k === 0 && view.tok.piece(t.id) === '<tool_call>') { capOf('words').textContent = 'Its first token is <tool_call>: the start of a request for the shell. A request is just more text.'; await beat(2600); }
+        if (t.k === 0 && view.tok.piece(t.id) === '<tool_call>') { capOf('words').textContent = 'Its first token is <tool_call>: the start of a request for the shell. A request is just more text.'; await slide(2600); }
         else if (/[0-9]/.test(t.text) && !call && !firstTurn) { capOf('words').textContent = `Writing “${t.text}”, its attention reaches back into the context: see where it looked.`; await beat(900); }
         await beat(call ? 260 : 200);
       } else if (e.t === 'calls') {
@@ -1016,30 +1038,30 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
         await codeTakesReply(e.reply);
         const m = /<tool_call>[\s\S]*?<\/tool_call>/.exec(e.reply);
         capOf('prog').textContent = 'Line 2: is there a <tool_call> … </tool_call> in the words?';
-        codeOn('match'); codeLit('call'); codeVal('match', m ? `call = ${qv(m[0], 120)}` : 'call = null  (no request found)'); await beat(2400);
+        codeOn('match'); codeLit('call'); codeVal('match', m ? `call = ${qv(m[0], 120)}` : 'call = null  (no request found)'); await slide(2400);
         if (!e.calls.length) {
           capOf('prog').textContent = 'No request, so line 3 ends the loop: these words are the answer.';
-          codeOn('none'); codeLit(null); codeVal('none', 'finish(reply): show the words as the answer and stop'); await beat(3000);
+          codeOn('none'); codeLit(null); codeVal('none', 'finish(reply): show the words as the answer and stop'); await slide(3000);
           continue;
         }
         const c = e.calls[0], cmd = c.args && c.args.command != null ? String(c.args.command) : ''; lastCmd = cmd;
         codeOn('none'); codeVal('none', 'call is not null, so keep going', ''); await beat(1200);
         capOf('prog').textContent = 'Line 4: read the JSON inside the request.';
         codeOn('parse'); codeLit('args');
-        codeVal('parse', c.error ? c.error : `name = "${c.name}"\nargs = ${JSON.stringify(c.args)}`); await beat(2400);
-        if (c.error) { capOf('prog').textContent = 'The request is broken, so nothing runs; the error goes back to the model.'; await beat(2200); continue; }
+        codeVal('parse', c.error ? c.error : `name = "${c.name}"\nargs = ${JSON.stringify(c.args)}`); await slide(2400);
+        if (c.error) { capOf('prog').textContent = 'The request is broken, so nothing runs; the error goes back to the model.'; await slide(2200); continue; }
         capOf('prog').textContent = 'Line 5: take out the command. This is the only part of the model\'s words that will ever touch the computer.';
-        codeOn('cmd'); codeLit('command'); codeVal('cmd', `command = ${qv(cmd)}`); await beat(2600);
+        codeOn('cmd'); codeLit('command'); codeVal('cmd', `command = ${qv(cmd)}`); await slide(2600);
         const askLine = lnEl('ask'); askLine.classList.toggle('off', !asking);
-        if (!asking) { codeOn('run'); codeLit('command'); capOf('prog').textContent = 'Line 7: hand the command to the shell, exactly as written, and wait for what it prints.'; codeVal('run', `shell.run(${qv(cmd)})  … waiting for the shell`, 'wait'); await beat(2200); }
+        if (!asking) { codeOn('run'); codeLit('command'); capOf('prog').textContent = 'Line 7: hand the command to the shell, exactly as written, and wait for what it prints.'; codeVal('run', `shell.run(${qv(cmd)})  … waiting for the shell`, 'wait'); await slide(2200); }
       } else if (e.t === 'ask') {
         focus('prog', 'Line 6: you asked to approve each command, so the program stops and waits for you.');
         const cmd = e.c.args && e.c.args.command != null ? String(e.c.args.command) : e.c.raw;
         codeOn('ask'); codeLit('command');
         const d = codeVal('ask', '', 'wait'); d.innerHTML = `<div class="ask">Run <b></b> in the shell?<br><button type="button" class="go">Allow</button><button type="button">Don’t allow</button></div>`; d.querySelector('b').textContent = cmd;
         const ok = await new Promise(res => { const [y, n] = d.querySelectorAll('button'); y.onclick = () => res(true); n.onclick = () => res(false); });
-        d.classList.remove('wait'); d.textContent = ok ? `youAllow(${JSON.stringify(cmd)}) → yes` : `youAllow(${JSON.stringify(cmd)}) → no: output = "The user did not allow this tool call."`; e.resolve(ok); await beat(1400);
-        if (ok) { codeOn('run'); capOf('prog').textContent = 'Line 7: hand the command to the shell, exactly as written, and wait for what it prints.'; codeVal('run', `shell.run(${qv(cmd)})  … waiting for the shell`, 'wait'); await beat(2000); }
+        d.classList.remove('wait'); d.textContent = ok ? `youAllow(${JSON.stringify(cmd)}) → yes` : `youAllow(${JSON.stringify(cmd)}) → no: output = "The user did not allow this tool call."`; e.resolve(ok); await slide(1400);
+        if (ok) { codeOn('run'); capOf('prog').textContent = 'Line 7: hand the command to the shell, exactly as written, and wait for what it prints.'; codeVal('run', `shell.run(${qv(cmd)})  … waiting for the shell`, 'wait'); await slide(2000); }
       } else if (e.t === 'result') {
         const cmd = e.c.args && e.c.args.command != null ? String(e.c.args.command) : (e.c.raw || '');
         lastOut = e.r;
@@ -1048,14 +1070,14 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
           focus('shell', `The command arrives in the shell, typed in by the program…`);
           await termType(cmd, e.r === '(no output)' ? '' : e.r); filesView();
           capOf('shell').textContent = e.r === '(no output)' ? `The shell ran it. It printed nothing${/^rm\b/.test(cmd) ? ': the files are gone' : ''}.` : 'The shell ran it and printed this. Everything it prints is text, like the model\'s words.';
-          await beat(2600);
+          await slide(2600);
           focus('prog', 'What the shell printed drops back into the waiting program.');
-          codeOn('run'); codeLit('output'); codeVal('run', `output = ${qv(e.r, 120)}`); await beat(2400);
-        } else { focus('prog', `The command did not run. The program sets output to: ${e.r}`); codeLit('output'); await beat(2200); }
+          codeOn('run'); codeLit('output'); codeVal('run', `output = ${qv(e.r, 120)}`); await slide(2400);
+        } else { focus('prog', `The command did not run. The program sets output to: ${e.r}`); codeLit('output'); await slide(2200); }
         capOf('prog').textContent = 'Line 8: wrap the output and add it to what the model reads.';
-        codeOn('push'); codeVal('push', `context += "<tool_response>\\n${short(e.r, 60).replace(/\n/g, '\\n')}\\n</tool_response>"`); await beat(2600);
+        codeOn('push'); codeVal('push', `context += "<tool_response>\\n${short(e.r, 60).replace(/\n/g, '\\n')}\\n</tool_response>"`); await slide(2600);
         capOf('prog').textContent = 'Line 9: ask the model to write again. Nobody pressed anything: this repeat is what “autonomous” means.';
-        codeOn('again'); codeLit(null); codeVal('again', 'askTheModelAgain() → round ' + (round + 1)); await beat(2600);
+        codeOn('again'); codeLit(null); codeVal('again', 'askTheModelAgain() → round ' + (round + 1)); await slide(2600);
       } else if (e.t === 'done' || e.t === 'stopped' || e.t === 'error') {
         if (e.t === 'error') { focus('done', 'Something went wrong: ' + e.e.message); break; }
         const now = A.SHELL.files(), ch = [];
@@ -1071,7 +1093,7 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
         break;
       }
     }
-    running = false; $('#aWalk').classList.remove('live'); document.querySelectorAll('#aRail li').forEach(li => li.classList.remove('on'));
+    running = false; $('#aCont').disabled = true; $('#aWalk').classList.remove('live'); document.querySelectorAll('#aRail li').forEach(li => li.classList.remove('on'));
     $('#aNow').firstChild.textContent = 'Finished'; $('#aNowSub').textContent = '';
   }
 
@@ -1114,7 +1136,7 @@ ${A.SYSTEM}<|im_end|>`; p.hidden = !p.hidden; } });
   'use strict';
   const $ = s => document.querySelector(s), A = window.AGENT, P = () => window.__agentPage, esc = A.esc, pct = A.pct, sleep = ms => new Promise(r => setTimeout(r, ms));
   const IM_END = 151645, MARK = id => id >= 151643 && id <= IM_END;
-  let pc = null, booting = null, busy = false, lastTask = null, SPEED = 1;
+  let pc = null, booting = null, busy = false, lastTask = null, SPEED = 1, STEP = true, cont = null;
   const term = $('#pcTerm');
   const onText = ch => { const f = ch.lastIndexOf('\f'); if (f >= 0) { term.textContent = ''; ch = ch.slice(f + 1); } term.textContent += ch; term.scrollTop = term.scrollHeight; };
   function machine() {
@@ -1136,7 +1158,12 @@ ${A.SYSTEM}<|im_end|>`; p.hidden = !p.hidden; } });
   const short = (t, n = 60) => (t.length > n ? t.slice(0, n - 1) + '…' : t).replace(/\n/g, ' ⏎ ');
   const lock = on => { busy = on; document.querySelectorAll('.cex, #chatGo, #chatIn, #pcReset').forEach(b => { b.disabled = on || (b.id === 'pcReset' && !pc); }); };
   const beat = ms => sleep(ms * SPEED);
-  document.querySelectorAll('.mspeed button').forEach(b => b.addEventListener('click', () => { SPEED = +b.dataset.sp; document.querySelectorAll('.mspeed button').forEach(x => x.setAttribute('aria-pressed', x === b)); }));
+  const goOn = () => { if (cont) { const r = cont; cont = null; r(); } };
+  // step by step: the run waits here until Continue (or Enter, Space, the right arrow)
+  async function gate(ms, where) { if (!STEP) return beat(ms); if (where) $(where).scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'nearest' }); $('#mCont').disabled = false; await new Promise(r => { cont = r; }); $('#mCont').disabled = true; }
+  $('#mCont').addEventListener('click', goOn);
+  addEventListener('keydown', e => { if (!cont || $('#agentMode').hidden || /INPUT|TEXTAREA|SELECT|BUTTON/.test(e.target.tagName)) return; if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowRight') { e.preventDefault(); goOn(); } });
+  document.querySelectorAll('.mspeed button').forEach(b => b.addEventListener('click', () => { STEP = b.dataset.sp === 'step'; SPEED = STEP ? 1 : +b.dataset.sp; if (STEP) $('.mspeed').removeAttribute('data-auto'); else $('.mspeed').setAttribute('data-auto', ''); goOn(); document.querySelectorAll('.mspeed button').forEach(x => x.setAttribute('aria-pressed', x === b)); }));
 
   // ---- the model panel ----
   const ctx = []; // every piece the model has read: { id, kind }
@@ -1196,8 +1223,8 @@ ${A.SYSTEM}<|im_end|>`; p.hidden = !p.hidden; } });
         e.segs.forEach(sg => sg.ids.forEach(id => ctx.push({ id, kind: MARK(id) ? 'mark' : sg.kind === 'system' ? 'sys' : sg.kind })));
         mstep('pieces'); tail(n); $('#mPiecesNote').textContent = turn === 1 ? `the hidden instructions, your task and the start of its reply: ${n} pieces` : `${n} new pieces: the output wrapped in <tool_response>, then its turn again`;
         $('#mCands').innerHTML = ''; $('#mPick').textContent = '';
-        await beat(1600);
-        mstep('layers'); $('#mLayNote').textContent = `all ${n} pieces go through all 24 layers at once`; await sweep(1400); await beat(500);
+        await gate(1600, '#mpanel');
+        mstep('layers'); $('#mLayNote').textContent = `all ${n} pieces go through all 24 layers at once`; await sweep(1400); await gate(500, '#mpanel');
       } else if (e.t === 'decision') { lens = e.d.lens;
       } else if (e.t === 'token') {
         const t = e.tok, slow = k < 3, d = slow ? 700 : 90; k++;
@@ -1207,18 +1234,18 @@ ${A.SYSTEM}<|im_end|>`; p.hidden = !p.hidden; } });
         mstep('layers'); const look = t.att ? lookedAt(t.att) : [];
         const from = await sweep(slow ? d * 1.6 : 0, k === 1 ? lens : null);
         $('#mLayNote').textContent = (k === 1 && lens ? `its best guess becomes the final pick at layer ${from + 1} of 24 (pink). ` : '') + (look.length ? 'listened back most to: ' + look.map(j => `“${piece(ctx[j].id)}”`).join(', ') : '');
-        if (k === 1) tail(0, look); await beat(slow ? d : d / 2);
+        if (k === 1) tail(0, look); if (k === 1) await gate(d, '#mpanel'); else await beat(slow ? d : d / 2);
         // 3: the wall of lights
-        mstep('lights'); lights(t.cands); await beat(slow ? d * 1.4 : d);
+        mstep('lights'); lights(t.cands); if (k === 1) await gate(d * 1.4, '#mpanel'); else await beat(slow ? d * 1.4 : d);
         // 4: the brightest light wins, and goes into the reply
         mstep('pick');
         if (t.end) { $('#mPick').className = 'mpick end'; $('#mPick').textContent = '<|im_end|>'; $('#mPickNote').textContent = 'its “I am done” token: the reply ends here'; await beat(1400); continue; }
         $('#mPick').className = 'mpick'; $('#mPick').textContent = piece(t.id); $('#mPickNote').textContent = 'no dice: an agent takes the top one every time';
         ctx.push({ id: t.id, kind: 'ai' });
         if (!bub) bub = msg('ai', ''); reply = t.sofar; wrote(bub, reply); stage('model', short(reply.slice(-40)));
-        await beat(slow ? d : d / 2);
+        if (k === 1) await gate(d, '#mpanel'); else await beat(slow ? d : d / 2);
       } else if (e.t === 'calls') {
-        if (e.calls.length) { const c = e.calls[0]; stage('prog', c.error ? c.error : 'found: ' + (c.args && c.args.command)); if (!c.error) msg('sys', `The program finds a &lt;tool_call&gt; in the model's words and takes out the command: <code>${esc(String(c.args.command))}</code>`); await beat(1400); }
+        if (e.calls.length) { const c = e.calls[0]; stage('prog', c.error ? c.error : 'found: ' + (c.args && c.args.command)); if (!c.error) msg('sys', `The program finds a &lt;tool_call&gt; in the model's words and takes out the command: <code>${esc(String(c.args.command))}</code>`); await gate(1400, '.chatgrid'); }
         else stage('answer', short(e.reply));
       } else if (e.t === 'ask') {
         const d2 = msg('sys warn', `Run <code>${esc(String(e.c.args && e.c.args.command))}</code> on the computer? <button type="button" class="go">Allow</button><button type="button">Don't allow</button>`);
@@ -1231,13 +1258,13 @@ ${A.SYSTEM}<|im_end|>`; p.hidden = !p.hidden; } });
         stage('back', out ? `${out.length} characters go back` : '“(no output)” goes back');
         msg('sys', out ? `Linux printed:\n<code>${esc(out.length > 400 ? out.slice(0, 399) + '…' : out)}</code>\nThe program wraps it in &lt;tool_response&gt; and gives it to the model to read.` : 'Linux printed nothing. The program sends back “(no output)”.');
         if (e.recorded != null && out !== (e.recorded === '(no output)' ? '' : e.recorded)) msg('sys warn', `(The recorded run read “${esc(short(e.recorded, 80))}” here; this Linux printed something different.)`);
-        await beat(1200); if (e.res) e.res(out);
+        await gate(1200, '.chatgrid'); if (e.res) e.res(out);
       } else if (e.t === 'done') { reply = e.reply; stage('answer', short(e.reply));
       } else if (e.t === 'stopped') { msg('sys warn', e.why === 'limit' ? 'The program stopped the loop after 5 rounds.' : 'Stopped.');
       } else if (e.t === 'error') { msg('sys warn', 'Something went wrong: ' + esc(e.e.message)); break;
       } else if (e.t === 'end') break;
     }
-    mstep(null);
+    mstep(null); $('#mCont').disabled = true;
     if (bub) bub.classList.add('final');
     const now = await files(), gone = before.filter(f => !now.includes(f)), added = now.filter(f => !before.includes(f));
     const sent = /sent|internet|upload/i.test(reply) && !ran.some(c => /curl|wget|scp|\bnc\b/.test(c));

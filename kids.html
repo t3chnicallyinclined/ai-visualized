@@ -46,8 +46,14 @@ textarea.grow { display: block; box-sizing: border-box; resize: none; overflow: 
 .rows { display: flex; flex-direction: column; gap: 6px; }
 .numrow { display: grid; grid-template-columns: 7em minmax(0, 1fr); gap: 10px; align-items: center; font: 700 17px var(--head); }
 .numrow canvas { width: 100%; height: 22px; border-radius: 6px; }
-.tunnels { display: flex; flex-direction: column; gap: 10px; margin: 12px 0 10px; }
-.tunnel { background: var(--soft); border-radius: 18px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; animation: pop .35s ease-out both; }
+.klayers { display: flex; flex-direction: column; gap: 10px; margin: 12px 0 10px; }
+.two-things { margin: 4px 0 10px; padding-left: 1.4em; } .two-things li { margin: 3px 0; }
+.snav { display: flex; align-items: center; justify-content: space-between; gap: 10px; position: sticky; bottom: 10px; z-index: 5; box-shadow: 0 8px 30px rgb(0 0 0 / .18); }
+.sdots { display: flex; gap: 8px; } .sdots i { width: 12px; height: 12px; border-radius: 50%; background: var(--line); } .sdots i.on { background: var(--purple); transform: scale(1.3); } .sdots i.done { background: var(--green); }
+.sdone { text-align: center; font-size: 17px; }
+.snav button { white-space: nowrap; } #snav .big { padding: 12px 26px; font-size: 20px; } @media (max-width: 600px) { .snav { padding: 10px 12px; gap: 6px; } #snav button { padding: 10px 14px; font-size: 16px; } #snav .big { padding: 10px 18px; font-size: 17px; } .sdots { gap: 5px; } .sdots i { width: 9px; height: 9px; } }
+.klayer.old { opacity: .55; }
+.klayer { background: var(--soft); border-radius: 18px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; animation: pop .35s ease-out both; }
 .thead { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font: 700 20px var(--head); color: var(--purple); } .thead small { font: 400 15px var(--body); color: var(--muted); }
 .trow { display: grid; grid-template-columns: 8.5em minmax(0, 1fr); gap: 10px; align-items: center; } .tl { font: 700 16px var(--head); color: var(--muted); }
 .look { display: flex; flex-wrap: wrap; gap: 5px; }
@@ -127,7 +133,7 @@ details.live { margin-top: 12px; } details.live summary { cursor: pointer; font-
 @media (max-width: 540px) {
   .step { grid-template-columns: 1fr; gap: 8px; } .num { width: 40px; height: 40px; font-size: 20px; }
   .g { grid-template-columns: 5.5em minmax(0, 1fr) 3.2em; gap: 8px; font-size: 17px; } .numrow { grid-template-columns: 4.5em minmax(0, 1fr); }
-  .trow { grid-template-columns: 1fr; gap: 4px; } .tunnel { padding: 10px 12px; }
+  .trow { grid-template-columns: 1fr; gap: 4px; } .klayer { padding: 10px 12px; }
 }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
@@ -136,7 +142,7 @@ details.live { margin-top: 12px; } details.live summary { cursor: pointer; font-
 <main>
   <header>
     <h1>How does an AI really work?</h1>
-    <p class="lead">An AI that writes is like the autocomplete on a phone, only much bigger: it guesses the next word, adds it, and guesses again. Let's look inside a real one while it writes a story, one word at a time. You will see that it is <b>a very good guesser, built by people</b>: numbers and a dice roll, no magic, no secret mind. The thinking is still yours. Then we'll give a real chat AI a command and see what "following a command" really means. Then let's see why it is still a powerful tool, and how to use it to <b>learn more, not think less</b>.</p>
+    <p class="lead">An AI that writes is a <b>guessing machine</b>. It guesses the next word, adds it, and guesses again. Let's look inside a real one while it writes a story. We'll go one step at a time: press <b>Next</b> when you're ready. You will see that it is numbers and a dice roll, made by people. No magic, and no secret mind. The thinking is still yours.</p>
     <p class="note">This AI is a small real model called TinyStories (15 million numbers, trained only on simple children's stories). It runs right here in your web browser: nothing you type is sent anywhere. The first visit downloads its numbers (30 MB). Grown-ups and teachers: <a href="explore.html">the full version</a> shows every detail, and all the code is <a href="https://github.com/t3chnicallyinclined/ai-visualized">on GitHub</a>.</p>
   </header>
 
@@ -158,8 +164,9 @@ details.live { margin-top: 12px; } details.live summary { cursor: pointer; font-
   <section class="card step" id="s1" hidden>
     <div class="num c1">1</div>
     <div>
-      <h2>Chop it into pieces</h2>
-      <p>The AI can't read letters. First it chops your words into pieces it knows, called <b>tokens</b>. Most pieces are whole words; long or rare words get split. Each piece has a number, like a page number in a giant dictionary of <b data-n="vocab">32,000</b> pieces. (The dot means "starts with a space". The first piece, <code>&lt;s&gt;</code>, is a special "start of story" marker the AI always gets first.)</p>
+      <h2>Cut the words into pieces</h2>
+      <p>The AI can't read letters. So first it cuts your words into <b>pieces</b>. Most pieces are whole words. Long or rare words get cut into smaller pieces. Each piece has a number, like a page in a giant dictionary of <b data-n="vocab">32,000</b> pieces.</p>
+      <p class="note">The dot means the piece starts with a space. The first piece, <code>&lt;s&gt;</code>, means "a story starts here". Grown-ups call the pieces <i>tokens</i>.</p>
       <div class="chips" id="chips"></div>
     </div>
   </section>
@@ -167,9 +174,9 @@ details.live { margin-top: 12px; } details.live summary { cursor: pointer; font-
   <section class="card step" id="s2" hidden>
     <div class="num c2">2</div>
     <div>
-      <h2>Turn each piece into a list of numbers</h2>
-      <p>Each piece looks up its own list of <b data-n="dim">288</b> numbers, which were set while the AI was being made. Here are the first 32 for each piece, as colours (blue = below zero, orange = above). Pieces used in similar ways get similar lists.</p>
-      <p>Think of the list as the word's <b>secret address</b> in a giant cloud of words, where words used in the same way live close together. It comes from how the word is used, not how you say it. So to the AI, <i>two</i> and <i>three</i> are neighbours, but <i>two</i> and <i>too</i> are not. Test it with the real AI:</p>
+      <h2>Give each piece its numbers</h2>
+      <p>Each piece gets its own list of <b data-n="dim">288</b> numbers. The numbers were set while the AI was being made.</p>
+      <p>Think of the list as the piece's <b>home address on a giant map of words</b>. Words that are used in the same way live close together. So <i>two</i> and <i>three</i> are neighbours. But <i>two</i> and <i>too</i> are not, even though they sound the same! Test it with the real AI:</p>
       <div class="start" style="margin:6px 0"><input id="sndA" value="cat" maxlength="16" aria-label="First word" style="flex:1 1 100px;min-width:0;font:600 18px var(--body);padding:8px 12px;border-radius:12px;border:2px solid var(--line);background:var(--card);color:var(--ink)"><input id="sndB" value="dog" maxlength="16" aria-label="Second word" style="flex:1 1 100px;min-width:0;font:600 18px var(--body);padding:8px 12px;border-radius:12px;border:2px solid var(--line);background:var(--card);color:var(--ink)"><button type="button" id="sndGo">Are they neighbours?</button></div>
       <p class="note" id="sndOut">Try <i>two / three</i>, then <i>two / too</i>.</p>
       <div class="rows" id="rows"></div>
@@ -179,11 +186,13 @@ details.live { margin-top: 12px; } details.live summary { cursor: pointer; font-
   <section class="card step" id="s3" hidden>
     <div class="num c3">3</div>
     <div>
-      <h2>Down through <span data-n="layers">6</span> tunnels of knobs</h2>
-      <p>Now the lists go down through <span data-n="layers">6</span> tunnels. This part is called a <b>transformer</b>. Each tunnel is full of <b>knobs</b>: about <b data-n="layerKnobs">6 million</b> in all, set while the AI was being made, and they <b>never move</b> while it writes. In every tunnel each piece does two things: it <b>looks back</b> at the earlier pieces and borrows from them (called <i>attention</i>), then it <b>works on its own numbers</b> (called <i>feed-forward</i>). Both are multiply-by-a-knob-and-add, millions of times.</p>
-      <p>Let's follow the <b>last piece</b> of your story (the dashed one). In each tunnel you'll see <b>which pieces it looked back at</b> (darker = more), <b>its numbers after the tunnel</b> (the same 32 as in step 2, changed by the knobs), and <b>what it would guess</b> if it stopped there.</p>
-      <div class="tunnels" id="tunnels" aria-live="polite"></div>
-      <p class="note">Nothing here is pretend: which pieces it looked at, how its numbers changed and the guess after each tunnel are the model's own numbers for your story. The earlier pieces went through the tunnels too; that is what the last piece looks back at. Many AIs park a lot of their looking on the <code>&lt;s&gt;</code> start marker: a known habit, a kind of resting spot. The AI's other <span data-n="tableKnobs">9 million</span> knobs are the dictionary lists from step 2, used again at the bottom.</p>
+      <h2>Go through <span data-n="layers">6</span> layers of dials</h2>
+      <p>Now the numbers go through <span data-n="layers">6</span> <b>layers</b>, one after another. Each layer is full of tiny <b>dials</b>, like volume knobs: about <b data-n="layerKnobs">6 million</b> in all. They were set while the AI was being made, and they <b>never move</b> while it writes.</p>
+      <p>Let's follow the <b>last piece</b> of your story. In every layer it does two things:</p>
+      <ol class="two-things"><li><b>It looks back</b> at the pieces before it, to see which ones matter most.</li><li><b>It mixes its numbers</b> through the layer's dials.</li></ol>
+      <p>Press <b>Next layer</b> to go down one layer at a time. Before you press, guess which piece it will look back at most!</p>
+      <div class="klayers" id="klayers" aria-live="polite"></div>
+      <p class="note">Nothing here is pretend: every number comes from the real AI, for your story. The first piece, <code>&lt;s&gt;</code>, often gets lots of looks: AIs use it as a resting spot, so we don't count it. In the first layers its guess is often just the word it is on: it hasn't worked anything out yet. Watch the guess change as it goes down. Grown-ups call this part a <i>transformer</i>; the looking back is <i>attention</i>.</p>
     </div>
   </section>
 
@@ -191,14 +200,14 @@ details.live { margin-top: 12px; } details.live summary { cursor: pointer; font-
     <div class="num c4">4</div>
     <div>
       <h2>Score every word, then roll the dice</h2>
-      <p>At the bottom, the AI gives every one of its <span data-n="vocab">32,000</span> pieces a score. Here are its top five. On this page the dice only rolls among these five, and the bars show each one's chance at the current slider setting: move the slider and watch the bars change. That's why it doesn't always pick the top piece!</p>
+      <p>After the last layer, the AI gives a score to every one of its <span data-n="vocab">32,000</span> pieces. Here are the top five. Then it rolls a dice to pick one. The bars show each piece's chance. Move the slider and watch the chances change. That's why it doesn't always pick the top piece!</p>
       <div class="guesses" id="guesses"></div>
       <div class="dicebox">
         <div class="die" id="die" aria-hidden="true">🎲</div>
         <button id="roll" type="button">Roll the dice</button>
         <label class="slider">careful <input id="temp" type="range" min="0" max="1.4" step="0.1" value="0.8" aria-label="How silly the dice is"> silly</label>
       </div>
-      <p class="note">"Careful" (all the way left) always picks the top piece. "Silly" flattens the chances, so surprising pieces win more often. Grown-ups call this slider the <i>temperature</i>.</p>
+      <p class="note">All the way to "careful", it always picks the top piece. "Silly" makes surprising pieces win more often. Grown-ups call this slider the <i>temperature</i>.</p>
     </div>
   </section>
 
@@ -206,16 +215,23 @@ details.live { margin-top: 12px; } details.live summary { cursor: pointer; font-
     <div class="num c5">5</div>
     <div>
       <h2>Again, and again, and again</h2>
-      <p>The picked piece is added to the story, and the whole thing runs again for the next one. That's all it does: one piece at a time.</p>
+      <p>The picked piece is added to the story. Then the whole thing runs again for the next piece: cut, numbers, layers, score, dice. That's all it ever does, one piece at a time.</p>
       <div class="story" id="story"></div>
       <p style="margin-top:10px"><button id="more" type="button">Write 20 more pieces</button></p>
       <p class="note" id="full" hidden>That's as long a story as this AI learned to write (it was trained on <span data-n="ctx">256</span> pieces at a time), so we stop here. Start a new one above!</p>
     </div>
   </section>
 
+  <nav class="card snav" id="snav" hidden aria-label="Steps">
+    <button type="button" id="sBack">◀ Back</button>
+    <div class="sdots" id="sdots" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+    <button type="button" class="big" id="sNext">Next ▶</button>
+  </nav>
+  <p class="note sdone" id="sdone" hidden>That's the whole machine! Keep scrolling: next, we give a real chat AI a command.</p>
+
   <section class="card" id="cmd" hidden>
     <h2>Part 2: Can it follow a command?</h2>
-    <p>The story AI above only continues stories. The AI helpers in apps answer questions and follow commands. Is that a different kind of machine? Let's test a real one: <b>SmolLM2</b>, a small chat AI made by Hugging Face (135 million knobs, 30 tunnels).</p>
+    <p>The story AI above only continues stories. The AI helpers in apps answer questions and follow commands. Is that a different kind of machine? Let's test a real one: <b>SmolLM2</b>, a small chat AI made by Hugging Face (135 million dials, in 30 layers).</p>
     <div id="cmdLoadBox">
       <button class="big" id="cmdLoad" type="button">Load the chat AI (269 MB)</button>
       <p class="note" style="margin-top:8px">It is 9 times bigger than the story AI, so it takes a while on school Wi-Fi and needs a computer or tablet with plenty of memory. It runs here in the browser too: nothing is sent anywhere.</p>
@@ -355,8 +371,8 @@ otherwise: do nothing</div></div>
     <summary>For teachers and parents</summary>
     <p>Everything on this page comes from a real model, <a href="https://huggingface.co/nickypro/tinyllama-15M" target="_blank" rel="noopener">TinyStories 15M</a> (trained by Andrej Karpathy on the <a href="https://arxiv.org/abs/2305.07759" target="_blank" rel="noopener">TinyStories</a> dataset of simple stories), running in the browser. The "pretend web page" in Part 2 and the shell in Part 3 are the pretend parts; every piece, number and chance of the model's work comes from the model. Ideas by grade:</p>
     <ul>
-      <li><b>K–2:</b> read steps 1, 4 and 5 aloud. Play "guess the next word" as a class, then roll the dice. Main idea: it picks one word at a time, like a game.</li>
-      <li><b>3–5:</b> all five steps, then the "Is it alive?" tests. In step 3, pause before each tunnel appears and guess which piece it will look back at most, then watch. Try careful vs silly. Main idea: it's numbers made by people, and it can be wrong.</li>
+      <li><b>K–2:</b> the page is written for readers of about 8 and up, so read it aloud: steps 1, 4 and 5. Play "guess the next word" as a class, then roll the dice. Main idea: it picks one word at a time, like a game.</li>
+      <li><b>3–5:</b> all five steps, then the "Is it alive?" tests. In step 3, before each "Next layer", have the class guess which piece it will look back at most. Try careful vs silly. Main idea: it's numbers made by people, and it can be wrong.</li>
       <li><b>4 and up:</b> Part 2, "Can it follow a command?" (a 269 MB download, best done once on the teacher's computer). Main ideas: a command is just more text in a hidden chat form; the chat AI follows it because it was trained on example conversations; and the AI only writes words, while programs written by people do the actions.</li>
       <li><b>5 and up:</b> Part 3, a real AI agent: "Watch it work" plays a recorded run of the real model straight away (works on phones and tablets); the live version is a 988 MB download, best on the teacher's computer, projected. Run "What is 23 times 47?" and follow the five steps round the loop together. Then, in the live version, tick "Ask me before each command" and say no: the class sees that the program, not the AI, decides what happens. Main idea: an "autonomous" agent is a loop that people wrote, and it can only use the tools people gave it.</li>
       <li><b>All grades:</b> "So who is the smart one here?": read it aloud, press "Try the dragon test", and ask "smarter at what?". Main idea: the AI's good guesses are borrowed from what people wrote and made relevant by attention over the whole context; asking, meaning, judging and caring are the student's.</li>
@@ -411,7 +427,7 @@ otherwise: do nothing</div></div>
     const cs = s / Math.sqrt(na * nb), pctv = Math.max(0, Math.round(cs * 100));
     out.textContent = `“${a}” and “${b}” match ${cs < 0 ? 'less than 0' : pctv} out of 100 (this page calls 45 and up neighbours). ` + (cs > 0.45 ? 'Neighbours in the AI’s cloud: they are used in similar ways.' : cs > 0.25 ? 'Not far apart.' : 'Far apart in the AI’s cloud, even if they sound the same to you.');
   });
-  // run the start of the story through the model; keep what each tunnel (layer) points to for the last piece
+  // run the start of the story through the model; keep what each layer points to for the last piece
   async function read(text) {
     const ids = [M.meta.bos].concat(M.tok.encode(text)), st = M.newState(); let res;
     for (let i = 0; i < ids.length; i++) res = await M.step(st, ids[i], i === ids.length - 1);
@@ -422,26 +438,50 @@ otherwise: do nothing</div></div>
     const c = cv.getContext('2d'), mx = Math.max(...vals.map(Math.abs)) || 1, w = W * dpr / vals.length;
     vals.forEach((v, i) => { const a = Math.min(1, Math.abs(v) / mx); c.fillStyle = v >= 0 ? `rgba(226,115,59,${0.15 + 0.85 * a})` : `rgba(61,123,224,${0.15 + 0.85 * a})`; c.fillRect(i * w, 0, Math.ceil(w), H * dpr); });
   }
-  // the tunnels: for the last piece, which earlier pieces each layer looked at (attention, averaged over the heads),
+  // one layer's card, for the last piece: which earlier pieces it looked back at (attention, averaged over the heads),
   // its numbers after the layer (the same 32 slots as step 2) and the guess if it stopped there (the logit lens). All real.
-  async function tunnels(rec, ids) {
-    const box = $('#tunnels'), L = M.L, T = ids.length; box.innerHTML = '';
-    for (let l = 0; l < L; l++) {
-      const ly = rec.layers[l], knobs = Object.values(M.mats.layers[l]).reduce((a, t) => a + ((t && t.length) || 0), 0);
-      const w = new Float32Array(T); if (ly.attn) for (let h = 0; h < ly.heads; h++) for (let j = 0; j < T; j++) w[j] += ly.attn[h * T + j] / ly.heads;
-      let top = Math.min(1, T - 1); for (let j = top + 1; j < T; j++) if (w[j] > w[top]) top = j; // not the first piece: AIs park spare attention there
-      const d = document.createElement('div'); d.className = 'tunnel';
-      d.innerHTML = `<div class="thead"><span>Tunnel ${l + 1}</span><small>${knobs.toLocaleString('en-US')} knobs</small></div><div class="trow"><span class="tl">looked back at</span><div class="look"></div></div><div class="trow"><span class="tl">its numbers now</span><canvas class="tstrip"></canvas></div><div class="trow"><span class="tl">guess so far</span><span class="tguess"></span></div>`;
-      const look = d.querySelector('.look');
-      ids.forEach((id, j) => { const c = document.createElement('span'); c.className = 'lk' + (j === top ? ' top' : '') + (j === T - 1 ? ' me' : ''); c.style.setProperty('--w', Math.min(1, w[j] / (w[top] || 1)).toFixed(3)); c.textContent = M.tok.piece(id); if (w[j] >= 0.1 || j === top) { const sm = document.createElement('small'); sm.textContent = pct(w[j]); c.appendChild(sm); } look.appendChild(c); });
-      const g = ly.lens[0], gw = M.tok.decode([g.id], true).trim() || '·';
-      d.querySelector('.tguess').textContent = `${gw}? (${pct(g.p)})`;
-      box.appendChild(d);
-      strip(d.querySelector('canvas'), Array.from((ly.vec && ly.vec.xout) || ly.first).slice(0, 32));
-      if (!reduce) d.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      await wait(900);
-    }
+  function layerCard(rec, ids, l) {
+    const L = M.L, T = ids.length, ly = rec.layers[l], knobs = Object.values(M.mats.layers[l]).reduce((a, t) => a + ((t && t.length) || 0), 0);
+    const w = new Float32Array(T); if (ly.attn) for (let h = 0; h < ly.heads; h++) for (let j = 0; j < T; j++) w[j] += ly.attn[h * T + j] / ly.heads;
+    let top = Math.min(1, T - 1); for (let j = top + 1; j < T; j++) if (w[j] > w[top]) top = j; // not the first piece: AIs park spare attention there
+    const d = document.createElement('div'); d.className = 'klayer';
+    d.innerHTML = `<div class="thead"><span>Layer ${l + 1} of ${L}</span><small>${knobs.toLocaleString('en-US')} dials</small></div><div class="trow"><span class="tl">looked back at (darker = more)</span><div class="look"></div></div><div class="trow"><span class="tl">its numbers now</span><canvas class="tstrip"></canvas></div><div class="trow"><span class="tl">if it stopped here, it would guess</span><span class="tguess"></span></div>`;
+    const look = d.querySelector('.look');
+    ids.forEach((id, j) => { if (j === T - 1) return; const c = document.createElement('span'); c.className = 'lk' + (j === top ? ' top' : ''); c.style.setProperty('--w', j === 0 ? 0 : Math.min(1, w[j] / (w[top] || 1)).toFixed(3)); c.textContent = M.tok.piece(id); if (j === top) { const sm = document.createElement('small'); sm.textContent = pct(w[j]); c.appendChild(sm); } look.appendChild(c); });
+    const g = ly.lens[0], gw = M.tok.decode([g.id], true).trim() || '·';
+    d.querySelector('.tguess').textContent = `${gw}? (${pct(g.p)})`;
+    $('#klayers').querySelectorAll('.klayer').forEach(x => x.classList.add('old'));
+    $('#klayers').appendChild(d);
+    strip(d.querySelector('canvas'), Array.from((ly.vec && ly.vec.xout) || ly.first).slice(0, 32));
+    if (!reduce) d.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
+  // the slideshow: one step on screen at a time; Next and Back (and the arrow keys) move between them
+  let stepN = 0, layerN = 0, seenAll = false;
+  async function enter(k, back) {
+    stepN = k; const r = last;
+    ['#s1', '#s2', '#s3', '#s4', '#s5'].forEach((id, i) => { $(id).hidden = i + 1 !== k; });
+    $('#sdots').querySelectorAll('i').forEach((d, i) => { d.className = i + 1 === k ? 'on' : i + 1 < k ? 'done' : ''; });
+    $('#sBack').disabled = k === 1; $('#snav').hidden = false;
+    fitAll(); if (!reduce) $('#s' + k).scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (k === 1) { const chips = $('#chips'); chips.innerHTML = ''; for (const [i, id] of r.ids.entries()) { const c = document.createElement('span'); c.className = 'chip'; c.style.background = COLORS[i % COLORS.length]; c.textContent = M.tok.piece(id); const sm = document.createElement('small'); sm.textContent = '#' + id; c.appendChild(sm); chips.appendChild(c); await wait(150); } }
+    if (k === 2) { const rows = $('#rows'); rows.innerHTML = ''; for (const id of r.ids) { const row = document.createElement('div'); row.className = 'numrow'; const lab = document.createElement('span'); lab.textContent = M.tok.piece(id); const cv = document.createElement('canvas'); row.append(lab, cv); rows.appendChild(row); strip(cv, M.embedding(id, 32)); await wait(120); } }
+    if (k === 3) { $('#klayers').innerHTML = ''; if (back) { for (let l = 0; l < M.L; l++) layerCard(r.res.rec, r.ids, l); layerN = M.L - 1; } else { layerN = 0; layerCard(r.res.rec, r.ids, 0); } }
+    if (k === 4) guesses(last.res.logits, -1);
+    if (k === 5 && !$('#story').textContent) $('#story').textContent = r.text;
+    if (k === 5 && !seenAll) { seenAll = true; ['#cmd', '#agent', '#myths', '#power', '#who', '#learn', '#risks'].forEach(id => { $(id).hidden = false; }); fitAll(); }
+    $('#sdone').hidden = k !== 5;
+    label();
+  }
+  function label() { $('#sNext').textContent = stepN === 3 && layerN < M.L - 1 ? 'Next layer ▶' : stepN === 5 ? 'Start over ↺' : 'Next ▶'; }
+  function next() {
+    if (busy || !last) return;
+    if (stepN === 3 && layerN < M.L - 1) { layerN++; layerCard(last.res.rec, last.ids, layerN); label(); return; }
+    if (stepN === 5) { $('#prompt').focus(); $('#prompt').scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' }); return; }
+    enter(stepN + 1);
+  }
+  $('#sNext').addEventListener('click', next);
+  $('#sBack').addEventListener('click', () => { if (!busy && stepN > 1) enter(stepN - 1, true); });
+  addEventListener('keydown', e => { if ($('#snav').hidden || /INPUT|TEXTAREA|SELECT|BUTTON/.test(e.target.tagName)) return; if (e.key === 'ArrowRight') { e.preventDefault(); next(); } if (e.key === 'ArrowLeft' && stepN > 1) { e.preventDefault(); enter(stepN - 1, true); } });
   function guesses(logits, pickIdx) { // the top five, with the chance the dice gives each at the current slider setting
     const { cands } = LLM.sampleTopK(logits, 5, +$('#temp').value, () => 0), box = $('#guesses'); box.innerHTML = '';
     cands.forEach((c, i) => { const row = document.createElement('div'); row.className = 'g' + (i === pickIdx ? ' win' : ''); row.innerHTML = `<span></span><span class="b"><i style="width:0"></i></span><span>${pct(c.p)}</span>`; row.firstChild.textContent = M.tok.piece(c.id); box.appendChild(row); requestAnimationFrame(() => { row.querySelector('i').style.width = (c.p * 100) + '%'; }); });
@@ -455,22 +495,9 @@ otherwise: do nothing</div></div>
     const text = $('#prompt').value.trim() || 'Once upon a time';
     try {
       const r = await read(text); last = { text, ...r, gen: '' };
-      // 1: chop
-      show('#s1'); const chips = $('#chips'); chips.innerHTML = '';
-      for (const [i, id] of r.ids.entries()) { const c = document.createElement('span'); c.className = 'chip'; c.style.background = COLORS[i % COLORS.length]; c.textContent = M.tok.piece(id); const s = document.createElement('small'); s.textContent = '#' + id; c.appendChild(s); chips.appendChild(c); await wait(140); }
-      await wait(600);
-      // 2: numbers
-      show('#s2'); const rows = $('#rows'); rows.innerHTML = '';
-      for (const id of r.ids) { const row = document.createElement('div'); row.className = 'numrow'; const lab = document.createElement('span'); lab.textContent = M.tok.piece(id); const cv = document.createElement('canvas'); row.append(lab, cv); rows.appendChild(row); strip(cv, M.embedding(id, 32)); await wait(110); }
-      await wait(700);
-      // 3: tunnels
-      show('#s3'); await tunnels(r.res.rec, r.ids);
-      await wait(500);
-      // 4: score and dice
-      show('#s4'); guesses(r.res.logits, -1);
-      show('#s5'); $('#story').textContent = text;
-      $('#cmd').hidden = false; $('#agent').hidden = false; $('#myths').hidden = false; $('#power').hidden = false; $('#who').hidden = false; $('#learn').hidden = false; $('#risks').hidden = false; fitAll();
+      $('#story').textContent = '';
     } finally { busy = false; $('#go').disabled = false; }
+    await enter(1);
   });
   // one dice roll: add the picked word to the story and run the model again for the next one
   async function rollOnce(animate) {
