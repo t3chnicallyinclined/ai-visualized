@@ -59,6 +59,21 @@ textarea { width: 100%; box-sizing: border-box; font: 500 18px/1.4 var(--mono); 
 #end .in { text-align: center; } #end p { color: #c3c8e6; }
 .nav { position: fixed; top: calc(8px + env(safe-area-inset-top, 0px)); right: 12px; z-index: 5; display: flex; gap: 8px; }
 .nav button { width: 36px; height: 36px; padding: 0; font-size: 15px; background: rgb(17 20 31 / .8); }
+#more { font-weight: 700; color: var(--pick); border-color: rgb(255 233 184 / .5); }
+/* the sheet: what this screen shows, in the picture's words and in the model's numbers */
+#sheet { position: fixed; left: 0; right: 0; bottom: calc(70px + env(safe-area-inset-bottom, 0px)); z-index: 6; max-width: 640px; margin: 0 auto; max-height: 62vh; display: flex; flex-direction: column; background: rgb(14 17 28 / .97); border: 1px solid var(--line); border-radius: 16px 16px 0 0; box-shadow: 0 -10px 40px rgb(0 0 0 / .6); animation: sheetin .3s ease-out both; }
+@keyframes sheetin { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+#sheet .sh { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px 6px; } #sheet .sh b { font: 700 15px var(--body); }
+#sheet .sh button { width: 32px; height: 32px; padding: 0; }
+#shBody { overflow-y: auto; padding: 0 14px 14px; font: 14.5px/1.5 var(--body); color: #d9dcf0; }
+#shBody p { margin: 0 0 8px; } #shBody h4 { font: 600 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink2); margin: 12px 0 4px; }
+#shBody table { border-collapse: collapse; width: 100%; font: 13px var(--mono); } #shBody td { padding: 3px 6px 3px 0; border-bottom: 1px solid rgb(255 255 255 / .06); vertical-align: top; } #shBody td:last-child { text-align: right; white-space: nowrap; }
+#shBody .sw { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
+#shBody .pk { color: var(--amber); } #shBody .wn { color: var(--pick); } #shBody .pic { border-left: 3px solid var(--knob); padding-left: 10px; color: var(--ink2); font-size: 13.5px; }
+#shBody .try { display: flex; gap: 6px; margin: 6px 0; } #shBody .try input { flex: 1 1 auto; min-width: 0; font: 14px var(--mono); padding: 6px 10px; border-radius: 8px; border: 1px solid var(--line); background: #0b0e19; color: var(--ink); } #shBody .try button { padding: 6px 12px; font-size: 13px; }
+/* the tooltip for anything tapped on the stage */
+#tip { position: fixed; z-index: 5; max-width: 260px; background: rgb(14 17 28 / .97); border: 1px solid rgb(255 255 255 / .18); border-radius: 10px; padding: 8px 10px; font: 13px/1.45 var(--body); color: #eef0fa; box-shadow: 0 8px 30px rgb(0 0 0 / .6); pointer-events: none; animation: sheetin .2s ease-out both; }
+#tip b { color: var(--pick); font-family: var(--mono); } #tip small { display: block; color: var(--ink2); }
 @media (max-width: 600px) { .autol span { display: none; } #cap { font-size: 18px; } }
 @media (prefers-reduced-motion: reduce) { #cap, #next.pulse { animation: none; } }
 </style>
@@ -73,6 +88,7 @@ textarea { width: 100%; box-sizing: border-box; font: 500 18px/1.4 var(--mono); 
 <div id="bar" hidden><div class="in">
   <button type="button" id="back" aria-label="Back">◀</button>
   <button type="button" id="next" class="go">Continue ▶</button>
+  <label class="autol"><input type="checkbox" id="detail"> <span>Details</span></label>
   <label class="autol"><input type="checkbox" id="auto"> <span>Autoplay</span></label>
 </div></div>
 
@@ -83,18 +99,20 @@ textarea { width: 100%; box-sizing: border-box; font: 500 18px/1.4 var(--mono); 
     <textarea id="prompt" rows="2" maxlength="100" aria-label="The start of a sentence">Once upon a time, there was a little</textarea>
     <div class="row"><button type="button" class="go" id="begin" disabled>Begin ▶</button><span class="note" id="status">Downloading the model (30 MB, once)…</span></div>
     <div class="load" id="load"><div class="track"><i id="loadBar"></i></div></div>
-    <p class="note">TinyStories 15M, a model that only ever read children's stories. Nothing you type leaves this page. <a href="index.html">The step-by-step version</a> · <a href="explore.html">the Explorer</a> · <a href="https://github.com/t3chnicallyinclined/ai-visualized">code</a>.</p>
+    <p class="note">Tap anything on the stage for its numbers; the <b>?</b> button explains each screen. TinyStories 15M, a model that only ever read children's stories. Nothing you type leaves this page. <a href="index.html">The step-by-step version</a> · <a href="explore.html">the Explorer</a> · <a href="https://github.com/t3chnicallyinclined/ai-visualized">code</a>.</p>
   </div>
 </div>
 <div class="card" id="end" hidden>
   <div class="in">
     <h1>That is all it <em>ever</em> does.</h1>
-    <p>Pieces, spots in the cloud, listening back, six layers of fixed knobs, a wall of lights, a weighted dice. One piece at a time, from the same frozen numbers. Every frame you saw was drawn from them.</p>
+    <p>Pieces, homes in the cloud, listening back, layers of fixed knobs, a wall of lights, a weighted dice. One piece at a time, from the same frozen numbers. Every frame you saw was drawn from them.</p><p id="endSize"></p><p>Every language model runs this same loop. The big ones just have more of everything: more layers, far more knobs, a bigger dictionary, and years of reading instead of children's stories. The step is the same; the scale is not.</p>
     <div class="row" style="justify-content:center"><button type="button" class="go" id="replay">Replay</button><button type="button" id="another">Another sentence</button></div>
     <p class="note">Want the numbers themselves? <a href="index.html">The step-by-step walk-through</a> shows every one; <a href="explore.html">the Explorer</a> shows the whole machine at once.</p>
   </div>
 </div>
-<div class="nav" id="nav" hidden><button type="button" id="exit" aria-label="Leave the show">✕</button></div>
+<div class="nav" id="nav" hidden><button type="button" id="more" aria-label="What am I seeing?" title="What am I seeing?">?</button><button type="button" id="exit" aria-label="Leave the show">✕</button></div>
+<div id="tip" hidden></div>
+<div id="sheet" hidden><div class="sh"><b id="shT"></b><button type="button" id="shX" aria-label="Close">✕</button></div><div id="shBody"></div></div>
 
 <script src="llm.js"></script>
 <script>
@@ -179,7 +197,8 @@ textarea { width: 100%; box-sizing: border-box; font: 500 18px/1.4 var(--mono); 
     c.fillStyle = 'rgba(255,255,255,.55)'; font(10 * k, 400); c.fillText(sub, 0, 11 * k);
     c.restore();
   }
-  let PLACED = []; // the labels drawn this frame, so none covers another
+  let PLACED = [], HIT = [], DETAIL = false; // the labels drawn this frame (none covers another); the tappable things; the Details toggle
+  const hit = (x, y, r, html) => HIT.push({ x, y, r, html });
   function place(x, y, txt, size) { font(size, 600); const w = c.measureText(txt).width, h = size + 4; let ly = y; for (let k = 0; k < 12; k++) { if (!PLACED.some(p => Math.abs(p.y - ly) < h && x < p.x + p.w + 6 && x + w > p.x - 6)) break; ly += h; } PLACED.push({ x, y: ly, w, h }); return ly; }
   function dot(x, y, r, color, label, lblAlpha) {
     c.save(); c.shadowColor = color; c.shadowBlur = 14; c.fillStyle = color; c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill(); c.shadowBlur = 0;
@@ -211,15 +230,33 @@ textarea { width: 100%; box-sizing: border-box; font: 500 18px/1.4 var(--mono); 
     }
   }
   const ringY = l => H * (0.26 + 0.46 * l / Math.max(1, M.L - 1)), ringRX = () => Math.min(W * 0.26, H * 0.3);
-  const lensLabel = (l, txt, color, alpha) => { const x = W / 2 + ringRX() + 16; if (x + 130 < W) label(x, ringY(l), txt, color, alpha, 13); else label(W - 14, ringY(l), txt, color, alpha, 13, 'right'); };
-  function rings(alpha, lit) { // the layers as stacked rings; the lit one glows
+  const lensLabel = (l, txt, color, alpha) => { const x = W / 2 + ringRX() + 16; if (x + (DETAIL ? 260 : 130) < W) label(x, ringY(l), txt, color, alpha, 13); else if (DETAIL) label(W / 2, ringY(l) + ringRX() * 0.22 + 11, txt, color, alpha, 11, 'center'); else label(W - 14, ringY(l), txt, color, alpha, 13, 'right'); }; // Details on a narrow screen: the three guesses sit under the ring
+  let KN = null; // per layer: a sample of its real weights, each scaled by its grid's spread
+  function knobsOf(l) {
+    if (!KN) KN = [];
+    if (!KN[l]) { const mats = Object.values(M.mats.layers[l]).filter(t => t && t.length > 4096), out = [], n = 18;
+      mats.forEach(m => { if (!m.sc) { const a = Array.from(m.subarray(0, 65536), Math.abs).sort((x, y) => x - y); m.sc = a[Math.floor(a.length * 0.98)] || 1; } });
+      const tot = mats.reduce((a, m) => a + m.length, 0);
+      for (let k = 0; k < n; k++) { let at = Math.floor((k + 0.5) / n * tot), j = 0; while (at >= mats[j].length) at -= mats[j++].length; out.push(clamp(mats[j][at] / mats[j].sc, -1, 1)); }
+      KN[l] = out; }
+    return KN[l];
+  }
+  function gauge(x, y, r, v, alpha, bright) { // a level gauge: a grey track, an arc from the top (orange clockwise above zero, blue the other way below)
+    c.save(); c.globalAlpha = alpha; c.lineCap = 'round'; c.lineWidth = Math.max(1.5, r * 0.34);
+    c.strokeStyle = bright ? 'rgba(157,144,255,.6)' : 'rgba(157,144,255,.3)'; c.beginPath(); c.arc(x, y, r, 0.75 * Math.PI, 2.25 * Math.PI); c.stroke();
+    const vv = Math.abs(v) < 0.04 ? 0.04 * Math.sign(v || 1) : v; c.strokeStyle = v >= 0 ? '#f29a4a' : '#5b8bd8'; if (bright) { c.shadowColor = c.strokeStyle; c.shadowBlur = 8; }
+    c.beginPath(); c.arc(x, y, r, -Math.PI / 2, -Math.PI / 2 + vv * 0.75 * Math.PI, vv < 0); c.stroke(); c.restore();
+  }
+  function rings(alpha, lit) { // the layers as stacked rings of knobs; the lit one glows
     for (let l = 0; l < M.L; l++) {
-      const y = ringY(l), rx = ringRX(), ry = rx * 0.22, on = lit === l;
+      const y = ringY(l), rx = ringRX(), ry = rx * 0.22, on = lit === l; if (lit >= 0 && l <= lit) hit(W / 2, y, ry + 14, layerTip(l));
       c.save(); c.globalAlpha = alpha; c.strokeStyle = on ? '#ff5c8a' : 'rgba(157,144,255,.45)'; c.lineWidth = on ? 2.5 : 1.2;
       if (on) { c.shadowColor = '#ff5c8a'; c.shadowBlur = 22; }
       c.beginPath(); c.ellipse(W / 2, y, rx, ry, 0, 0, Math.PI * 2); c.stroke();
       font(11, 500); c.fillStyle = on ? '#fff' : 'rgba(157,144,255,.8)'; c.textAlign = 'right'; c.textBaseline = 'middle'; c.fillText(`layer ${l + 1}`, W / 2 - rx - 10, y);
       c.restore();
+      const kn = knobsOf(l), gr = clamp(rx * 0.045, 3.5, 7); // the layer's knobs sit along the front of its ring
+      kn.forEach((v, k) => { const a = Math.PI * (0.08 + 0.84 * (k + 0.5) / kn.length), gx = W / 2 + Math.cos(a) * rx, gy = y + Math.sin(a) * ry; gauge(gx, gy, gr, v, alpha * (on ? 1 : 0.75), on); });
     }
   }
   function label(x, y, txt, color, alpha, size = 13, align = 'left') { c.save(); c.globalAlpha = alpha; font(size, 600); c.fillStyle = color; c.textAlign = align; c.textBaseline = 'middle'; c.shadowColor = 'rgba(0,0,0,.9)'; c.shadowBlur = 8; c.fillText(txt, x, y); c.restore(); }
@@ -229,31 +266,58 @@ textarea { width: 100%; box-sizing: border-box; font: 500 18px/1.4 var(--mono); 
   // ---------- the scenes ----------
   // each: label, caption, (sub)caption, duration, draw(t in ms). Continue goes on when a scene has played; Back replays the one before.
   const piece = i => M.tok.piece(R.ids[i]);
+  // what tapping a thing on the stage shows
+  const nbCache = {}; const nbr = id => nbCache[id] || (nbCache[id] = M.neighbors(id, 4).map(n => `${M.tok.piece(n.id)} ${n.sim.toFixed(2)}`));
+  const headPulls = j => { const ly = R.words[0].rec.layers[0], Tn = R.n; return Array.from({ length: ly.heads }, (_, h) => ly.attn[h * Tn + j]); };
+  const pieceTip = i => `<b>${esc(piece(i))}</b><small>piece #${R.ids[i]} · neighbours in the cloud: ${esc(nbr(R.ids[i]).join(', '))}</small>` + (scene === 3 && i < R.n - 1 ? `<small>pull from each reader: ${headPulls(i).map((w, h) => `<span class="sw" style="background:hsl(${HEAD_HUES[h]},90%,65%)"></span>${pct(w)}`).join(' ')}</small>` : '');
+  const chanceTip = cd => `<b>${esc(M.tok.piece(cd.id))}</b><small>chance ${pct(cd.full)} of all ${nf(M.V)} pieces · score ${cd.logit.toFixed(1)}</small>`;
+  const layerTip = l => { const w = R.words[0], q = w.rec.layers[l], g = q.lens, Tn = R.n; let top = Tn > 1 ? 1 : 0; const a = new Float32Array(Tn); for (let h = 0; h < q.heads; h++) for (let jj = 0; jj < Tn; jj++) a[jj] += q.attn[h * Tn + jj] / q.heads; for (let jj = top + 1; jj < Tn - 1; jj++) if (a[jj] > a[top]) top = jj;
+    return `<b>layer ${l + 1}</b><small>if it stopped here: ${g.slice(0, 3).map(x => `${esc(M.tok.piece(x.id))} ${pct(x.p)}`).join(', ')}</small><small>listened most to “${esc(piece(top))}” (${pct(a[top])}) · ${nf(layerKnobs(l))} knobs</small>`; };
+  const layerKnobs = l => Object.values(M.mats.layers[l]).reduce((a, t) => a + ((t && t.length) || 0), 0);
+  const above = (watch, p) => { let n = 0; for (let i = 0; i < watch.length; i++) if (pOfQ(watch[i]) >= p) n++; return n; };
+  const topList = (w, k) => { const lg = w.logits, ids = Array.from(lg.keys()).sort((a, b) => lg[b] - lg[a]).slice(0, k); let mx = -Infinity; for (const v of lg) if (v > mx) mx = v; let z = 0; for (const v of lg) z += Math.exp(v - mx); return ids.map(id => [id, Math.exp(lg[id] - mx) / z]); };
+  const table = rows => `<table>${rows.map(r => `<tr>${r.map(x => `<td>${x}</td>`).join('')}</tr>`).join('')}</table>`;
   const SCENES = [
-    { k: 'words', lbl: 'Your words', cap: () => `“${R.text}”`, sub: () => 'A real model is about to choose the next word. Here is everything it gets.', dur: 1600,
+    { k: 'words', lbl: 'Your words', cap: () => `“${R.text}”`, sub: () => 'A real model is about to choose the next word. Think of autocomplete that has read a whole library: it gets this text, and nothing else.', dur: 1600,
+      more: () => `<p>The model is <b>TinyStories 15M</b>: ${nf(M.weightBytes / 2)} fixed numbers, set once by reading children's stories. It has no memory of you and no idea what you mean: it only gets these ${R.text.length} characters.</p><p class="pic">The picture: a machine with millions of volume knobs, set at the factory and glued. Your words go in; one word comes out. Then it runs again.</p>`,
       draw(t) { const k = Math.min(W / 420, 1.4); font(Math.round(26 * k), 600, 'sans'); c.fillStyle = '#fff'; c.textAlign = 'center'; c.textBaseline = 'middle';
         const shown = R.text.slice(0, Math.floor(R.text.length * seg(t, 100, 1200))); wrap(shown, W / 2, H * 0.5, Math.min(W - 40, 640), 36 * k); } },
-    { k: 'pieces', lbl: 'Pieces', cap: () => `It can't read letters. It cuts your words into ${R.n} pieces from a dictionary of ${nf(M.V)}.`, sub: () => 'Each piece has a number. The dot means "starts with a space".', dur: 2400,
+    { k: 'pieces', lbl: 'Pieces', cap: () => `It can't read letters. It cuts your words into ${R.n} jigsaw pieces it knows, out of ${nf(M.V)}.`, sub: () => 'Each piece has a number in its dictionary. Common words are one piece; rare words are cut into several. Tap a piece.', dur: 2400,
+      more: () => `<h4>Your pieces</h4>${table(R.ids.map((id, i) => [esc(piece(i)), '#' + id]))}<p>The dot means the piece starts with a space. ${M.meta.bos != null ? '<code>&lt;s&gt;</code> is the marker the model always gets first: "a text starts here".' : ''}</p><h4>Try a rare word</h4><div class="try"><input id="tryW" value="dragonfruit" maxlength="24" aria-label="A word to cut into pieces"><button type="button" id="tryGo">Cut it</button></div><p id="tryOut" class="pic">How the model would cut it.</p>`,
       draw(t) { chipRow(t, 1); } },
-    { k: 'cloud', lbl: 'The cloud', cap: () => `Every piece has a spot in a cloud of ${nf(MAP ? MAP.cat.filter(v => v !== 255).length : M.V)}. Pieces used alike sit close.`, sub: () => 'The map is flat; the real cloud has 288 directions. Each piece is 288 numbers: its address.', dur: 3400,
+    { k: 'cloud', lbl: 'The cloud', cap: () => `Each piece has a home in a cloud of ${nf(MAP ? MAP.cat.filter(v => v !== 255).length : M.V)}. Neighbours are pieces used in the same way.`, sub: () => `“${piece(R.n - 1)}” lives near ${nbr(R.ids[R.n - 1]).slice(0, 3).map(x => x.split(' ')[0]).join(', ')}. Tap any piece to see its neighbours.`, dur: 3400,
+      more: () => `<p>A piece's home is a list of <b>${M.D} numbers</b>, set in training: its address. Pieces that appear in the same kinds of places get similar numbers, so they end up near each other. It comes from how a word is <i>used</i>, not how it sounds or is spelled.</p><h4>Your pieces and their nearest neighbours</h4>${table(R.ids.map((id, i) => [esc(piece(i)), esc(nbr(id).map(x => x.split(' ')[0]).join(' · '))]))}<p class="pic">The map is flat (made with t-SNE) and the real cloud has ${M.D} directions, so distances on it are rough. The number after a neighbour above (in the tooltips) is how closely the two addresses point the same way: 1 = identical.</p>`,
       enter() { camTo.x = 0.5; camTo.y = 0.5; camTo.z = 1; },
       draw(t) { drawCloudLayer(seg(t, 0, 900) * 0.9, null, 0); flyToCloud(t); } },
-    { k: 'listen', lbl: 'Listening back', cap: () => `“${piece(R.n - 1)}” listens back to the earlier pieces: ${R.words[0].rec.layers[0].heads} heads, six colours, each pulling from different pieces.`, sub: () => 'Thicker thread, more attention. This is the only step that depends on what you typed.', dur: 3600,
+    { k: 'listen', lbl: 'Listening back', cap: () => `Before guessing, “${piece(R.n - 1)}” asks the earlier pieces: which of you matter for what comes next?`, sub: () => `Six readers ask at once (the model's ${R.words[0].rec.layers[0].heads} “attention heads”), each pulling on different pieces. Thicker thread, more pull. Tap a piece.`, dur: 3600,
+      more: () => { const ly = R.words[0].rec.layers[0], Tn = R.n; const rows = Array.from({ length: ly.heads }, (_, h) => { let best = Tn > 1 ? 1 : 0; for (let jj = 1; jj < Tn - 1; jj++) if (ly.attn[h * Tn + jj] > ly.attn[h * Tn + best]) best = jj; return [`<span class="sw" style="background:hsl(${HEAD_HUES[h]},90%,65%)"></span>reader ${h + 1}`, `pulls most on “${esc(piece(best))}”`, pct(ly.attn[h * Tn + best])]; });
+        return `<p>This is <b>attention</b>. Each reader is its own small set of fixed knobs. From the last piece it works out a pull on every earlier piece, and the pulls of one reader add up to 100%. Then it blends the pieces it pulled on into the last piece's numbers. Six readers, six different blends, all added together.</p><h4>Layer 1, for “${esc(piece(Tn - 1))}”</h4>${table(rows)}<p class="pic">The first piece, <code>${esc(piece(0))}</code>, gets ${pct(headPulls(0).reduce((a, b) => a + b, 0) / ly.heads)} on average: models park spare attention there (a resting spot), so it is drawn thin. This is the only step whose mixing depends on what you typed; the knobs themselves never move.</p>`; },
       enter() { const b = bounds(); camTo.x = b.cx; camTo.y = b.cy; camTo.z = clamp(0.55 / Math.max(b.w, b.h, 0.08), 1.2, 4); },
-      draw(t) { drawCloudLayer(0.55, null, 0); piecesOnCloud(1, 1); const [x, y] = scr(...piecePos(R.n - 1)); threads([x, y], 0, t, seg(t, 300, 1200)); ball(x, y, 30 + 10 * seg(t, 0, 600), R.words[0].rec.layers[0].vec.xin, vecScale(), seg(t, 0, 600)); } },
-    { k: 'layers', lbl: 'Through every layer', cap: () => `Its numbers fall through ${M.L} layers of fixed knobs. Watch its best guess change on the way down.`, sub: () => 'Each layer: listen back, then reshape the numbers. The cloud lights up with what it would say if it stopped there.', dur: () => M.L * 1250 + 900,
+      draw(t) { drawCloudLayer(0.55, null, 0); piecesOnCloud(1, 1); const [x, y] = scr(...piecePos(R.n - 1)); threads([x, y], 0, t, seg(t, 300, 1200)); ball(x, y, 30 + 10 * seg(t, 0, 600), R.words[0].rec.layers[0].vec.xin, vecScale(), seg(t, 0, 600)); if (DETAIL) headLegend(); } },
+    { k: 'layers', lbl: 'Through every layer', cap: () => `Its numbers go through ${M.L} rounds of fixed knobs, the ${M.L} layers. After each round we peek at its best guess.`, sub: () => 'Each round: listen back, then reshape the numbers. The peek is ours; the model only scores once, at the end. Tap a ring.', dur: () => M.L * 1250 + 900,
+      more: () => { const w = R.words[0]; return `<p>The ring of spokes is the piece's <b>${M.D} numbers</b>: orange out for above zero, blue in for below. Every layer changes them a little: listen back (attention), then push them through the layer's own knobs (the feed-forward block). ${nf(w.rec.layers.reduce((a, _, l) => a + layerKnobs(l), 0))} knobs in all, none of them moved by your words.</p><h4>Its best guess after each layer</h4>${table(w.rec.layers.map((q, l) => [`layer ${l + 1}`, q.lens.slice(0, 3).map(x => `${esc(M.tok.piece(x.id))} ${pct(x.p)}`).join(' · ')]))}<p class="pic">The guess after each layer is a peek we take by running the model's final scoring early (the "logit lens"). Early layers are not built to be read this way, so their guesses can look odd.</p>`; },
       enter() { camTo.x = 0.5; camTo.y = 0.52; camTo.z = 1; },
       draw(t) { descent(t); } },
-    { k: 'lights', lbl: 'The wall of lights', cap: () => { const w = R.words[0].rec.layers[M.L - 1].watch; let n = 0; for (let i = 0; i < w.length; i++) if (pOfQ(w[i]) >= 0.01) n++; return `All ${nf(M.V)} pieces get a score. Only ${n} shine above 1%.`; }, sub: () => 'The final numbers against each piece\'s own row: a wall of lights, one per piece.', dur: 3000,
+    { k: 'lights', lbl: 'The wall of lights', cap: () => `At the end, every one of the ${nf(M.V)} pieces gets a light. Brighter means a better match. Only ${above(R.words[0].rec.layers[M.L - 1].watch, 0.01)} shine above 1%.`, sub: () => 'The final numbers are compared with each piece\'s own row in the dictionary: that is its score. Tap a light.', dur: 3000,
+      more: () => { const w = R.words[0], watch = w.rec.layers[M.L - 1].watch; return `<p>Each piece's row in the dictionary (the same ${M.D} numbers from the cloud) is compared with the final numbers: multiply number by number, add it all up. That is one score per piece. Softmax turns the scores into chances that add up to 100%.</p><h4>The brightest lights</h4>${table(topList(w, 10).map(([id, p]) => [esc(M.tok.piece(id)), pct(p)]))}<p class="pic">${above(watch, 0.01)} pieces have 1% or more; ${above(watch, 0.001)} have 0.1% or more; the other ${nf(M.V - above(watch, 0.001))} are almost dark. The whole wall is lit at once: the model never looks anything up.</p>`; },
       enter() { const b = topBounds(); camTo.x = b.cx; camTo.y = b.cy; camTo.z = clamp(0.5 / Math.max(b.w, b.h, 0.06), 1.4, 5); },
-      draw(t) { drawCloudLayer(0.8, R.words[0].rec.layers[M.L - 1].watch, seg(t, 0, 900)); topLabels(seg(t, 900, 1500)); } },
-    { k: 'dice', lbl: 'The weighted dice', cap: () => `The 5 brightest go on the dice, loaded by their chances. Temperature ${T}.`, sub: () => 'Usually the brightest wins. Sometimes a dimmer one does: that is why the same start can give different stories.', dur: 3600,
+      draw(t) { drawCloudLayer(0.8, R.words[0].rec.layers[M.L - 1].watch, seg(t, 0, 900)); topLabels(seg(t, 900, 1500), DETAIL ? 10 : 5); } },
+    { k: 'dice', lbl: 'The weighted dice', cap: () => `The 5 brightest go on a weighted dice. The temperature (${T}) sets how loaded it is.`, sub: () => 'Usually the brightest wins. Sometimes a dimmer one does: that is why the same start can give different stories. Tap an orb.', dur: 3600,
+      more: () => { const w = R.words[0]; return `<p>Apps rarely take the top light every time: that reads as stiff and repetitive. This page keeps the five brightest and rolls a dice loaded by their scores. <b>Temperature</b> is the knob on that dice: at 0 the brightest always wins; higher flattens the odds so dimmer lights win more often.</p><h4>This roll</h4>${table(w.cands.map((cd, i) => [(i === w.pick ? '<span class="wn">●</span> ' : '') + esc(M.tok.piece(cd.id)), `${pct(cd.p)} on the dice`, `${pct(cd.full)} of all pieces`]))}<p class="pic">The roll landed on “${esc(M.tok.piece(w.id))}”${w.pick ? ', not the brightest light' : ', the brightest light'}. Replay the show for a new roll on the same lights.</p>`; },
       enter() { camTo.z = 1; camTo.x = 0.5; camTo.y = 0.5; },
       draw(t) { drawCloudLayer(0.25, null, 0); dice(t, R.words[0], 1); } },
-    { k: 'again', lbl: 'Again', cap: () => 'The new piece joins the sentence, and it all runs again. And again.', sub: () => 'Pieces, spots, listening, layers, lights, dice. One piece at a time, from the same frozen numbers.', dur: () => 900 + (R.words.length - 1) * 2300 + 600,
+    { k: 'again', lbl: 'Again', cap: () => 'The new piece joins the sentence, and it all runs again. And again.', sub: () => `Pieces, homes, listening, layers, lights, dice. One piece at a time, from the same frozen numbers. Every language model runs this loop; this one is tiny (${M.L} layers), the big ones have dozens of layers and billions of knobs.`, dur: () => 900 + (R.words.length - 1) * 2300 + 600,
+      more: () => `<h4>The words it wrote</h4>${table(R.words.map(w => [esc(w.text), `${pct(w.cands[w.pick].p)} on the dice`, w.pick ? 'a dimmer light' : 'the brightest']))}<p class="pic">Nothing between the words is remembered as a plan: each one comes from running the whole machine again on everything so far. Want every number? <a href="index.html">The step-by-step walk-through</a> shows them all; <a href="explore.html">the Explorer</a> shows the whole machine at once.</p>`,
       enter() { camTo.z = 1; camTo.x = 0.5; camTo.y = 0.52; },
       draw(t) { again(t); } },
   ];
+  function headLegend() { // Details: each reader and the piece it pulls on most (layer 1)
+    const ly = R.words[0].rec.layers[0], Tn = R.n, x = 14, y0 = H - 92 - env() - ly.heads * 18;
+    for (let h = 0; h < ly.heads; h++) { let best = Tn > 1 ? 1 : 0; for (let jj = 1; jj < Tn - 1; jj++) if (ly.attn[h * Tn + jj] > ly.attn[h * Tn + best]) best = jj;
+      c.save(); c.fillStyle = `hsl(${HEAD_HUES[h]},90%,65%)`; c.beginPath(); c.arc(x + 5, y0 + h * 18, 4, 0, Math.PI * 2); c.fill(); c.restore();
+      label(x + 16, y0 + h * 18, `reader ${h + 1} pulls most on “${piece(best)}” ${pct(ly.attn[h * Tn + best])}`, '#eef0fa', 0.9, 12); }
+  }
+  const env = () => parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sab') || 0) || 0;
   // ---- scene helpers ----
   function wrap(txt, x, y, maxW, lh) { const words = txt.split(' '), lines = []; let line = ''; for (const w of words) { const test = line ? line + ' ' + w : w; if (c.measureText(test).width > maxW && line) { lines.push(line); line = w; } else line = test; } lines.push(line); lines.forEach((ln, i) => c.fillText(ln, x, y + (i - (lines.length - 1) / 2) * lh)); }
   function chipLayout() { // the chips in rows, centred
@@ -263,19 +327,19 @@ textarea { width: 100%; box-sizing: border-box; font: 500 18px/1.4 var(--mono); 
     rows.forEach((row, r) => { const tot = row.reduce((a, [, w]) => a + w, 0) + gap * (row.length - 1); let cx = W / 2 - tot / 2; row.forEach(([i, w]) => { out[i] = [cx + w / 2, y0 + r * rh, k]; cx += w + gap; }); });
     return out;
   }
-  function chipRow(t, alpha) { const L = chipLayout(); for (let i = 0; i < R.n; i++) { const s = eo(seg(t, i * 120, i * 120 + 500)); if (s <= 0) continue; const [x, y, k] = L[i]; c.save(); c.globalAlpha = alpha * s; chip(x, y, piece(i), '#' + R.ids[i], k * (0.6 + 0.4 * s), s > 0.95); c.restore(); } }
+  function chipRow(t, alpha) { const L = chipLayout(); for (let i = 0; i < R.n; i++) { const s = eo(seg(t, i * 120, i * 120 + 500)); if (s <= 0) continue; const [x, y, k] = L[i]; hit(x, y, 26 * k, pieceTip(i)); c.save(); c.globalAlpha = alpha * s; chip(x, y, piece(i), '#' + R.ids[i], k * (0.6 + 0.4 * s), s > 0.95); c.restore(); } }
   function flyToCloud(t) { // each chip flies to its spot and shrinks to a labelled dot
     const L = chipLayout();
     for (let i = 0; i < R.n; i++) {
       const u = eo(seg(t, 500 + i * 90, 1500 + i * 90)), [x0, y0, k] = L[i], [x1, y1] = scr(...piecePos(i)), x = lerp(x0, x1, u), y = lerp(y0, y1, u) - Math.sin(u * Math.PI) * 60;
       if (u < 1) { c.save(); c.globalAlpha = 1 - u * 0.6; chip(x, y, piece(i), '#' + R.ids[i], k * (1 - 0.6 * u), false); c.restore(); }
-      if (u > 0.3) dot(x, y, 4 + 2 * (i === R.n - 1), i === R.n - 1 ? '#ff5c8a' : '#f2a93b', piece(i), seg(u, 0.6, 1));
+      if (u > 0.3) { dot(x, y, 4 + 2 * (i === R.n - 1), i === R.n - 1 ? '#ff5c8a' : '#f2a93b', piece(i), seg(u, 0.6, 1)); hit(x, y, 14, pieceTip(i)); }
     }
   }
-  function piecesOnCloud(alpha, lbl) { for (let i = 0; i < R.n; i++) { const [x, y] = scr(...piecePos(i)); c.save(); c.globalAlpha = alpha; dot(x, y, i === R.n - 1 ? 6 : 4, i === R.n - 1 ? '#ff5c8a' : '#f2a93b', piece(i), lbl); c.restore(); } }
+  function piecesOnCloud(alpha, lbl) { for (let i = 0; i < R.n; i++) { const [x, y] = scr(...piecePos(i)); hit(x, y, 14, pieceTip(i)); c.save(); c.globalAlpha = alpha; dot(x, y, i === R.n - 1 ? 6 : 4, i === R.n - 1 ? '#ff5c8a' : '#f2a93b', piece(i), lbl); c.restore(); } }
   function bounds() { let x0 = 1, y0 = 1, x1 = 0, y1 = 0; for (let i = 0; i < R.n; i++) { const [x, y] = piecePos(i); x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); } return { cx: (x0 + x1) / 2, cy: (y0 + y1) / 2, w: x1 - x0, h: y1 - y0 }; }
   function topBounds() { let x0 = 1, y0 = 1, x1 = 0, y1 = 0; for (const cd of R.words[0].cands) { if (!onMap(cd.id)) continue; const x = MAP.x[cd.id], y = MAP.y[cd.id]; x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); } return { cx: (x0 + x1) / 2, cy: (y0 + y1) / 2, w: x1 - x0, h: y1 - y0 }; }
-  function topLabels(alpha) { R.words[0].cands.forEach((cd, i) => { if (!onMap(cd.id)) return; const [x, y] = scr(MAP.x[cd.id], MAP.y[cd.id]); dot(x, y, 5 + 6 * Math.sqrt(cd.full), i ? '#ffd58a' : '#ffe9b8', `${M.tok.piece(cd.id)} ${pct(cd.full)}`, alpha); }); }
+  function topLabels(alpha, k = 5) { const w = R.words[0], list = k > 5 ? topList(w, k).map(([id, p]) => ({ id, full: p, logit: w.logits[id] })) : w.cands; list.forEach((cd, i) => { if (!onMap(cd.id)) return; const [x, y] = scr(MAP.x[cd.id], MAP.y[cd.id]); dot(x, y, 5 + 6 * Math.sqrt(cd.full), i ? '#ffd58a' : '#ffe9b8', `${M.tok.piece(cd.id)} ${pct(cd.full)}`, alpha); hit(x, y, 16, chanceTip(cd)); }); }
   function descent(t) { // the ball falls ring by ring; at each ring its spokes morph to that layer's numbers and the cloud relights
     const w = R.words[0], L = M.L, per = 1250, sc = vecScale(), lyr = Math.min(L - 1, Math.floor(t / per)), u = seg(t - lyr * per, 0, per);
     const watch = w.rec.layers[lyr].watch, prev = lyr ? w.rec.layers[lyr - 1].watch : null;
@@ -285,14 +349,14 @@ textarea { width: 100%; box-sizing: border-box; font: 500 18px/1.4 var(--mono); 
     if (u > 0.3 && u < 0.7) { const [bx] = [W / 2]; threads([bx, y], lyr, t, 0.55 * Math.sin(seg(u, 0.3, 0.7) * Math.PI)); }
     const from = lyr ? w.rec.layers[lyr - 1].vec.xout : w.rec.layers[0].vec.xin, to = w.rec.layers[lyr].vec.xout, m = eo(seg(u, 0.35, 0.8)), vec = from.map((v, i) => lerp(v, to[i], m));
     ball(W / 2, y, rad, vec, sc, 1);
-    for (let l = 0; l <= lyr; l++) { const g = lensOf(w, l), a = l < lyr ? 0.5 : seg(u, 0.5, 0.9); if (a > 0) lensLabel(l, `${M.tok.piece(g.id)} ${pct(g.p)}`, l === lyr ? '#fff' : '#c9b8ff', a); }
+    for (let l = 0; l <= lyr; l++) { const g = lensOf(w, l), a = l < lyr ? 0.5 : seg(u, 0.5, 0.9); if (a > 0) lensLabel(l, DETAIL ? w.rec.layers[l].lens.slice(0, 3).map(x => `${M.tok.piece(x.id)} ${pct(x.p)}`).join('  ') : `${M.tok.piece(g.id)} ${pct(g.p)}`, l === lyr ? '#fff' : '#c9b8ff', a); }
   }
   function dice(t, w, alpha) { // the five on a ring, sized by chance; a marker spins, slows, and lands on the real pick
     const cx = W / 2, cy = H * 0.5, R0 = Math.min(W, H) * 0.3, n = w.cands.length;
     const spin = seg(t, 900, 2800), turns = 3 + w.pick / n, ang = -Math.PI / 2 + eo(spin) * turns * Math.PI * 2, landed = t > 2800;
     w.cands.forEach((cd, i) => {
       const a = -Math.PI / 2 + i / n * Math.PI * 2, x = cx + Math.cos(a) * R0, y = cy + Math.sin(a) * R0, r = (10 + 34 * Math.sqrt(cd.p)) * eo(seg(t, i * 100, 600 + i * 100));
-      const win = landed && i === w.pick, col = win ? '#ffe9b8' : '#f2a93b';
+      const win = landed && i === w.pick, col = win ? '#ffe9b8' : '#f2a93b'; hit(x, y, r + 8, `<b>${esc(M.tok.piece(cd.id))}</b><small>${pct(cd.p)} on the dice · ${pct(cd.full)} of all ${nf(M.V)} pieces</small>`);
       c.save(); c.globalAlpha = alpha; c.shadowColor = col; c.shadowBlur = win ? 40 : 14; c.fillStyle = win ? 'rgba(255,233,184,.95)' : 'rgba(242,169,59,.35)'; c.strokeStyle = col; c.lineWidth = 1.5;
       c.beginPath(); c.arc(x, y, r + (win ? 6 * Math.sin((t - 2800) / 120) : 0), 0, Math.PI * 2); c.fill(); c.stroke(); c.shadowBlur = 0;
       font(14, 600); c.fillStyle = win ? '#07080d' : '#fff'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(M.tok.piece(cd.id), x, y - 7); font(11, 500); c.fillStyle = win ? '#3b2d00' : 'rgba(255,255,255,.7)'; c.fillText(pct(cd.p), x, y + 9);
@@ -327,14 +391,16 @@ textarea { width: 100%; box-sizing: border-box; font: 500 18px/1.4 var(--mono); 
     $('#prog').innerHTML = SCENES.map((_, j) => `<i class="${j < i ? 'done' : j === i ? 'on' : ''}"></i>`).join('');
     $('#back').disabled = i === 0; $('#next').classList.remove('pulse'); $('#next').textContent = i === SCENES.length - 1 ? 'Finish' : 'Continue ▶';
     if (s.k !== 'again') $('#sentence').hidden = true;
+    $('#tip').hidden = true; if (!$('#sheet').hidden) openSheet();
     s.enter && s.enter();
   }
+  // (openSheet is defined below; enter runs only after everything is wired)
   function frame(now) {
     raf = requestAnimationFrame(frame); if (!playing) return;
     if (paused) { t0 += now - lastNow; } lastNow = now;
     const t = now - t0, s = SCENES[scene];
     cam.x = lerp(cam.x, camTo.x, 0.08); cam.y = lerp(cam.y, camTo.y, 0.08); cam.z = lerp(cam.z, camTo.z, 0.08);
-    PLACED = []; c.setTransform(dpr, 0, 0, dpr, 0, 0); c.fillStyle = '#07080d'; c.fillRect(0, 0, W, H);
+    PLACED = []; HIT = []; c.setTransform(dpr, 0, 0, dpr, 0, 0); c.fillStyle = '#07080d'; c.fillRect(0, 0, W, H);
     const g = c.createRadialGradient(W / 2, H * 0.3, 0, W / 2, H * 0.3, Math.max(W, H)); g.addColorStop(0, '#141829'); g.addColorStop(1, '#07080d'); c.fillStyle = g; c.fillRect(0, 0, W, H);
     s.draw(reduce ? Math.max(t, dur(s)) : t);
     if (t >= dur(s)) { if (auto && scene < SCENES.length - 1) { enter(scene + 1); } else if (!$('#next').classList.contains('pulse') && t > dur(s) + 4000) $('#next').classList.add('pulse'); }
@@ -342,7 +408,7 @@ textarea { width: 100%; box-sizing: border-box; font: 500 18px/1.4 var(--mono); 
   let lastNow = 0;
   function next() { const s = SCENES[scene], t = performance.now() - t0; if (t < dur(s) - 50 && !reduce) { t0 = performance.now() - dur(s); return; } if (scene < SCENES.length - 1) enter(scene + 1); else finish(); }
   function back() { if (scene > 0) enter(scene - 1); }
-  function finish() { playing = false; $('#end').hidden = false; $('#top').hidden = true; $('#bar').hidden = true; $('#sentence').hidden = true; }
+  function finish() { playing = false; $('#endSize').innerHTML = `This one is tiny: <b>${M.L} layers</b> and <b>${nf(M.weightBytes / 2)} knobs</b>, trained on children's stories. Qwen2.5-0.5B, the model behind the agent page, has 24 layers and 494 million knobs. Llama 3 70B has 80 layers and about 70 billion.`; $('#end').hidden = false; $('#top').hidden = true; $('#bar').hidden = true; $('#sentence').hidden = true; $('#sheet').hidden = true; $('#tip').hidden = true; }
   function resize() { dpr = Math.min(2, devicePixelRatio || 1); W = innerWidth; H = innerHeight; cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
   addEventListener('resize', resize); resize();
   async function begin() {
@@ -357,15 +423,29 @@ textarea { width: 100%; box-sizing: border-box; font: 500 18px/1.4 var(--mono); 
   $('#begin').addEventListener('click', begin);
   $('#next').addEventListener('click', next); $('#back').addEventListener('click', back);
   $('#auto').addEventListener('change', e => { auto = e.target.checked; });
+  $('#detail').addEventListener('change', e => { DETAIL = e.target.checked; });
+  // the sheet: what this screen shows, with the numbers behind it
+  function openSheet() { const s = SCENES[scene]; $('#shT').textContent = s.lbl; $('#shBody').innerHTML = s.more ? s.more() : ''; $('#sheet').hidden = false; $('#tip').hidden = true;
+    const tw = $('#tryW'); if (tw) { const cut = () => { const w = tw.value.trim(); if (!w) return; const ids = M.tok.encode(' ' + w); $('#tryOut').innerHTML = `“${esc(w)}” → ${ids.length} piece${ids.length === 1 ? '' : 's'}: ${ids.map(id => `<b>${esc(M.tok.piece(id))}</b> <small>#${id}</small>`).join(' + ')}`; }; $('#tryGo').addEventListener('click', cut); tw.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); cut(); } }); cut(); } }
+  $('#more').addEventListener('click', () => { if ($('#sheet').hidden) openSheet(); else $('#sheet').hidden = true; });
+  $('#shX').addEventListener('click', () => { $('#sheet').hidden = true; });
+  // tapping something on the stage
+  cv.addEventListener('pointerdown', e => {
+    if (!playing) return; let best = null, bd = 1e9;
+    for (const h of HIT) { const d = Math.hypot(e.clientX - h.x, e.clientY - h.y); if (d < h.r + 12 && d < bd) { bd = d; best = h; } }
+    const tip = $('#tip'); if (!best) { tip.hidden = true; return; }
+    tip.innerHTML = best.html; tip.hidden = false; const tw = tip.offsetWidth, th = tip.offsetHeight;
+    tip.style.left = clamp(best.x - tw / 2, 8, W - tw - 8) + 'px'; tip.style.top = (best.y - best.r - th - 10 > 60 ? best.y - best.r - th - 10 : best.y + best.r + 10) + 'px';
+  });
   $('#replay').addEventListener('click', () => { $('#end').hidden = true; $('#top').hidden = false; $('#bar').hidden = false; playing = true; cam.z = 0.7; enter(0); });
   $('#another').addEventListener('click', () => { $('#end').hidden = true; $('#start').hidden = false; $('#nav').hidden = true; });
-  $('#exit').addEventListener('click', () => { playing = false; ['#top', '#bar', '#sentence', '#nav'].forEach(q => { $(q).hidden = true; }); $('#start').hidden = false; });
+  $('#exit').addEventListener('click', () => { playing = false; ['#top', '#bar', '#sentence', '#nav', '#sheet', '#tip'].forEach(q => { $(q).hidden = true; }); $('#start').hidden = false; });
   addEventListener('keydown', e => { if (!playing || /INPUT|TEXTAREA|BUTTON/.test(e.target.tagName)) return; if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'Enter') { e.preventDefault(); next(); } if (e.key === 'ArrowLeft') { e.preventDefault(); back(); } });
   let sx = 0, sy = 0, st = 0;
   addEventListener('touchstart', e => { const t = e.touches[0]; sx = t.clientX; sy = t.clientY; st = Date.now(); }, { passive: true });
   addEventListener('touchend', e => { if (!playing || !st) return; const t = e.changedTouches[0], dx = t.clientX - sx, dy = t.clientY - sy; st = 0; if (Math.abs(dx) > 60 && Math.abs(dy) < 60) { if (dx < 0) next(); else back(); } }, { passive: true });
   $('#prompt').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); if (!$('#begin').disabled) begin(); } });
-  window.__show = { begin, next, back, get scene() { return scene; }, get playing() { return playing; }, skip: () => { t0 = -1e9; }, R }; // for testing
+  window.__show = { begin, next, back, get hits() { return HIT; }, detail: v => { DETAIL = v; $('#detail').checked = v; }, get scene() { return scene; }, get playing() { return playing; }, skip: () => { t0 = -1e9; }, R }; // for testing
 })();
 </script>
 </body>
