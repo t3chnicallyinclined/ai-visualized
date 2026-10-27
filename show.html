@@ -28,7 +28,7 @@ button:focus-visible, textarea:focus-visible { outline: 2px solid var(--attn); o
 #cv { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
 /* the chrome over the canvas */
 #top { position: fixed; left: 0; right: 0; top: 0; padding: calc(10px + env(safe-area-inset-top, 0px)) 14px 0; z-index: 3; pointer-events: none; }
-#prog { display: flex; gap: 4px; max-width: 900px; margin: 0 auto; padding-right: 150px; }
+#prog { display: flex; gap: 4px; max-width: 900px; margin: 0 auto; padding-right: 196px; }
 #prog i { flex: 1 1 0; height: 4px; border-radius: 99px; background: rgb(255 255 255 / .14); transition: background .3s; }
 #prog i.done { background: rgb(255 255 255 / .55); } #prog i.on { background: var(--attn); box-shadow: 0 0 10px rgb(255 92 138 / .7); }
 #capbox { max-width: 900px; margin: 12px auto 0; }
@@ -55,7 +55,7 @@ h1 em { font-style: normal; color: var(--pick); }
 .models { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; } @media (max-width: 560px) { .models { grid-template-columns: 1fr; } }
 .mcard { display: block; border: 1.5px solid var(--line); border-radius: 12px; padding: 9px 11px; cursor: pointer; background: #0e111c; } .mcard input { display: none; } .mcard b { display: block; font: 700 15px var(--display); } .mcard span { display: block; font: 12.5px/1.4 var(--body); color: var(--ink2); margin-top: 2px; }
 .mcard:has(input:checked) { border-color: var(--pick); background: rgb(255 233 184 / .07); }
-#recenter, #legend { font-size: 13px; width: auto; padding: 0 12px; border-radius: 999px; }
+#recenter, #legend, #tilt { font-size: 13px; width: auto; padding: 0 12px; border-radius: 999px; } #tilt[aria-pressed="true"] { background: var(--knob); border-color: var(--knob); color: #fff; }
 #shBody .lg { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; } #shBody .lg div { border-bottom: 1px solid rgb(255 255 255 / .06); padding-bottom: 6px; } #shBody .lg b { color: var(--pick); } #shBody .lg i { font-style: normal; color: #8ff0ff; font-family: var(--mono); font-size: 13px; } #shBody .lg small { display: block; color: var(--ink2); }
 .nudge { font-size: 14px; color: var(--amber); margin: 0 0 8px; } .nudge b { color: #fff; }
 textarea { width: 100%; box-sizing: border-box; font: 500 18px/1.4 var(--mono); padding: 12px 14px; border-radius: 12px; border: 1.5px solid var(--line); background: #11141f; color: var(--ink); resize: none; }
@@ -115,7 +115,7 @@ textarea { width: 100%; box-sizing: border-box; font: 500 18px/1.4 var(--mono); 
     <textarea id="prompt" rows="2" maxlength="100" aria-label="The start of a sentence">Once upon a time, there was a little</textarea>
     <div class="row"><button type="button" class="go" id="begin">Begin ▶</button><span class="note" id="status">The model downloads once, when you press Begin.</span></div>
     <div class="load" id="load" hidden><div class="track"><i id="loadBar"></i></div></div>
-    <p class="note">Tap anything on the stage for its numbers; drag, scroll or pinch the cloud; <b>?</b> explains each screen and <b>words</b> maps the picture to the proper terms. Nothing you type leaves this page. <a href="index.html?walk">The step-by-step version</a> · <a href="explore.html">the Explorer</a> · <a href="https://github.com/t3chnicallyinclined/ai-visualized">code</a>.</p>
+    <p class="note">Tap anything on the stage for its numbers; drag, scroll or pinch the cloud, <b>3D</b> lays it down with height as the chance; <b>?</b> explains each screen and <b>words</b> maps the picture to the proper terms. Nothing you type leaves this page. <a href="index.html?walk">The step-by-step version</a> · <a href="explore.html">the Explorer</a> · <a href="https://github.com/t3chnicallyinclined/ai-visualized">code</a>.</p>
   </div>
 </div>
 <div class="card" id="end" hidden>
@@ -126,7 +126,7 @@ textarea { width: 100%; box-sizing: border-box; font: 500 18px/1.4 var(--mono); 
     <p class="note">Want the numbers themselves? <a href="index.html?walk">The step-by-step walk-through</a> shows every one; <a href="explore.html">the Explorer</a> shows the whole machine at once.</p>
   </div>
 </div>
-<div class="nav" id="nav" hidden><button type="button" id="recenter" hidden>⌖ recentre</button><button type="button" id="legend" aria-label="The picture and the proper words" title="Our words and the proper terms">words</button><button type="button" id="more" aria-label="What am I seeing?" title="What am I seeing?">?</button><button type="button" id="exit" aria-label="Leave the show">✕</button></div>
+<div class="nav" id="nav" hidden><button type="button" id="recenter" hidden>⌖ recentre</button><button type="button" id="tilt" aria-pressed="false" aria-label="3D: lay the cloud down, height is the chance" title="3D: lay the cloud down; height is the chance">3D</button><button type="button" id="legend" aria-label="The picture and the proper words" title="Our words and the proper terms">words</button><button type="button" id="more" aria-label="What am I seeing?" title="What am I seeing?">?</button><button type="button" id="exit" aria-label="Leave the show">✕</button></div>
 <div id="tip" hidden></div>
 <div id="sheet" hidden><div class="sh"><b id="shT"></b><button type="button" id="shX" aria-label="Close">✕</button></div><div id="shBody"></div></div>
 
@@ -203,8 +203,9 @@ textarea { width: 100%; box-sizing: border-box; font: 500 18px/1.4 var(--mono); 
   }
 
   // ---------- the stage: a camera over the cloud (unit square), and things placed on it ----------
-  const cam = { x: 0.5, y: 0.5, z: 1 }, camTo = { x: 0.5, y: 0.5, z: 1 }; let USER = false, SEL = -1; // USER: the viewer moved the camera; SEL: a tapped token
-  const scr = (x, y) => { const s = Math.min(W, H) * 0.92 * cam.z; return [W / 2 + (x - cam.x) * s, H / 2 + (y - cam.y) * s]; };
+  const cam = { x: 0.5, y: 0.5, z: 1 }, camTo = { x: 0.5, y: 0.5, z: 1 }; let USER = false, SEL = -1, TILT = 0, tiltTo = 0; // TILT: the map laid down (0 flat .. 0.92), height = the chance // USER: the viewer moved the camera; SEL: a tapped token
+  const scr = (x, y, h = 0) => { const s = Math.min(W, H) * 0.92 * cam.z, ct = Math.cos(TILT), st = Math.sin(TILT), m = Math.min(W, H); return [W / 2 + (x - cam.x) * s, H / 2 + (y - cam.y) * s * ct + m * 0.16 * st - h * m * 0.42 * st]; }; // h: height above the map, 0..1
+  const hOfQ = q => (q >= 70 ? Math.sqrt(pOfQ(q)) : 0); // a chance as a height
   const piecePos = i => { const id = R.ids[i]; return onMap(id) ? [MAP.x[id], MAP.y[id]] : [0.5 + (i - R.n / 2) * 0.03, 0.9]; };
   function drawCloudLayer(alpha, watch, glowAlpha) {
     if (!BASE) return;
@@ -215,7 +216,8 @@ textarea { width: 100%; box-sizing: border-box; font: 500 18px/1.4 var(--mono); 
       const lim = Math.min(watch.length, MAP.cat.length);
       for (let id = 0; id < lim; id++) {
         const q = watch[id]; if (q < 70 || MAP.cat[id] === 255) continue;
-        const a = (q - 70) / 185, [h] = hueOf(id), [x, y] = scr(MAP.x[id], MAP.y[id]);
+        const a = (q - 70) / 185, [h] = hueOf(id), hh = TILT > 0.05 ? hOfQ(q) : 0, [x, y] = scr(MAP.x[id], MAP.y[id], hh);
+        if (hh > 0.3) { const [fx, fy] = scr(MAP.x[id], MAP.y[id], 0); c.strokeStyle = `hsla(${h.toFixed(0)},90%,70%,${(glowAlpha * 0.5).toFixed(2)})`; c.lineWidth = 1; c.beginPath(); c.moveTo(fx, fy); c.lineTo(x, y); c.stroke(); }
         c.fillStyle = `hsla(${h.toFixed(0)},90%,${(55 + 30 * a).toFixed(0)}%,${(glowAlpha * (0.25 + 0.75 * a)).toFixed(2)})`;
         const r = (1.2 + 5 * a * a) * Math.sqrt(cam.z); c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill();
       }
@@ -313,7 +315,7 @@ textarea { width: 100%; box-sizing: border-box; font: 500 18px/1.4 var(--mono); 
     const p = g.cloud; c.save(); c.beginPath(); c.roundRect(p.x, p.y, p.w, p.h, 10); c.clip();
     c.fillStyle = 'rgba(255,255,255,.025)'; c.fillRect(p.x, p.y, p.w, p.h); drawCloudLayer(0.85, watch, glow); piecesOnCloud(0.9, 0);
     if (path && path.length > 1) { c.strokeStyle = 'rgba(255,233,184,.75)'; c.lineWidth = 1.5; c.beginPath(); let first = true; path.forEach(id => { if (!onMap(id)) return; const [x, y] = scr(MAP.x[id], MAP.y[id]); first ? c.moveTo(x, y) : c.lineTo(x, y); first = false; }); c.stroke(); }
-    if (top && onMap(top.id)) { const [x, y] = scr(MAP.x[top.id], MAP.y[top.id]); dot(x, y, 5, '#ffe9b8', `${M.tok.piece(top.id)} ${pct(top.p)}`, 1); }
+    if (top && onMap(top.id)) { const [x, y] = scr(MAP.x[top.id], MAP.y[top.id], TILT > 0.05 ? Math.sqrt(top.p) : 0); dot(x, y, 5, '#ffe9b8', `${M.tok.piece(top.id)} ${pct(top.p)}`, 1); }
     c.restore(); c.save(); c.strokeStyle = 'rgba(255,255,255,.12)'; c.lineWidth = 1; c.beginPath(); c.roundRect(p.x, p.y, p.w, p.h, 10); c.stroke(); c.restore();
     label(p.x + 8, p.y + 12, 'the cloud: what it would say if it stopped here', 'rgba(255,255,255,.5)', 1, 10.5);
   }
@@ -490,7 +492,7 @@ textarea { width: 100%; box-sizing: border-box; font: 500 18px/1.4 var(--mono); 
   function piecesOnCloud(alpha, lbl) { const keep = labelled(); for (let i = 0; i < R.n; i++) { const [x, y] = scr(...piecePos(i)); hit(x, y, 14, pieceTip(i)); c.save(); c.globalAlpha = alpha; dot(x, y, i === R.n - 1 ? 6 : 4, kcol(i), piece(i), keep && !keep.has(i) ? 0 : lbl); c.restore(); } }
   function bounds(only) { let x0 = 1, y0 = 1, x1 = 0, y1 = 0; for (let i = 0; i < R.n; i++) { if (only && !only.has(i)) continue; const [x, y] = piecePos(i); x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); } return { cx: (x0 + x1) / 2, cy: (y0 + y1) / 2, w: x1 - x0, h: y1 - y0 }; }
   function topBounds() { let x0 = 1, y0 = 1, x1 = 0, y1 = 0; for (const cd of R.words[0].cands) { if (!onMap(cd.id)) continue; const x = MAP.x[cd.id], y = MAP.y[cd.id]; x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); } return { cx: (x0 + x1) / 2, cy: (y0 + y1) / 2, w: x1 - x0, h: y1 - y0 }; }
-  function topLabels(alpha, k = 5) { const w = R.words[0], list = k > 5 ? topList(w, k).map(([id, p]) => ({ id, full: p, logit: w.logits[id] })) : w.cands; list.forEach((cd, i) => { if (!onMap(cd.id)) return; const [x, y] = scr(MAP.x[cd.id], MAP.y[cd.id]); dot(x, y, 5 + 6 * Math.sqrt(cd.full), i ? '#ffd58a' : '#ffe9b8', `${M.tok.piece(cd.id)} ${pct(cd.full)}`, alpha); hit(x, y, 16, chanceTip(cd)); }); }
+  function topLabels(alpha, k = 5) { const w = R.words[0], list = k > 5 ? topList(w, k).map(([id, p]) => ({ id, full: p, logit: w.logits[id] })) : w.cands; list.forEach((cd, i) => { if (!onMap(cd.id)) return; const [x, y] = scr(MAP.x[cd.id], MAP.y[cd.id], TILT > 0.05 ? Math.sqrt(cd.full) : 0); dot(x, y, 5 + 6 * Math.sqrt(cd.full), i ? '#ffd58a' : '#ffe9b8', `${M.tok.piece(cd.id)} ${pct(cd.full)}`, alpha); hit(x, y, 16, chanceTip(cd)); }); }
   function descent(t) { const w = R.words[0], per = PER(), sc = vecScale(), lyr = Math.min(M.L - 1, Math.floor(t / per)), u = seg(t - lyr * per, 0, per); layerPass(w, lyr, u, sc, t, false); }
   function dice(t, w, alpha) { // the five on a ring, sized by chance; a marker spins, slows, and lands on the real pick
     const cx = W / 2, cy = Math.max(H * 0.5, stageTop() + Math.min(W, H) * 0.3 + 40), R0 = Math.min(W, H, 1000) * 0.3, n = w.cands.length;
@@ -538,6 +540,7 @@ textarea { width: 100%; box-sizing: border-box; font: 500 18px/1.4 var(--mono); 
     if (paused) { t0 += now - lastNow; } lastNow = now;
     const t = Math.max(0, now - t0), s = SCENES[scene]; // the frame's timestamp can precede the scene's start by a few ms
     if (!USER) { cam.x = lerp(cam.x, camTo.x, 0.08); cam.y = lerp(cam.y, camTo.y, 0.08); cam.z = lerp(cam.z, camTo.z, 0.08); }
+    TILT = reduce ? tiltTo : lerp(TILT, tiltTo, 0.1);
     PLACED = []; HIT = []; c.setTransform(dpr, 0, 0, dpr, 0, 0); c.fillStyle = '#07080d'; c.fillRect(0, 0, W, H);
     const g = c.createRadialGradient(W / 2, H * 0.3, 0, W / 2, H * 0.3, Math.max(W, H)); g.addColorStop(0, '#141829'); g.addColorStop(1, '#07080d'); c.fillStyle = g; c.fillRect(0, 0, W, H);
     s.draw(reduce ? Math.max(t, dur(s)) : t); drawSel();
@@ -593,14 +596,14 @@ textarea { width: 100%; box-sizing: border-box; font: 500 18px/1.4 var(--mono); 
   // tapping something on the stage
   // the stage under your fingers: drag to move the cloud, scroll or pinch to zoom, tap for a token
   const PT = new Map(); let drag = null, pinch0 = 0;
-  const unitAt = (px, py) => { const sc = Math.min(W, H) * 0.92 * cam.z; return [cam.x + (px - W / 2) / sc, cam.y + (py - H / 2) / sc]; };
+  const unitAt = (px, py) => { const sc = Math.min(W, H) * 0.92 * cam.z, ct = Math.cos(TILT) || 1e-3, lift = Math.min(W, H) * 0.16 * Math.sin(TILT); return [cam.x + (px - W / 2) / sc, cam.y + (py - H / 2 - lift) / (sc * ct)]; };
   const moveCam = () => { USER = true; Object.assign(camTo, cam); $('#recenter').hidden = false; };
   cv.addEventListener('pointerdown', e => { if (!playing) return; cv.setPointerCapture(e.pointerId); PT.set(e.pointerId, [e.clientX, e.clientY]); drag = { x: e.clientX, y: e.clientY, cx: cam.x, cy: cam.y, moved: false }; if (PT.size === 2) { const [a, b] = [...PT.values()]; pinch0 = Math.hypot(a[0] - b[0], a[1] - b[1]) / cam.z; } });
   cv.addEventListener('pointermove', e => {
     if (!drag || !PT.has(e.pointerId)) return; PT.set(e.pointerId, [e.clientX, e.clientY]);
     if (PT.size === 2) { const [a, b] = [...PT.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]); if (pinch0) { cam.z = clamp(d / pinch0, 0.5, 12); moveCam(); } drag.moved = true; return; }
     const dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (!drag.moved && Math.hypot(dx, dy) < 6) return; drag.moved = true;
-    if (!CLOUD_SCENES.has(SCENES[scene].k)) return; const sc = Math.min(W, H) * 0.92 * cam.z; cam.x = drag.cx - dx / sc; cam.y = drag.cy - dy / sc; moveCam();
+    if (!CLOUD_SCENES.has(SCENES[scene].k)) return; const sc = Math.min(W, H) * 0.92 * cam.z; cam.x = drag.cx - dx / sc; cam.y = drag.cy - dy / (sc * (Math.cos(TILT) || 1e-3)); moveCam();
   });
   const up = e => {
     PT.delete(e.pointerId); if (!drag) return; const tapped = !drag.moved; drag = PT.size ? drag : null; if (PT.size) return;
@@ -618,6 +621,7 @@ textarea { width: 100%; box-sizing: border-box; font: 500 18px/1.4 var(--mono); 
   };
   cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', e => { PT.delete(e.pointerId); if (!PT.size) drag = null; });
   cv.addEventListener('wheel', e => { if (!playing || !CLOUD_SCENES.has(SCENES[scene].k)) return; e.preventDefault(); const [ux, uy] = unitAt(e.clientX, e.clientY), f = Math.pow(1.0015, -e.deltaY), z = clamp(cam.z * f, 0.5, 12); cam.x = ux - (ux - cam.x) * cam.z / z; cam.y = uy - (uy - cam.y) * cam.z / z; cam.z = z; moveCam(); }, { passive: false });
+  $('#tilt').addEventListener('click', () => { const on = $('#tilt').getAttribute('aria-pressed') !== 'true'; $('#tilt').setAttribute('aria-pressed', on); tiltTo = on ? 0.92 : 0; });
   $('#recenter').addEventListener('click', () => { USER = false; $('#recenter').hidden = true; const sc = SCENES[scene]; sc.enter && sc.enter(); });
   $('#replay').addEventListener('click', () => { $('#end').hidden = true; $('#top').hidden = false; $('#bar').hidden = false; playing = true; cam.z = 0.7; enter(0); });
   $('#another').addEventListener('click', () => { $('#end').hidden = true; $('#start').hidden = false; $('#nav').hidden = true; });

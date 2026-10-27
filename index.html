@@ -93,6 +93,8 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
 .lights { display: flex; flex-direction: column; gap: 6px; }
 .allgrid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 14px; align-items: start; }
 .cloudbox { position: sticky; top: 12px; } .cloudbox canvas { width: 100%; display: block; border-radius: 12px; background: #07080d; border: 1px solid var(--s-line); }
+.cvwrap { position: relative; } .cv3d { position: absolute; top: 8px; right: 8px; font: 600 11px var(--mono); padding: 4px 9px; background: rgb(19 23 38 / .85); } .cv3d[aria-pressed="true"] { background: var(--knob); border-color: var(--knob); color: #fff; }
+.cloudtip { position: fixed; z-index: 60; max-width: 260px; background: rgb(14 17 28 / .97); border: 1px solid rgb(255 255 255 / .18); border-radius: 10px; padding: 8px 10px; font: 13px/1.45 var(--body); color: #eef0fa; box-shadow: 0 8px 30px rgb(0 0 0 / .6); pointer-events: none; } .cloudtip b { color: var(--pick); font-family: var(--mono); } .cloudtip small { display: block; color: var(--s-ink2); }
 .cloudbox .note { margin-top: 6px; font-size: 12.5px; }
 @media (max-width: 760px) { .allgrid { grid-template-columns: 1fr; } .cloudbox { position: static; order: -1; } }
 .light { display: grid; grid-template-columns: 1.6em minmax(0, 7em) minmax(0, 1fr) 4.2em; gap: 10px; align-items: center; font: 600 14px var(--mono); }
@@ -672,27 +674,64 @@ body.playing .ctl .now { display: none; }
   const needCloud = k => (window.CLOUDS && window.CLOUDS[k]) ? Promise.resolve() : new Promise(ok => { const sc = document.createElement('script'); sc.src = CLOUD_FILE[k]; sc.onload = ok; sc.onerror = ok; document.head.appendChild(sc); });
   const unb64 = t => Uint8Array.from(atob(t || ''), ch => ch.charCodeAt(0));
   let MAP = null;
-  function setMap(k) { const c = window.CLOUDS && window.CLOUDS[k]; if (!c) { MAP = null; return; } MAP = { xy: new Uint16Array(unb64(c.xy).buffer), cat: unb64(c.cat), base: null }; }
+  function setMap(k) { const c = window.CLOUDS && window.CLOUDS[k]; if (!c) { MAP = null; return; } MAP = { xy: new Uint16Array(unb64(c.xy).buffer), cat: unb64(c.cat), base: null };
+    const G = 160, cells = Array.from({ length: G * G }, () => []); for (let id = 0; id < MAP.cat.length; id++) { if (MAP.cat[id] === 255) continue; cells[Math.min(G - 1, Math.floor(MAP.xy[2 * id + 1] / 65534 * G)) * G + Math.min(G - 1, Math.floor(MAP.xy[2 * id] / 65534 * G))].push(id); } MAP.index = { G, cells }; }
+  function nearestToken(u, v, maxD) { if (!MAP || !MAP.index) return -1; const { G, cells } = MAP.index, cx = Math.floor(u * G), cy = Math.floor(v * G), r = Math.ceil(maxD * G) + 1; let best = -1, bd = maxD * maxD;
+    for (let gy = Math.max(0, cy - r); gy <= Math.min(G - 1, cy + r); gy++) for (let gx = Math.max(0, cx - r); gx <= Math.min(G - 1, cx + r); gx++) for (const id of cells[gy * G + gx]) { const d = (MAP.xy[2 * id] / 65534 - u) ** 2 + (MAP.xy[2 * id + 1] / 65534 - v) ** 2; if (d < bd) { bd = d; best = id; } } return best; }
+  // every cloud on the page can be moved, zoomed, laid down in 3D and tapped
+  let cloudTip = null;
+  function wireCloud(cv) {
+    if (cv._wired) return; cv._wired = true; cv.style.touchAction = 'none'; cv.style.cursor = 'grab';
+    const wrap = document.createElement('div'); wrap.className = 'cvwrap'; cv.replaceWith(wrap); wrap.appendChild(cv);
+    const b3 = document.createElement('button'); b3.type = 'button'; b3.className = 'cv3d'; b3.textContent = '3D'; b3.title = 'Lay the map down: height is the chance'; b3.setAttribute('aria-pressed', 'false'); wrap.appendChild(b3);
+    const redraw = () => { if (cv._args) drawCloud(cv, ...cv._args); };
+    b3.addEventListener('click', () => { const V = cv._v, on = b3.getAttribute('aria-pressed') !== 'true'; b3.setAttribute('aria-pressed', on); const from = V.tilt, to = on ? 0.92 : 0, t0 = performance.now();
+      const stepT = now => { const u = Math.min(1, (now - t0) / 450); V.tilt = from + (to - from) * (u < 0.5 ? 2 * u * u : 1 - (-2 * u + 2) ** 2 / 2); redraw(); if (u < 1) requestAnimationFrame(stepT); }; requestAnimationFrame(stepT); });
+    const PT = new Map(); let drag = null, pinch0 = 0;
+    const local = e => { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) * cv.width / r.width, (e.clientY - r.top) * cv.height / r.height]; };
+    cv.addEventListener('pointerdown', e => { cv.setPointerCapture(e.pointerId); const [x, y] = local(e); PT.set(e.pointerId, [x, y]); const V = cv._v; drag = { x, y, px: V.px, py: V.py, moved: false }; if (PT.size === 2) { const [a, b] = [...PT.values()]; pinch0 = Math.hypot(a[0] - b[0], a[1] - b[1]) / V.z; } });
+    cv.addEventListener('pointermove', e => { if (!drag || !PT.has(e.pointerId)) return; const [x, y] = local(e); PT.set(e.pointerId, [x, y]); const V = cv._v;
+      if (PT.size === 2) { const [a, b] = [...PT.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]); if (pinch0) V.z = Math.max(1, Math.min(14, d / pinch0)); drag.moved = true; redraw(); return; }
+      const dx = x - drag.x, dy = y - drag.y; if (!drag.moved && Math.hypot(dx, dy) < 6 * (cv.width / cv.clientWidth)) return; drag.moved = true; V.px = drag.px + dx; V.py = drag.py + dy / (Math.cos(V.tilt) || 1e-3); redraw(); });
+    const up = e => { PT.delete(e.pointerId); if (!drag) return; const tapped = !drag.moved; if (!PT.size) drag = null; if (PT.size || !tapped) return;
+      const [x, y] = local(e), V = cv._v, pad = 10 * Math.min(2, devicePixelRatio || 1), cx = cv.width / 2, cy = cv.height / 2, ct = Math.cos(V.tilt) || 1e-3, lift = cv.height * 0.16 * Math.sin(V.tilt);
+      const u = ((cx + (x - cx - V.px) / V.z) - pad) / (cv.width - 2 * pad), v = ((cy + ((y - cy - lift) / ct - V.py) / V.z) - pad) / (cv.height - 2 * pad);
+      const id = nearestToken(u, v, 14 * (cv.width / cv.clientWidth) / ((cv.width - 2 * pad) * V.z));
+      V.sel = id; redraw(); if (!cloudTip) { cloudTip = document.createElement('div'); cloudTip.className = 'cloudtip'; document.body.appendChild(cloudTip); }
+      if (id < 0) { cloudTip.hidden = true; return; }
+      const w = cv._args && cv._args[0], p = w ? Math.exp(Math.log(1e-6) * (1 - w[id] / 255)) : null;
+      cloudTip.innerHTML = `<b>${esc(M.tok.piece(id))}</b><small>token #${id} · neighbours: ${esc(M.neighbors(id, 4).map(n => `${M.tok.piece(n.id)} ${n.sim.toFixed(2)}`).join(', '))}</small>` + (w && w[id] ? `<small>its chance here: ${pct(p)}</small>` : '');
+      cloudTip.hidden = false; const r = cv.getBoundingClientRect(), tw = cloudTip.offsetWidth; cloudTip.style.left = Math.max(8, Math.min(innerWidth - tw - 8, e.clientX - tw / 2)) + 'px'; cloudTip.style.top = Math.max(8, e.clientY - cloudTip.offsetHeight - 14) + 'px'; };
+    cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', e => { PT.delete(e.pointerId); if (!PT.size) drag = null; });
+    cv.addEventListener('wheel', e => { e.preventDefault(); const V = cv._v, [x, y] = local(e), f = Math.pow(1.0015, -e.deltaY), z = Math.max(1, Math.min(14, V.z * f)), cx = cv.width / 2, cy = cv.height / 2; V.px = x - (x - V.px - cx) * z / V.z - cx; V.py = (y - cy - V.py) * (1 - z / V.z) + V.py; V.z = z; redraw(); }, { passive: false });
+    cv.addEventListener('dblclick', () => { Object.assign(cv._v, { z: 1, px: 0, py: 0, sel: -1 }); redraw(); });
+    document.addEventListener('pointerdown', e => { if (cloudTip && !cv.contains(e.target)) cloudTip.hidden = true; });
+  }
+
   const onMap = id => MAP && id < MAP.cat.length && MAP.cat[id] !== 255;
   function hue(id) { const dx = MAP.xy[2 * id] / 65534 - 0.5, dy = MAP.xy[2 * id + 1] / 65534 - 0.5; return [(Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360, Math.min(1, Math.hypot(dx, dy) * 2.3)]; }
   const FLOOR = Math.log(1e-6), pOfQ = q => (q ? Math.exp(FLOOR * (1 - q / 255)) : 0);
   function drawCloud(cv, watch, labels, path) {
-    if (!MAP) { cv.hidden = true; return; } cv.hidden = false;
+    if (!MAP) { cv.hidden = true; return; } cv.hidden = false; cv._args = [watch, labels, path]; wireCloud(cv); const V = cv._v || (cv._v = { z: 1, px: 0, py: 0, tilt: 0, sel: -1 });
     const W = cv.clientWidth || 320, H = Math.round(Math.min(W * 0.8, 340)), dpr = Math.min(2, devicePixelRatio || 1);
     if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); cv.style.height = H + 'px'; MAP.base = null; }
-    const c = cv.getContext('2d'), pad = 10 * dpr, X = id => pad + MAP.xy[2 * id] / 65534 * (cv.width - 2 * pad), Y = id => pad + MAP.xy[2 * id + 1] / 65534 * (cv.height - 2 * pad);
+    const c = cv.getContext('2d'), pad = 10 * dpr, bx = id => pad + MAP.xy[2 * id] / 65534 * (cv.width - 2 * pad), by = id => pad + MAP.xy[2 * id + 1] / 65534 * (cv.height - 2 * pad);
+    const cx = cv.width / 2, cy = cv.height / 2, ct = Math.cos(V.tilt), st = Math.sin(V.tilt), lift = cv.height * 0.16 * st, tilted = V.tilt > 0.05;
+    const X = id => cx + (bx(id) - cx) * V.z + V.px, Yh = (id, h) => cy + ((by(id) - cy) * V.z + V.py) * ct + lift - h * cv.height * 0.42 * st, Y = id => Yh(id, 0); // through the view: zoom, pan, tilt; h = height above the map (a chance)
+    const hOf = id => (tilted && watch && watch[id] >= 60 ? Math.sqrt(pOfQ(watch[id])) : 0);
     if (!MAP.base || MAP.base.width !== cv.width) { // every piece as a dim dot, coloured by where it sits
       const b = document.createElement('canvas'); b.width = cv.width; b.height = cv.height; const bc = b.getContext('2d');
-      for (let id = 0; id < MAP.cat.length; id++) { if (MAP.cat[id] === 255) continue; const [h, r] = hue(id); bc.fillStyle = `hsla(${h.toFixed(0)},${(20 + 55 * r).toFixed(0)}%,60%,0.35)`; bc.fillRect(X(id), Y(id), 1.2 * dpr, 1.2 * dpr); }
+      for (let id = 0; id < MAP.cat.length; id++) { if (MAP.cat[id] === 255) continue; const [h, r] = hue(id); bc.fillStyle = `hsla(${h.toFixed(0)},${(20 + 55 * r).toFixed(0)}%,60%,0.35)`; bc.fillRect(bx(id), by(id), 1.2 * dpr, 1.2 * dpr); }
       MAP.base = b;
     }
-    c.clearRect(0, 0, cv.width, cv.height); c.drawImage(MAP.base, 0, 0);
+    c.clearRect(0, 0, cv.width, cv.height); c.save(); c.translate(cx + V.px, cy + lift + V.py * ct); c.scale(V.z, V.z * ct); c.translate(-cx, -cy); c.drawImage(MAP.base, 0, 0); c.restore();
     if (watch) { // the chance of every piece as light (one in a million and up)
       c.globalCompositeOperation = 'lighter';
       for (let id = 0; id < Math.min(watch.length, MAP.cat.length); id++) {
         const q = watch[id]; if (q < 60 || MAP.cat[id] === 255) continue;
         const a = (q - 60) / 195, [h] = hue(id); c.fillStyle = `hsla(${h.toFixed(0)},90%,${(55 + 30 * a).toFixed(0)}%,${(0.25 + 0.75 * a).toFixed(2)})`;
-        const r = (1 + 4 * a * a) * dpr; c.beginPath(); c.arc(X(id), Y(id), r, 0, Math.PI * 2); c.fill();
+        const r = (1 + 4 * a * a) * dpr, hh = hOf(id); if (hh > 0.3) { c.strokeStyle = `hsla(${h.toFixed(0)},90%,70%,.5)`; c.lineWidth = dpr; c.beginPath(); c.moveTo(X(id), Y(id)); c.lineTo(X(id), Yh(id, hh)); c.stroke(); }
+        c.beginPath(); c.arc(X(id), Yh(id, hh), r, 0, Math.PI * 2); c.fill();
       }
       c.globalCompositeOperation = 'source-over';
     }
@@ -700,10 +739,15 @@ body.playing .ctl .now { display: none; }
       c.strokeStyle = 'rgba(255,233,184,.7)'; c.lineWidth = 1.5 * dpr; c.beginPath();
       path.forEach((id, i) => { if (!onMap(id)) return; i ? c.lineTo(X(id), Y(id)) : c.moveTo(X(id), Y(id)); }); c.stroke();
     }
+    if (V.sel >= 0 && onMap(V.sel) && M) { // the tapped token: a ring, its nearest neighbours lit
+      const sx = X(V.sel), sy = Y(V.sel); c.font = `600 ${11 * dpr}px "IBM Plex Mono", monospace`; c.textBaseline = 'middle';
+      M.neighbors(V.sel, 4).forEach(n => { if (!onMap(n.id)) return; c.strokeStyle = 'rgba(255,233,184,.5)'; c.lineWidth = dpr; c.setLineDash([3 * dpr, 4 * dpr]); c.beginPath(); c.moveTo(sx, sy); c.lineTo(X(n.id), Y(n.id)); c.stroke(); c.setLineDash([]); c.fillStyle = '#ffd58a'; c.beginPath(); c.arc(X(n.id), Y(n.id), 3 * dpr, 0, Math.PI * 2); c.fill(); c.fillText(`${M.tok.piece(n.id)} ${n.sim.toFixed(2)}`, X(n.id) + 6 * dpr, Y(n.id)); });
+      c.strokeStyle = '#ffe9b8'; c.lineWidth = 2 * dpr; c.beginPath(); c.arc(sx, sy, 8 * dpr, 0, Math.PI * 2); c.stroke(); c.fillStyle = '#fff'; c.fillText(M.tok.piece(V.sel), sx + 11 * dpr, sy - 10 * dpr);
+    }
     c.font = `600 ${12 * dpr}px "IBM Plex Mono", monospace`; c.textBaseline = 'middle';
     const placed = []; // labels never overlap: each one moves down until it has room, with a thin line back to its dot
     (labels || []).forEach(([id, txt], i) => {
-      if (!onMap(id)) return; const x = X(id), y = Y(id);
+      if (!onMap(id)) return; const x = X(id), y = Yh(id, hOf(id));
       c.fillStyle = i ? 'rgba(255,255,255,.9)' : '#ffe9b8'; c.beginPath(); c.arc(x, y, (i ? 3 : 4.5) * dpr, 0, Math.PI * 2); c.fill();
       const tw = c.measureText(txt).width, h = 18 * dpr, tx = Math.min(cv.width - tw - 6 * dpr, x + 10 * dpr); let ty = y;
       while (placed.some(r => tx < r.x + r.w && tx + tw + 6 * dpr > r.x && Math.abs(ty - r.y) < h + 2 * dpr)) ty += h + 2 * dpr;
