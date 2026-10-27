@@ -123,7 +123,8 @@
     return { run, files: () => Object.assign({}, fs), reset: () => { fs = Object.assign({}, FILES); } };
   }
   const SHELL = makeShell();
-  const RUN = { run_command: a => { const out = SHELL.run(String(a.command == null ? '' : a.command)).replace(/\n$/, ''); return out === '' ? '(no output)' : out; } };
+  const asOutput = o => { const out = String(o).replace(/\n$/, ''); return out === '' ? '(no output)' : out; }; // what goes back to the model
+  const RUN = { run_command: a => asOutput(SHELL.run(String(a.command == null ? '' : a.command))) };
 
   // ---------- Qwen2.5's chat template, written out (it matches transformers' apply_chat_template exactly) ----------
   const pyJson = v => v === null ? 'null' : Array.isArray(v) ? '[' + v.map(pyJson).join(', ') + ']' : typeof v === 'object' ? '{' + Object.entries(v).map(([k, x]) => JSON.stringify(k) + ': ' + pyJson(x)).join(', ') + '}' : JSON.stringify(v);
@@ -157,7 +158,8 @@
   // ---------- the loop ----------
   // on: { turn(n), phase(name), context(segs), read(done, total), readDone(n, ms, pos), decision({ lens, logits }),
   //       token(t), calls(list, reply), result(call, text, ran), done(reply, ended), stopped(why) }
-  async function run({ model, task, maxTurns = 5, approve, on = {}, shouldStop = () => false }) {
+  // shell: optional, another computer to run the commands on (machine.js: a real Linux); its run(command) may be async
+  async function run({ model, task, maxTurns = 5, approve, on = {}, shouldStop = () => false, shell = null }) {
     const tok = model.tok, st = model.newState(), seg = (kind, text) => ({ kind, text, ids: tok.encode(text) });
     let pending = [seg('system', systemText()), seg('user', userText(task)), seg('marker', ASSISTANT)];
     // Qwen's published generation settings lower the score of every token already in the context (repetition
@@ -199,7 +201,7 @@
         let r = c.error, ran = false;
         if (!r) {
           if (approve && !(await approve(c))) r = 'The user did not allow this tool call.';
-          else { ran = true; try { r = RUN[c.name](c.args); } catch (e) { r = 'Error: ' + e.message; } }
+          else { ran = true; try { r = shell && c.name === 'run_command' ? asOutput(await shell.run(String(c.args.command == null ? '' : c.args.command))) : RUN[c.name](c.args); } catch (e) { r = 'Error: ' + e.message; } }
         }
         results.push(r); on.result && on.result(c, r, ran);
       }

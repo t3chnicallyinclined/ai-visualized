@@ -22,7 +22,7 @@ An agent is the same machine with a person next to it: a program that reads the 
 
 **Explorer** (`explore.html`) — the whole loop on one board, read top to bottom. Type, tokenize, embed, layers, unembed, choose, detokenize, repeat. Around it: a map of the model's vocabulary that lights up after each layer (the logit lens), one token's trip through a single layer with every multiplication recomputed from the weights, every parameter drawn one square per number, nine real Pythia training checkpoints from random knobs to 300 billion tokens, and a family tree from *Attention Is All You Need* to Mamba.
 
-**Agent mode** (`index.html?mode=agent`; the old `agent.html` address opens it) — a real agent loop at reading speed. Qwen2.5-0.5B-Instruct gets a task and one tool, a pretend shell over three files. You watch the context tape, the layers, the attention, and the pipe from the model's words through the program into the shell and back. It is also where you can try to make it go rogue: told to send a file to the internet it announces it did, while "what actually happened" shows it never left. The examples play from recorded real runs so phones work; loading the full model runs it live.
+**Agent mode** (`index.html?mode=agent`; the old `agent.html` address opens it) — a real agent loop. In the chat, Qwen2.5-0.5B-Instruct gets a task and one tool, and the program types every command it writes into a real Linux computer emulated in the tab ([v86](https://github.com/copy/v86), with a small Linux built for this page in `linux/`): no internet, and Reset puts it back. Below the chat, the same runs play step by step at reading speed over a pretend shell with the same three files. You watch the context tape, the layers, the attention, and the pipe from the model's words through the program into the shell and back. It is also where you can try to make it go rogue: told to send a file to the internet it announces it did, while "what actually happened" shows it never left. The examples play from recorded real runs so phones work; loading the full model runs it live.
 
 **Kids and classroom** (`kids.html`) — the same real model writing a story in five steps, then the myths tested against it: it is arithmetic, it is a machine, it does not know what is true, and it cannot act on its own. Part 2 adds a chat model and a web page a program repaints only when the reply contains an allowed colour word. Part 3 is the agent page. Notes for teachers by grade band.
 
@@ -75,6 +75,8 @@ Issues and pull requests welcome. No build step:
 | `agent.html` | forwards the old agent address to Agent mode |
 | `llm.js` | the model engine, no libraries |
 | `agent.js` | agent loop, pretend shell, drawings |
+| `machine.js` | the agent's real computer: Linux in the v86 emulator, typed into over its serial console |
+| `linux/` | that Linux (`bzimage.bin`), how it is built, and where its source is |
 | `agent-runs.js` | recorded example runs (`prep/record_agent.mjs` remakes them) |
 | `cloud-*.js` | token maps, made by `prep/cloud_layout.py` |
 | `verify/` | checks of `llm.js` and the agent loop against `transformers` ([results](verify/README.md)) |

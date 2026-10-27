@@ -1,0 +1,6 @@
+The complete corresponding source for linux/bzimage.bin (Buildroot "make legal-info": every package's source
+tarball, its licence texts, and the exact configuration) is attached to this repository's GitHub release:
+
+  https://github.com/t3chnicallyinclined/ai-visualized/releases/tag/linux-image-2026-10-27
+
+  legal-info.tar.gz   (Buildroot 2025.02.19, Linux 6.12.112, BusyBox, musl; built 2026-10-27 with linux/build.sh)
