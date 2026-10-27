@@ -43,14 +43,12 @@ Six models, four designs, each downloaded once from Hugging Face at a pinned rev
 
 Every number about the model's work comes from its real weights.
 
-`llm.js` is a from-scratch JavaScript implementation of the four designs (Llama, GPT-NeoX, GPT-2, Mamba). The scripts in [`verify/`](verify/README.md) check it against Hugging Face `transformers` in float32, for all six models at the exact revisions the pages download:
+`llm.js` is a from-scratch JavaScript implementation of the four designs (Llama, GPT-NeoX, GPT-2, Mamba). The scripts in [`verify/`](verify/README.md) trace the same six models in Hugging Face `transformers`, at the exact revisions the pages download, with hooks on every layer and on each layer's parts, and compare every number:
 - identical tokens on six tricky texts and on the prompt (chat template included)
-- every number of the hidden state after every layer within a few millionths of that layer's largest number
-- the same logit-lens top token after every layer
-- the same top-10 tokens in the same order, with scores within 0.0001
-- identical greedy continuations
+- every number of every token's hidden state after every layer, every head's attention weights, and what the attention and feed-forward blocks add in every layer
+- the same logit-lens top token after every layer, the same top-10 tokens in the same order, and identical greedy continuations
 
-They pass with both the WebAssembly and the plain JavaScript kernel. For the agent, every context the loop builds equals `apply_chat_template` token for token, and every reply equals transformers' own greedy output with Qwen's repetition penalty. In the Explorer, the layer view also redoes each grid multiplication from the weights in the page and shows the check.
+The yardstick is `transformers` in 64-bit maths, close to the exact answer: `llm.js` comes out about as close to it as `transformers`' own float32 run, or closer (largest gap 5.5e-5 of a layer's largest number, in Pythia's sharpest heads). The checks pass with both the WebAssembly and the plain JavaScript kernel, and a self-test that nudges a single knob makes them fail, for every model. For the agent, every context the loop builds equals `apply_chat_template` token for token, and every reply equals transformers' own greedy output with Qwen's repetition penalty. In the Explorer, the layer view also redoes each grid multiplication from the weights in the page and shows the check.
 
 Anything that is an illustration says so where it appears:
 
