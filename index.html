@@ -833,7 +833,7 @@ body.playing .ctl .now { display: none; }
     await slide(3200);
 
     // 7 again
-    focus('again', 'The new piece joins the sentence, and it all runs again.');
+    focus('again', `The dice gives a number, #${cands[pick].id}. The same list turns it back into text, “${M.tok.decode([cands[pick].id], true)}”, and the piece joins the sentence. Then it all runs again.`);
     $('#sentence').innerHTML = esc(text) + `<span class="new">${esc(M.tok.decode([cands[pick].id], true))}</span>`;
     const addPick = (id, p, i) => { const d = document.createElement('div'); d.innerHTML = `word ${i}: <b></b> · its chance on the dice ${pct(p)}`; d.querySelector('b').textContent = piece(id); $('#picks').appendChild(d); };
     addPick(cands[pick].id, cands[pick].p, 1);
