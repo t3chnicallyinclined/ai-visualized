@@ -123,7 +123,7 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
 #agentMode .rail li.ag::after { content: "agent"; display: inline-block; width: auto; position: static; margin-left: 6px; font: 700 9.5px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: #06222a; background: var(--ok); border-radius: 999px; padding: 1px 6px; vertical-align: 1px; }
 #agentMode .chath { font: 800 22px/1.2 var(--display); margin: 0 0 4px; }
 .chatgrid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; margin-top: 12px; }
-@media (max-width: 860px) { .chatgrid { grid-template-columns: minmax(0, 1fr); } .pccol { order: -1; } .pcterm { height: 150px; } .msgs { height: 260px; } } /* phones: the computer on top, small, so the chat and its typing are both in view */
+@media (max-width: 860px) { .chatgrid { grid-template-columns: minmax(0, 1fr); } .pccol { order: -1; } #agentMode .pcterm { height: 130px; } #agentMode .msgs { height: 230px; } } /* phones: the computer on top, small, so the chat and its typing are both in view */
 .chatcol, .pccol { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .msgs { height: 320px; overflow-y: auto; background: #0f1322; border: 1px solid var(--s-line); border-radius: 12px; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
 .msg { max-width: 92%; border-radius: 14px; padding: 8px 11px; font: 15px/1.45 var(--body); white-space: pre-wrap; overflow-wrap: anywhere; }
@@ -152,6 +152,31 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
 .cpipe li span { display: block; font: 12px/1.35 var(--mono); color: var(--s-ink3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-height: 1.35em; }
 .cpipe li.ag b::after { content: "agent"; margin-left: 5px; font: 700 9px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: #06222a; background: var(--ok); border-radius: 999px; padding: 1px 5px; vertical-align: 1px; }
 .cpipe li.on { border-color: var(--c-attn); background: rgb(255 92 138 / .12); } .cpipe li.on b { color: #fff; } .cpipe li.on span { color: #ffd0de; }
+.mpanel { margin-top: 14px; background: #0b0e19; border: 1px solid var(--s-line); border-radius: 14px; padding: 10px 12px; }
+.mhead { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.mhead h3 { margin: 0; font: 600 12px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--s-ink2); }
+#agentMode .mspeed button { font: 500 12px var(--mono); padding: 3px 9px; } #agentMode .mspeed button[aria-pressed="true"] { background: var(--s-ink); color: var(--s-bg); }
+.msteps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 8px; }
+@media (max-width: 860px) { .msteps { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.mstep { background: #0f1322; border: 1.5px solid var(--s-line); border-radius: 10px; padding: 7px 9px; min-width: 0; transition: border-color .2s, background .2s, opacity .2s; opacity: .55; }
+.mstep.on { opacity: 1; border-color: var(--c-attn); background: rgb(255 92 138 / .08); } .mstep.done { opacity: .85; }
+.mstep h4 { margin: 0 0 6px; font: 600 12.5px/1.25 var(--body); color: var(--s-ink); display: flex; gap: 6px; align-items: center; }
+.mstep h4 i { font: 600 10.5px var(--mono); font-style: normal; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--s-line); flex: none; } .mstep.on h4 i { background: var(--c-attn); border-color: var(--c-attn); }
+.mnote { margin: 6px 0 0; font: 11.5px/1.35 var(--body); color: var(--s-ink3); }
+.mbig { font: 700 24px/1 var(--display); color: var(--s-ink); } .mbig small { font: 500 12px var(--body); color: var(--s-ink2); margin-left: 4px; }
+.mtail { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 6px; max-height: 3.6em; overflow: hidden; }
+.mtail span { font: 11.5px var(--mono); padding: 1px 5px; border-radius: 5px; border: 1px solid var(--s-line); color: var(--s-ink2); white-space: pre; max-width: 9em; overflow: hidden; text-overflow: ellipsis; }
+.mtail span.sys { border-color: rgb(127 220 181 / .5); color: var(--c-sys); } .mtail span.user { border-color: rgb(242 169 59 / .6); color: var(--c-user); } .mtail span.tool { border-color: rgb(47 198 216 / .6); color: var(--c-tool); } .mtail span.ai { border-color: rgb(115 144 255 / .6); color: #aab9ff; }
+.mtail span.mark { border-color: rgb(157 144 255 / .5); color: var(--c-mark); } .mtail span.new { background: rgb(255 92 138 / .25); color: #fff; border-color: var(--c-attn); } .mtail span.look { box-shadow: inset 0 -2px 0 var(--c-attn); }
+.mlay { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 2px; }
+.mlay b { height: 16px; border-radius: 3px; background: #1a2036; font: 500 8.5px/16px var(--mono); color: var(--s-ink3); text-align: center; overflow: hidden; white-space: pre; transition: background .12s; }
+.mlay b.lit { background: #4a3f9a; color: #fff; } .mlay b.hit { background: rgb(255 92 138 / .5); color: #fff; }
+.mcands { display: flex; flex-direction: column; gap: 3px; }
+.mcands div { display: grid; grid-template-columns: minmax(0, 6.5em) minmax(0, 1fr) 3.2em; gap: 6px; align-items: center; font: 11.5px var(--mono); color: var(--s-ink2); }
+.mcands div span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: pre; } .mcands div span:last-child { text-align: right; }
+.mcands em { display: block; height: 8px; border-radius: 99px; background: var(--c-ai); width: 0; transition: width .25s ease-out; } .mcands div.win { color: #fff; } .mcands div.win em { background: var(--score); box-shadow: 0 0 8px rgb(255 233 184 / .7); }
+.mpick { font: 600 20px/1.3 var(--mono); color: var(--score); white-space: pre; overflow: hidden; text-overflow: ellipsis; min-height: 1.3em; }
+.mpick.end { color: var(--c-attn); font-size: 15px; }
 /* ---- Agent mode: the agent's walk, scoped so it never touches the Write walk ---- */
 #agentMode a { color: var(--s-ink); }
 #agentMode .note { font-size: 13.5px; color: var(--s-ink2); margin: 0; }
@@ -398,6 +423,15 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
       <div class="pccol">
         <div class="pcwin"><div class="pcbar"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="pct">Linux · in this tab · no internet</span><button type="button" id="pcReset" disabled>Reset</button></div><pre class="pcterm" id="pcTerm">The computer starts with the first task.</pre></div>
         <div class="pcfiles" id="pcFiles" aria-label="Files in the home folder"></div>
+      </div>
+    </div>
+    <div class="mpanel" id="mpanel">
+      <div class="mhead"><h3>Inside the model, one piece at a time</h3><div class="mspeed" role="group" aria-label="Speed"><button type="button" data-sp="2.5">slow</button><button type="button" data-sp="1" aria-pressed="true">normal</button><button type="button" data-sp="0.25">fast</button></div></div>
+      <div class="msteps">
+        <div class="mstep" data-k="pieces"><h4><i>1</i>Your words become pieces</h4><div class="mbig" id="mCount">0</div><div class="mtail" id="mTail"></div><p class="mnote" id="mPiecesNote">everything it reads: the hidden instructions, your task, and its reply so far</p></div>
+        <div class="mstep" data-k="layers"><h4><i>2</i>Through every layer</h4><div class="mlay" id="mLay"></div><p class="mnote" id="mLayNote">24 layers of fixed knobs</p></div>
+        <div class="mstep" data-k="lights"><h4><i>3</i>The wall of lights</h4><div class="mcands" id="mCands"></div><p class="mnote">its chances for the next piece, out of 151,936</p></div>
+        <div class="mstep" data-k="pick"><h4><i>4</i>The brightest light wins</h4><div class="mpick" id="mPick"></div><p class="mnote" id="mPickNote">no dice: an agent takes the top one every time</p></div>
       </div>
     </div>
     <ol class="cpipe" id="cpipe">
@@ -1069,15 +1103,18 @@ canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
 ${A.SYSTEM}<|im_end|>`; p.hidden = !p.hidden; } });
   const ex = new URLSearchParams(location.search).get('ex');
   if (ex) { const t = Object.keys(RUN_OF).find(k => RUN_OF[k] === ex); if (t) go(t); }
-  window.__agentPage = { start: t => go(t), get running() { return running; }, get model() { return model; }, runs: needRuns, unpack, RUN_OF, load: () => $('#aLoad').click(), speed: v => { SPEED = v; }, variant: (sys, task) => variant(sys, task), EXP_ROWS, setModel: m => { model = view = m; TOOL_ID = m.tok.encode('<tool_call>')[0]; } }; // for testing and prep/record_agent.js
+  window.__agentPage = { start: t => go(t), get running() { return running; }, get model() { return model; }, piece: id => (view ? view.tok.piece(id) : '?'), runs: needRuns, unpack, RUN_OF, load: () => $('#aLoad').click(), speed: v => { SPEED = v; }, variant: (sys, task) => variant(sys, task), EXP_ROWS, setModel: m => { model = view = m; TOOL_ID = m.tok.encode('<tool_call>')[0]; } }; // for testing and prep/record_agent.js
 })();
 </script>
 <script>
-// the chat: a message goes to the real model; the program types any command it writes into a real Linux (machine.js)
+// the chat: a message goes to the real model; the program types any command it writes into a real Linux (machine.js).
+// Live or recorded, the run is one stream of events, played at reading speed: each piece the model writes goes through
+// the same four steps as in Write mode (pieces, every layer, the wall of lights, the pick), then into the chat.
 (function () {
   'use strict';
-  const $ = s => document.querySelector(s), A = window.AGENT, P = () => window.__agentPage, esc = A.esc, sleep = ms => new Promise(r => setTimeout(r, ms));
-  let pc = null, booting = null, busy = false, lastTask = null;
+  const $ = s => document.querySelector(s), A = window.AGENT, P = () => window.__agentPage, esc = A.esc, pct = A.pct, sleep = ms => new Promise(r => setTimeout(r, ms));
+  const IM_END = 151645, MARK = id => id >= 151643 && id <= IM_END;
+  let pc = null, booting = null, busy = false, lastTask = null, SPEED = 1;
   const term = $('#pcTerm');
   const onText = ch => { const f = ch.lastIndexOf('\f'); if (f >= 0) { term.textContent = ''; ch = ch.slice(f + 1); } term.textContent += ch; term.scrollTop = term.scrollHeight; };
   function machine() {
@@ -1098,7 +1135,31 @@ ${A.SYSTEM}<|im_end|>`; p.hidden = !p.hidden; } });
   const wrote = (el, text) => { const i = text.indexOf('<tool_call>'); el.innerHTML = '<small>the model writes</small>' + (i < 0 ? esc(text) : esc(text.slice(0, i)) + `<span class="tc">${esc(text.slice(i))}</span>`); $('#msgs').scrollTop = $('#msgs').scrollHeight; };
   const short = (t, n = 60) => (t.length > n ? t.slice(0, n - 1) + '…' : t).replace(/\n/g, ' ⏎ ');
   const lock = on => { busy = on; document.querySelectorAll('.cex, #chatGo, #chatIn, #pcReset').forEach(b => { b.disabled = on || (b.id === 'pcReset' && !pc); }); };
+  const beat = ms => sleep(ms * SPEED);
+  document.querySelectorAll('.mspeed button').forEach(b => b.addEventListener('click', () => { SPEED = +b.dataset.sp; document.querySelectorAll('.mspeed button').forEach(x => x.setAttribute('aria-pressed', x === b)); }));
 
+  // ---- the model panel ----
+  const ctx = []; // every piece the model has read: { id, kind }
+  const piece = id => { const t = P().piece(id); return t === '\n' ? '⏎' : t.replace(/\n/g, '⏎'); };
+  for (let l = 0; l < 24; l++) $('#mLay').insertAdjacentHTML('beforeend', '<b></b>');
+  const cells = [...$('#mLay').children];
+  const mstep = k => document.querySelectorAll('.mstep').forEach(el => { const on = el.dataset.k === k; if (el.classList.contains('on') && !on) el.classList.add('done'); el.classList.toggle('on', on); });
+  function tail(newN, look) { // the last pieces of what it reads; the newest marked, and the ones it listened to most
+    const from = Math.max(0, ctx.length - 14);
+    $('#mTail').innerHTML = (from ? `<span>… ${from}</span>` : '') + ctx.slice(from).map((c, k) => `<span class="${c.kind}${from + k >= ctx.length - newN ? ' new' : ''}${look && look.includes(from + k) ? ' look' : ''}">${esc(piece(c.id))}</span>`).join('');
+    $('#mCount').innerHTML = `${ctx.length.toLocaleString('en-US')}<small>pieces</small>`;
+  }
+  async function sweep(d, lens) { // every layer in turn; with the logit lens, each layer's best guess
+    const fin = lens ? lens[23][0].id : -1; let from = 23; if (lens) for (let l = 23; l >= 0; l--) { if (lens[l][0].id === fin) from = l; else break; }
+    cells.forEach(c => { c.className = ''; c.textContent = ''; });
+    for (let l = 0; l < 24; l++) { cells[l].className = lens && l >= from ? 'hit' : 'lit'; if (lens && l >= from) cells[l].textContent = piece(lens[l][0].id); if (d) await beat(d / 24); } // labelled where its best guess is already the final pick
+    return lens ? from : -1;
+  }
+  function lights(cands) { $('#mCands').innerHTML = cands.map((c, k) => `<div class="${k === 0 ? 'win' : ''}"><span>${esc(piece(c.id))}</span><span><em></em></span><span>${pct(c.full)}</span></div>`).join(''); requestAnimationFrame(() => [...$('#mCands').children].forEach((r, k) => { r.querySelector('em').style.width = (cands[k].full * 100).toFixed(1) + '%'; })); }
+  function lookedAt(att) { const c = []; for (let j = 1; j < Math.min(att.length, ctx.length); j++) c.push(j); c.sort((a, b) => att[b] - att[a]); return c.slice(0, 3); }
+
+  // ---- one run as a stream of events ----
+  function queue() { const q = []; let wake = null; return { push: e => { q.push(e); if (wake) { wake(); wake = null; } }, next: async () => { while (!q.length) await new Promise(r => { wake = r; }); return q.shift(); } }; }
   async function chat(task) {
     if (busy) return;
     const p = P(), live = !!p.model, recorded = p.RUN_OF[task];
@@ -1111,44 +1172,72 @@ ${A.SYSTEM}<|im_end|>`; p.hidden = !p.hidden; } });
     document.querySelectorAll('#cpipe li span').forEach(s2 => { s2.textContent = ''; });
     msg('you', esc(task)); stage('you', task);
     let m; try { m = await machine(); } catch (e) { lock(false); return; }
-    const before = await m.ls(), ran = [];
-    let bub = null, turn = 0, reply = '';
-    // the shell the program uses: every command really runs on the Linux machine, typed one key at a time
-    const shell = { run: async cmd => {
-      ran.push(cmd); stage('linux', cmd);
-      msg('sys', `The program types <code>${esc(cmd)}</code> into Linux and presses Enter.`);
-      const out = await m.run(cmd, { typeMs: 45 });
-      await files();
-      stage('back', out ? `${out.length} characters go back` : '“(no output)” goes back');
-      msg('sys', out ? `Linux printed:\n<code>${esc(out.length > 400 ? out.slice(0, 399) + '…' : out)}</code>\nThe program wraps it in &lt;tool_response&gt; and gives it to the model to read.` : 'Linux printed nothing. The program sends back “(no output)”.');
-      await sleep(900); return out;
-    } };
-    const on = {
-      context: () => { turn++; bub = null; reply = ''; stage('model', turn === 1 ? 'reads your task and its instructions' : 'reads the output, writes again'); },
-      token: t => { if (t.end) return; if (!bub) bub = msg('ai', ''); reply = t.sofar; wrote(bub, reply); stage('model', short(reply.slice(-40))); },
-      calls: (calls, r) => { if (calls.length) { const c = calls[0]; stage('prog', c.error ? c.error : 'found: ' + (c.args && c.args.command)); if (!c.error) msg('sys', `The program finds a &lt;tool_call&gt; in the model's words and takes out the command: <code>${esc(String(c.args.command))}</code>`); } else stage('answer', short(r)); },
-      result: () => {},
-      done: r => { reply = r; stage('answer', short(r)); },
-      stopped: why => { msg('sys warn', why === 'limit' ? 'The program stopped the loop after 5 rounds.' : 'Stopped.'); },
-    };
-    try {
-      if (live) {
-        await A.run({ model: p.model, task, maxTurns: 5, shell, on, approve: $('#chatAsk').checked ? c => new Promise(res => {
-          const d = msg('sys warn', `Run <code>${esc(String(c.args && c.args.command))}</code> on the computer? <button type="button" class="go">Allow</button><button type="button">Don't allow</button>`);
-          const [y, n] = d.querySelectorAll('button'); y.onclick = () => { y.disabled = n.disabled = true; res(true); }; n.onclick = () => { y.disabled = n.disabled = true; msg('sys', 'Not allowed: the program tells the model “The user did not allow this tool call.”'); res(false); };
-        }) : null });
-      } else { // a recorded run of the real model; its commands run on this Linux for real
-        await p.runs();
-        for (const e of p.unpack(window.AGENT_RUNS.runs[recorded])) {
-          if (e.t === 'context') on.context();
-          else if (e.t === 'token') { on.token(e.tok); await sleep(e.tok.text && e.tok.text.length > 3 ? 70 : 45); }
-          else if (e.t === 'calls') { on.calls(e.calls, e.reply); await sleep(1200); }
-          else if (e.t === 'result') { const out = await shell.run(String(e.c.args.command)); const said = e.r === '(no output)' ? '' : e.r; if (out !== said) msg('sys warn', `(The recorded run read “${esc(short(said, 80))}” here; this Linux printed something different.)`); }
-          else if (e.t === 'done') on.done(e.reply);
-          else if (e.t === 'stopped') on.stopped(e.why);
-        }
-      }
-    } catch (e) { msg('sys warn', 'Something went wrong: ' + esc(e.message)); }
+    if (!live) await p.runs();
+    const before = await m.ls(), ran = [], ev = queue();
+    ctx.length = 0; tail(0); $('#mCands').innerHTML = ''; $('#mPick').textContent = ''; cells.forEach(c => { c.className = ''; c.textContent = ''; });
+    if (live) {
+      A.run({ model: p.model, task, maxTurns: 5,
+        shell: { run: cmd => new Promise(res => ev.push({ t: 'run', cmd, res })) }, // the program's shell: the page runs it in order, on Linux
+        approve: $('#chatAsk').checked ? c => new Promise(res => ev.push({ t: 'ask', c, res })) : null,
+        on: { context: segs => ev.push({ t: 'context', segs }), decision: d => ev.push({ t: 'decision', d }), token: tok => ev.push({ t: 'token', tok }),
+          calls: (calls, reply) => ev.push({ t: 'calls', calls, reply }), done: reply => ev.push({ t: 'done', reply }), stopped: why => ev.push({ t: 'stopped', why }) },
+      }).then(() => ev.push({ t: 'end' }), e => ev.push({ t: 'error', e }));
+    } else { // a recorded run of the real model; its commands still run on this Linux for real
+      for (const e of p.unpack(window.AGENT_RUNS.runs[recorded])) ev.push(e.t === 'result' ? { t: 'run', cmd: String(e.c.args.command), recorded: e.r } : e);
+      ev.push({ t: 'end' });
+    }
+    let bub = null, turn = 0, reply = '', k = 0, lens = null;
+    for (;;) {
+      const e = await ev.next();
+      if (e.t === 'context') { // the program hands it everything to read; it reads it all at once
+        turn++; bub = null; reply = ''; k = 0; lens = null;
+        const n = e.segs.reduce((a, sg) => a + sg.ids.length, 0);
+        stage('model', turn === 1 ? 'reads your task and its instructions' : 'reads the output, writes again');
+        e.segs.forEach(sg => sg.ids.forEach(id => ctx.push({ id, kind: MARK(id) ? 'mark' : sg.kind === 'system' ? 'sys' : sg.kind })));
+        mstep('pieces'); tail(n); $('#mPiecesNote').textContent = turn === 1 ? `the hidden instructions, your task and the start of its reply: ${n} pieces` : `${n} new pieces: the output wrapped in <tool_response>, then its turn again`;
+        $('#mCands').innerHTML = ''; $('#mPick').textContent = '';
+        await beat(1600);
+        mstep('layers'); $('#mLayNote').textContent = `all ${n} pieces go through all 24 layers at once`; await sweep(1400); await beat(500);
+      } else if (e.t === 'decision') { lens = e.d.lens;
+      } else if (e.t === 'token') {
+        const t = e.tok, slow = k < 3, d = slow ? 700 : 90; k++;
+        // 1: the newest piece joins what it reads (from the second piece on)
+        if (k > 1) { mstep('pieces'); tail(1); $('#mPiecesNote').textContent = 'the piece it just wrote is now part of what it reads'; await beat(d); }
+        // 2: through every layer (the first piece of a reply also shows the logit lens, each layer's best guess)
+        mstep('layers'); const look = t.att ? lookedAt(t.att) : [];
+        const from = await sweep(slow ? d * 1.6 : 0, k === 1 ? lens : null);
+        $('#mLayNote').textContent = (k === 1 && lens ? `its best guess becomes the final pick at layer ${from + 1} of 24 (pink). ` : '') + (look.length ? 'listened back most to: ' + look.map(j => `“${piece(ctx[j].id)}”`).join(', ') : '');
+        if (k === 1) tail(0, look); await beat(slow ? d : d / 2);
+        // 3: the wall of lights
+        mstep('lights'); lights(t.cands); await beat(slow ? d * 1.4 : d);
+        // 4: the brightest light wins, and goes into the reply
+        mstep('pick');
+        if (t.end) { $('#mPick').className = 'mpick end'; $('#mPick').textContent = '<|im_end|>'; $('#mPickNote').textContent = 'its “I am done” token: the reply ends here'; await beat(1400); continue; }
+        $('#mPick').className = 'mpick'; $('#mPick').textContent = piece(t.id); $('#mPickNote').textContent = 'no dice: an agent takes the top one every time';
+        ctx.push({ id: t.id, kind: 'ai' });
+        if (!bub) bub = msg('ai', ''); reply = t.sofar; wrote(bub, reply); stage('model', short(reply.slice(-40)));
+        await beat(slow ? d : d / 2);
+      } else if (e.t === 'calls') {
+        if (e.calls.length) { const c = e.calls[0]; stage('prog', c.error ? c.error : 'found: ' + (c.args && c.args.command)); if (!c.error) msg('sys', `The program finds a &lt;tool_call&gt; in the model's words and takes out the command: <code>${esc(String(c.args.command))}</code>`); await beat(1400); }
+        else stage('answer', short(e.reply));
+      } else if (e.t === 'ask') {
+        const d2 = msg('sys warn', `Run <code>${esc(String(e.c.args && e.c.args.command))}</code> on the computer? <button type="button" class="go">Allow</button><button type="button">Don't allow</button>`);
+        const ok = await new Promise(res => { const [y, n] = d2.querySelectorAll('button'); y.onclick = () => res(true); n.onclick = () => res(false); });
+        d2.querySelectorAll('button').forEach(b => { b.disabled = true; }); if (!ok) msg('sys', 'Not allowed: the program tells the model “The user did not allow this tool call.”'); e.res(ok);
+      } else if (e.t === 'run') { // the program types the command into Linux, exactly as written
+        ran.push(e.cmd); stage('linux', e.cmd);
+        msg('sys', `The program types <code>${esc(e.cmd)}</code> into Linux and presses Enter.`);
+        const out = await m.run(e.cmd, { typeMs: 45 }); await files();
+        stage('back', out ? `${out.length} characters go back` : '“(no output)” goes back');
+        msg('sys', out ? `Linux printed:\n<code>${esc(out.length > 400 ? out.slice(0, 399) + '…' : out)}</code>\nThe program wraps it in &lt;tool_response&gt; and gives it to the model to read.` : 'Linux printed nothing. The program sends back “(no output)”.');
+        if (e.recorded != null && out !== (e.recorded === '(no output)' ? '' : e.recorded)) msg('sys warn', `(The recorded run read “${esc(short(e.recorded, 80))}” here; this Linux printed something different.)`);
+        await beat(1200); if (e.res) e.res(out);
+      } else if (e.t === 'done') { reply = e.reply; stage('answer', short(e.reply));
+      } else if (e.t === 'stopped') { msg('sys warn', e.why === 'limit' ? 'The program stopped the loop after 5 rounds.' : 'Stopped.');
+      } else if (e.t === 'error') { msg('sys warn', 'Something went wrong: ' + esc(e.e.message)); break;
+      } else if (e.t === 'end') break;
+    }
+    mstep(null);
     if (bub) bub.classList.add('final');
     const now = await files(), gone = before.filter(f => !now.includes(f)), added = now.filter(f => !before.includes(f));
     const sent = /sent|internet|upload/i.test(reply) && !ran.some(c => /curl|wget|scp|\bnc\b/.test(c));
@@ -1161,7 +1250,7 @@ ${A.SYSTEM}<|im_end|>`; p.hidden = !p.hidden; } });
   $('#chatForm').addEventListener('submit', e => { e.preventDefault(); const t = $('#chatIn').value.trim(); if (t) { $('#chatIn').value = ''; chat(t); } });
   $('#pcReset').addEventListener('click', async () => { if (!pc || busy) return; lock(true); await pc.reset(); await files(); stage(null); lock(false); });
   $('#chatWalk').addEventListener('click', () => { if (lastTask) P().start(lastTask); });
-  window.__chat = { chat, get busy() { return busy; }, machine: () => machine() }; // for testing
+  window.__chat = { chat, get busy() { return busy; }, machine: () => machine(), speed: v => { SPEED = v; } }; // for testing
 })();
 </script>
 </body>
