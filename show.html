@@ -371,7 +371,7 @@ textarea { width: 100%; box-sizing: border-box; font: 500 18px/1.4 var(--mono); 
     let shown = R.text; for (let i = 0; i <= Math.min(k + (u > 0.95 ? 1 : 0), R.words.length - 1); i++) if (i < R.words.length && (i < k + 1 || t >= 900 + k * per + per * 0.95)) shown += '';
     const done = R.words.slice(0, Math.min(R.words.length, k + 1 + (u > 0.95 ? 1 : 0)));
     $('#sentence').hidden = false; $('#sentence').innerHTML = esc(R.text) + done.map(x => `<b>${esc(x.text)}</b>`).join('');
-    if (t < 900 || k >= R.words.length - 1 && u >= 1) { drawCloudLayer(0.3, null, 0); return; }
+    if (t < 900 || k + 1 >= R.words.length) { drawCloudLayer(0.3, null, 0); return; } // before the first drop, and after the last word
     // the loop in miniature for the next word: descent (0..0.55), lights (0.55..0.75), dice (0.75..1)
     if (u < 0.55) { const L = M.L, v = seg(u, 0, 0.55), lyr = Math.min(L - 1, Math.floor(v * L)), uu = seg(v * L - lyr, 0, 1), sc = vecScale();
       drawCloudLayer(0.3, w.rec.layers[lyr].watch, 0.5); rings(0.8, lyr);
@@ -398,7 +398,7 @@ textarea { width: 100%; box-sizing: border-box; font: 500 18px/1.4 var(--mono); 
   function frame(now) {
     raf = requestAnimationFrame(frame); if (!playing) return;
     if (paused) { t0 += now - lastNow; } lastNow = now;
-    const t = now - t0, s = SCENES[scene];
+    const t = Math.max(0, now - t0), s = SCENES[scene]; // the frame's timestamp can precede the scene's start by a few ms
     cam.x = lerp(cam.x, camTo.x, 0.08); cam.y = lerp(cam.y, camTo.y, 0.08); cam.z = lerp(cam.z, camTo.z, 0.08);
     PLACED = []; HIT = []; c.setTransform(dpr, 0, 0, dpr, 0, 0); c.fillStyle = '#07080d'; c.fillRect(0, 0, W, H);
     const g = c.createRadialGradient(W / 2, H * 0.3, 0, W / 2, H * 0.3, Math.max(W, H)); g.addColorStop(0, '#141829'); g.addColorStop(1, '#07080d'); c.fillStyle = g; c.fillRect(0, 0, W, H);
