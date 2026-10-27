@@ -10,11 +10,11 @@ Plain HTML and JavaScript, no build step and no server. The models run in your b
 
 There are plenty of diagrams of imaginary models. This one runs real ones and shows what they compute, using the same picture on every page:
 
-A language model is a stereo with millions of volume knobs. Training set the knobs and glued them; a prompt never moves one. Each word goes in as a spot in a cloud, and where it sits is set by how the word gets *used*, not how it is pronounced. In SmolLM2, *two* and *three* sit at 0.81; *two* and *too* at 0.15.
+A language model is a machine with millions of volume knobs. Training set the knobs and glued them; a prompt never moves one. Each word goes in as a spot in a cloud, and where it sits is set by how the word gets *used*, not how it is pronounced. In SmolLM2, *two* and *three* sit at 0.81; *two* and *too* at 0.15.
 
-The knobs then do their work. The only part that reacts to what you typed is attention, which is the model listening back over what came before. At the end there is a wall of lights, one per token in the vocabulary, each lit by how likely it is next. Weighted dice pick one. Then it starts again with that token added.
+The knobs then do their work. The only place the words affect each other is attention, which is the model listening back over what came before. At the end there is a wall of lights, one per token in the vocabulary, each lit by how likely it is next. Weighted dice pick one. Then it starts again with that token added.
 
-An agent is the same stereo with a person next to it: a program that reads the words it writes, types any commands into a shell, and hands the output back.
+An agent is the same machine with a person next to it: a program that reads the words it writes, types any commands into a shell, and hands the output back.
 
 ## The pages
 
@@ -43,16 +43,23 @@ Six models, four designs, each downloaded once from Hugging Face at a pinned rev
 
 Every number about the model's work comes from its real weights.
 
-`llm.js` is a from-scratch JavaScript implementation of all four designs, checked against Hugging Face `transformers` in float32: identical tokens on tricky text, identical greedy continuations, identical top-10 scores, hidden states within a few millionths after every layer, and the same logit-lens top token at every layer. The agent's context was checked against `apply_chat_template` token for token. (The comparison scripts are not in the repository yet.)
+`llm.js` is a from-scratch JavaScript implementation of the four designs (Llama, GPT-NeoX, GPT-2, Mamba). The scripts in [`verify/`](verify/README.md) check it against Hugging Face `transformers` in float32, for all six models at the exact revisions the pages download:
+- identical tokens on six tricky texts and on the prompt (chat template included)
+- every number of the hidden state after every layer within a few millionths of that layer's largest number
+- the same logit-lens top token after every layer
+- the same top-10 tokens in the same order, with scores within 0.0001
+- identical greedy continuations
+
+They pass with both the WebAssembly and the plain JavaScript kernel. For the agent, every context the loop builds equals `apply_chat_template` token for token, and every reply equals transformers' own greedy output with Qwen's repetition penalty. In the Explorer, the layer view also redoes each grid multiplication from the weights in the page and shows the check.
 
 Anything that is an illustration says so where it appears:
 
 - the token cloud is a t-SNE map of the embedding rows (`prep/cloud_layout.py`); distances are approximate and the page states how many true neighbours it keeps
-- the agent's shell and the kids page's web page are imitations written in `agent.js`
+- the agent's shell is a small imitation written in `agent.js`, and the kids page's web page is a pretend page in `kids.html`
 - the dice's first hops in the Explorer are animation; where it lands is the real pick
 - the training view's tiny model is a real training run of a 676-knob model, not of the models above
 
-The engine runs on the processor. Its one hot loop (knobs times numbers) uses WebAssembly SIMD where available (`prep/matvec.wat`), with a JavaScript fallback that does the same sums.
+The engine runs on the processor. Its one hot loop (knobs times numbers) uses WebAssembly SIMD where available (`prep/matvec.wat`), with a JavaScript fallback that does the same sums in a different order, so only the last digits can differ.
 
 ## Run it locally
 
@@ -72,6 +79,7 @@ Issues and pull requests welcome. No build step:
 | `agent.js` | agent loop, pretend shell, drawings |
 | `agent-runs.js` | recorded example runs (`prep/record_agent.mjs` remakes them) |
 | `cloud-*.js` | token maps, made by `prep/cloud_layout.py` |
+| `verify/` | checks of `llm.js` and the agent loop against `transformers` ([results](verify/README.md)) |
 
 Keep it that way, so anyone can open a file and read it.
 

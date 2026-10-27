@@ -341,7 +341,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
   <a class="agentbar" href="agent.html"><span class="ab-new">New</span><span class="ab-txt">Watch an AI agent work <em>· or make it go rogue</em></span><span class="ab-go" aria-hidden="true">→</span></a>
 
   <details class="pic" id="pic">
-    <summary class="pichead"><h2 id="picT">The picture in one minute</h2><p>A stereo with millions of volume knobs. Open it, then watch the real thing below.</p></summary>
+    <summary class="pichead"><h2 id="picT">The picture in one minute</h2><p>A machine with millions of glued knobs, and a cloud of words. Open it, then watch the real thing below.</p></summary>
     <ol class="tiles">
       <li><span class="ic" aria-hidden="true">🔤</span><b>Each word gets a spot in a cloud</b><span>Each word is looked up and becomes its own list of numbers: its address in the token cloud. Words used alike sit close together (it comes from how a word is used, not how it sounds).</span><em>On the board: tokens and the embed strips</em></li>
       <li><span class="ic" aria-hidden="true">🎛️</span><b>Volume knobs, set at the factory and glued</b><span>Rows of knobs turn parts of the list up or down and mix them. Training set every knob; nothing you type turns them.</span><em>On the board: the dials in every layer</em></li>
@@ -573,7 +573,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
   <p id="trLead"></p>
   <div class="trbar"><button id="trGo" type="button" class="nb-next">Train</button><button id="trStep" type="button">One step</button><button id="trReset" type="button">Start over</button><span class="mono" id="trStat"></span></div>
   <div class="trgrid">
-    <canvas id="trCv" class="pcv" aria-label="The toy model's knobs: one dial for each pair of letters"></canvas>
+    <canvas id="trCv" class="pcv" aria-label="The tiny training model's knobs: one dial for each pair of letters"></canvas>
     <div class="trside">
       <p class="eyebrow">How wrong its guesses are (loss)</p>
       <canvas id="trLoss" class="pcv" aria-label="Loss falling as it trains"></canvas>
@@ -1145,12 +1145,12 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
       const id = D.ids[row];
       return { where: 'Tokens · ' + who, title: `Token ${who}: ID ${id}`, text: real
         ? `The tokenizer learned ${nf(RM().V)} pieces from data and cuts your text into them. ${who} is piece number ${id}. A dot (·) means the piece starts with a space; long or rare words are split into several pieces.`
-        : `In toy mode this page splits words with a simple rule and makes up the ID. A real tokenizer learns its pieces from data (Qwen3.6 has about 250,000).` };
+        : 'The model is still loading.' };
     }
     if (si === -2) {
       const id = D.ids[row], dims = MODELS[S.mode].dims;
       const text = `The model looks up row ${id.toLocaleString('en-US')} of its embedding table (${real ? nf(RM().V) : 'about 250,000'} rows, one per token): a list of ${dims.d.toLocaleString('en-US')} numbers learned in training. That list is the ball the layers work on. No single number means anything readable; what matters is that tokens used in similar ways end up with similar lists. Click the strip to open the embedding explorer.`;
-      if (!real) return { where: 'Embed · ' + who, title: `Embed ${who}: look up row ${id}`, text, nums: 'Toy mode: the strip is made up. Pick a real model to see real rows and which tokens are closest.' };
+      if (!real) return { where: 'Embed · ' + who, title: `Embed ${who}: look up row ${id}`, text, nums: 'The model is still loading.' };
       const e = D.embeds[row], nb = S.nb[id] || (S.nb[id] = S.llm.neighbors(id, 5));
       return { where: 'Embed · ' + who, title: `Embed ${who}: look up row ${id}`, text,
         nums: `first 12 of its ${RM().D} numbers:\n` + [e.slice(0, 6), e.slice(6, 12)].map(r => r.map(v => (v >= 0 ? ' ' : '−') + Math.abs(v).toFixed(3)).join(' ')).join('\n') + ' …' +
@@ -1533,7 +1533,7 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
     const T = Z.T;
     $('#zSoftLead').textContent = real
       ? `At the end of the board the last ball becomes a real score (a logit) for each of the ${nf(RM().V)} tokens. After “${Z.prev}”, the model's top five are below; the dice choose only among them. Softmax turns their scores into chances that add up to 100%:`
-      : `At the end of the board the last ball becomes a score for every token in the vocabulary (about 250,000). After “${Z.prev}”, the toy model's top five are below; like many apps, this page lets the dice choose only among the top few. Softmax turns their scores into chances that add up to 100%:`;
+      : 'The model is still loading.';
     const steps = $('#zSteps'); steps.innerHTML = '';
     const li = t => { const e = document.createElement('li'); e.textContent = t; steps.appendChild(e); };
     const fullCol = real ? ['of all ' + nf(RM().V)] : [];
@@ -1908,7 +1908,7 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
       if (this.hits.length) this.select(this.hits[0], true);
       else {
         this.select(-1);
-        let msg = real ? `“${q}” is not a single token on the map.` : `“${q}” is not one of the 2,000 tokens shown in toy mode.`;
+        let msg = real ? `“${q}” is not a single token on the map.` : `The model is still loading.`;
         if (real) { const t = S.llm.tok.encode(' ' + q); msg += t.length === 1 ? ` It is token ${t[0]}, a byte fragment or special token, which the map leaves out.` : ` To the model it is ${t.length} tokens: ${t.map(x => S.llm.tok.piece(x)).join(' + ')}.`; }
         this.info.textContent = msg;
       }
