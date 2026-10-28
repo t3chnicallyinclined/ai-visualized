@@ -45,6 +45,7 @@ header a { color: var(--ink); font-weight: 600; }
 .pic { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; }
 .pichead { display: flex; flex-wrap: wrap; gap: 4px 16px; align-items: baseline; cursor: pointer; list-style: none; } .pichead::-webkit-details-marker { display: none; }
 .pichead h2::before { content: '▸ '; color: var(--muted); } details.pic[open] .pichead h2::before { content: '▾ '; } details.pic:not([open]) { padding: 10px 16px; }
+.lgbtn { font: 600 12px var(--mono); padding: 4px 10px; border-radius: 999px; border: 1.5px solid rgb(255 233 184 / .5); background: transparent; color: #ffe9b8; cursor: pointer; vertical-align: middle; }
 .agentbar { display: flex; align-self: flex-start; max-width: 100%; box-sizing: border-box; align-items: center; gap: 10px; text-decoration: none; color: #eef0fa; background: linear-gradient(90deg, #232870, #141733); border: 1px solid #2f3566; border-radius: 999px; padding: 7px 8px 7px 8px; font: 600 14.5px var(--body); }
 .agentbar:hover .ab-go { transform: translateX(3px); }
 .ab-new { font: 700 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; background: #ff5c8a; color: #fff; border-radius: 999px; padding: 3px 9px; flex: none; }
@@ -335,7 +336,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
 <div id="page">
   <header>
     <h1 aria-label="AI Visualized">A<span class="vz" aria-hidden="true">(visualized)</span>I</h1>
-    <p><b>It's autocomplete:</b> a language model guesses the next word, adds it, and guesses again. Here a real one runs in your browser, and every number about its work comes from its real weights (pictures and reference figures are labelled).<span class="hmore"> Your prompt becomes numbers, falls through every layer of knobs, and lands in the token cloud, where the model's options light up and a dice roll picks one.</span> <a href="show.html">The show: one word as a full-screen film</a> · <a href="kids.html">A version for kids and classrooms</a> · <a href="https://github.com/t3chnicallyinclined/ai-visualized">Code on GitHub</a>.</p>
+    <p><b>It's autocomplete:</b> a language model guesses the next word, adds it, and guesses again. Here a real one runs in your browser, and every number about its work comes from its real weights (pictures and reference figures are labelled).<span class="hmore"> Your prompt becomes numbers, falls through every layer of knobs, and lands in the token cloud, where the model's options light up and a dice roll picks one.</span> <a href="show.html">The show: one word as a full-screen film</a> · <a href="kids.html">A version for kids and classrooms</a> · <button type="button" class="lgbtn" id="legendBtn" title="Our words and the proper terms">words</button> · <a href="https://github.com/t3chnicallyinclined/ai-visualized">Code on GitHub</a>.</p>
   </header>
 
   <a class="agentbar" href="index.html?mode=agent"><span class="ab-new">New</span><span class="ab-txt">Watch an AI agent work <em>· or make it go rogue</em></span><span class="ab-go" aria-hidden="true">→</span></a>
@@ -616,6 +617,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="llm.js"></script>
+<script src="legend.js"></script>
 <script src="cloud-data.js"></script>
 <script>
 (function () {
@@ -1148,7 +1150,7 @@ dialog#emb p { margin: 0 0 10px; text-wrap: pretty; }
     if (si === -3) {
       const id = D.ids[row];
       return { where: 'Tokens · ' + who, title: `Token ${who}: ID ${id}`, text: real
-        ? `The tokenizer learned ${nf(RM().V)} pieces from data and cuts your text into them. ${who} is piece number ${id}. A dot (·) means the piece starts with a space; long or rare words are split into several pieces.`
+        ? `A computer only works on numbers, so text becomes numbers first. This model's tokenizer has its own list of ${nf(RM().V)} pieces, built before training from the most common chunks of text, and finds your words in it; other models have other lists. ${who} is piece number ${id}. A dot (·) means the piece starts with a space; long or rare words are split into several pieces.`
         : 'The model is still loading.' };
     }
     if (si === -2) {
@@ -2913,6 +2915,7 @@ blue prompt lifts: ${up.map(i => `${S.llm.tok.piece(i)} ×${fmtR(ratio(i))}`).jo
   $('#cmpOn').addEventListener('change', () => { if (S.mode === 'real') runReal(false); });
   $('#temp').addEventListener('input', e => { $('#tempVal').textContent = parseFloat(e.target.value).toFixed(1); });
   $('#temp').addEventListener('change', () => runReal(false));
+  LEGEND.mount($('#legendBtn'), () => S.llm || null);
   window.__plinko = { px: PX, get data() { return S.data; }, get mode() { return S.mode; }, get caps() { return CAPS; }, get choose() { return CHOOSE; }, cloud: cardView }; // for testing and the curious
 
   // start: load the tiny real model (30 MB), run the prompt, then (first visit) the guided tour plays one token step by step

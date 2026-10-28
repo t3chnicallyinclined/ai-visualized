@@ -29,7 +29,8 @@ a { color: var(--s-ink); }
 main { max-width: 1040px; margin: 0 auto; padding: 20px max(16px, env(safe-area-inset-left, 0px)) 130px; display: flex; flex-direction: column; gap: 16px; }
 .top { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: baseline; justify-content: space-between; }
 .logo { font: 800 26px/1 var(--display); text-decoration: none; letter-spacing: -0.02em; } .logo .vz { font-weight: 400; font-size: 0.62em; color: var(--s-ink2); margin: 0 0.06em; }
-.top nav { display: flex; gap: 14px; font-size: 14px; flex-wrap: wrap; } .top nav a { color: var(--s-ink2); }
+.top nav { display: flex; gap: 14px; font-size: 14px; flex-wrap: wrap; align-items: center; } .top nav a { color: var(--s-ink2); }
+.lgbtn { font: 600 12px var(--mono); padding: 4px 10px; border-radius: 999px; border: 1.5px solid rgb(255 233 184 / .5); background: transparent; color: #ffe9b8; cursor: pointer; vertical-align: middle; }
 h1 { font: 800 clamp(28px, 4.4vw, 44px)/1.08 var(--display); margin: 4px 0 0; letter-spacing: -0.02em; }
 .lead { font-size: 17px; color: #c3c8e6; max-width: 70ch; margin: 0; text-wrap: pretty; }
 .note { font-size: 13.5px; color: var(--s-ink2); margin: 0; }
@@ -400,7 +401,7 @@ body.playing .ctl .now { display: none; }
 <main>
   <div class="top">
     <a class="logo" href="index.html" aria-label="AI Visualized">A<span class="vz" aria-hidden="true">(visualized)</span>I</a>
-    <nav><a href="show.html">The show</a><a href="explore.html">Explorer: everything at once</a><a href="kids.html">For kids and classrooms</a><a href="https://github.com/t3chnicallyinclined/ai-visualized">Code on GitHub</a></nav>
+    <nav><a href="show.html">The show</a><a href="explore.html">Explorer: everything at once</a><button type="button" class="lgbtn" id="legendBtn" title="Our words and the proper terms">words</button><a href="kids.html">For kids and classrooms</a><a href="https://github.com/t3chnicallyinclined/ai-visualized">Code on GitHub</a></nav>
   </div>
   <h1>How does an AI answer? Watch a real one, one step at a time.</h1>
   <div class="modes" role="tablist" aria-label="What to watch">
@@ -590,6 +591,7 @@ body.playing .ctl .now { display: none; }
 </main>
 
 <script src="llm.js"></script>
+<script src="legend.js"></script>
 <script src="agent.js"></script>
 <script src="machine.js"></script>
 <script>
@@ -781,6 +783,7 @@ body.playing .ctl .now { display: none; }
   $('#prompt').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('#form').requestSubmit(); } });
   addEventListener('resize', fit); requestAnimationFrame(fit);
   $('#form').addEventListener('submit', e => { e.preventDefault(); if (M && !running) walk(($('#prompt').value.trim() || 'Once upon a time').slice(0, 100)); });
+  LEGEND.mount($('#legendBtn'), () => M || (window.__agentPage && window.__agentPage.model) || null);
   if (!$('#writeMode').hidden) loadModel(key); else $('#mWrite').addEventListener('click', () => { if (!M) loadModel(key); }, { once: true }); // Agent mode never downloads the Write model
 
   // ---------- the walk-through ----------

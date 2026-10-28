@@ -143,13 +143,13 @@ details.live { margin-top: 12px; } details.live summary { cursor: pointer; font-
   <header>
     <h1>How does an AI really work?</h1>
     <p class="lead">An AI that writes is a <b>guessing machine</b>. It guesses the next word, adds it, and guesses again. Let's look inside a real one while it writes a story. We'll go one step at a time: press <b>Next</b> when you're ready. You will see that it is numbers and a dice roll, made by people. No magic, and no secret mind. The thinking is still yours.</p>
-    <p class="note">This AI is a small real model called TinyStories (15 million numbers, trained only on simple children's stories). It runs right here in your web browser: nothing you type is sent anywhere. The first visit downloads its numbers (30 MB). Grown-ups and teachers: <a href="show.html">the show</a> (one word, as a film), <a href="explore.html">the full version</a> shows every detail, and all the code is <a href="https://github.com/t3chnicallyinclined/ai-visualized">on GitHub</a>.</p>
+    <p class="note">This AI is a small real model called TinyStories (15 million numbers, trained only on simple children's stories). It runs right here in your web browser: nothing you type is sent anywhere. The first visit downloads its numbers (30 MB). Grown-ups and teachers: <a href="explore.html">the full version</a> shows every detail, and all the code is <a href="https://github.com/t3chnicallyinclined/ai-visualized">on GitHub</a>.</p>
   </header>
 
   <section class="khero" aria-labelledby="khT">
     <div><h2 id="khT">Watch an AI agent work, or try to make it <em>go rogue</em>!</h2>
       <p>Tell a real AI agent to send your files to the internet or delete everything. Then check what it <b>says</b> and what really <b>happens</b>.</p></div>
-    <div class="kb"><a class="kbtn" href="index.html?mode=agent&amp;ex=work">Watch it work</a><a class="kbtn r" href="index.html?mode=agent&amp;ex=send">Make it go rogue</a></div>
+    <div class="kb"><a class="kbtn" href="show.html?kids">Watch the film</a><a class="kbtn" href="index.html?mode=agent&amp;ex=work">Watch it work</a><a class="kbtn r" href="index.html?mode=agent&amp;ex=send">Make it go rogue</a></div>
   </section>
 
   <section class="card">
@@ -386,11 +386,13 @@ otherwise: do nothing</div></div>
 </main>
 
 <script src="llm.js"></script>
+<script src="legend.js"></script>
 <script src="agent.js"></script>
 <script>
 (function () {
   const $ = s => document.querySelector(s);
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!$('#legendBtn')) { const b = document.createElement('button'); b.type = 'button'; b.id = 'legendBtn'; b.className = 'lgbtn'; b.textContent = 'words: the proper names'; b.style.cssText = 'font:600 13px var(--body);padding:6px 12px;border-radius:999px;border:2px solid var(--purple);background:var(--card);color:var(--purple);cursor:pointer;margin-top:8px'; $('header').appendChild(b); LEGEND.mount(b, () => M); }
   const wait = ms => new Promise(r => setTimeout(r, reduce ? 0 : ms));
   const pct = p => (p >= 0.995 ? '100%' : p < 0.0005 ? '0%' : p < 0.01 ? '<1%' : Math.round(p * 100) + '%');
   const COLORS = ['#e2733b', '#3d7be0', '#7b5cd6', '#2f9e6b', '#d6457a', '#c78a12', '#1f8ea3'];
