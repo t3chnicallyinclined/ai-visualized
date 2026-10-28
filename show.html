@@ -27,12 +27,12 @@ button:focus-visible, textarea:focus-visible { outline: 2px solid var(--attn); o
 .go { background: var(--attn); border-color: var(--attn); color: #fff; }
 #gl, #cv { position: fixed; inset: 0; width: 100%; height: 100%; display: block; } #gl { z-index: 0; } #cv { z-index: 1; }
 /* the chrome over the canvas */
-#top { position: fixed; left: 0; right: 0; top: 0; padding: calc(10px + env(safe-area-inset-top, 0px)) 14px 0; z-index: 3; pointer-events: none; }
-#prog { display: flex; gap: 4px; max-width: 900px; margin: 0 auto; padding-right: 196px; }
+#top { position: fixed; left: 0; right: 0; top: 0; padding: calc(10px + env(safe-area-inset-top, 0px)) max(14px, env(safe-area-inset-left, 0px)) 28px max(14px, env(safe-area-inset-right, 0px)); z-index: 3; pointer-events: none; background: linear-gradient(to bottom, rgb(7 8 13 / .96) 0%, rgb(7 8 13 / .9) 55%, rgb(7 8 13 / .6) 80%, rgb(7 8 13 / 0) 100%); } /* a scrim: the words always read, whatever is lit under them */
+#prog { display: flex; gap: 4px; max-width: 900px; margin: 0 auto; padding-right: 212px; }
 #prog i { flex: 1 1 0; height: 4px; border-radius: 99px; background: rgb(255 255 255 / .14); transition: background .3s; }
 #prog i.done { background: rgb(255 255 255 / .55); } #prog i.on { background: var(--attn); box-shadow: 0 0 10px rgb(255 92 138 / .7); }
-#capbox { max-width: 900px; margin: 12px auto 0; }
-#lbl { font: 600 11.5px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--attn); margin: 0 0 4px; }
+#capbox { max-width: 900px; margin: 16px auto 0; }
+#lbl { font: 600 11.5px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--attn); margin: 0 0 6px; }
 #cap { font: 600 clamp(18px, 2.6vw, 27px)/1.35 var(--body); color: #fff; margin: 0; text-wrap: pretty; text-shadow: 0 2px 18px rgb(0 0 0 / .8); animation: capin .5s ease-out both; max-width: 34em; }
 #sub { font: 13.5px/1.4 var(--body); color: var(--ink2); margin: 6px 0 0; max-width: 40em; text-shadow: 0 1px 12px rgb(0 0 0 / .8); }
 @keyframes capin { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
@@ -65,7 +65,7 @@ textarea { width: 100%; box-sizing: border-box; font: 500 18px/1.4 var(--mono); 
 .load { margin-top: 12px; } .load .track { height: 8px; border-radius: 99px; background: #11141f; overflow: hidden; margin-top: 6px; } .load .track i { display: block; height: 100%; width: 0; background: var(--pick); transition: width .2s; }
 #end .in { text-align: center; } #end p { color: #c3c8e6; }
 .nav { position: fixed; top: calc(8px + env(safe-area-inset-top, 0px)); right: 12px; z-index: 5; display: flex; gap: 8px; }
-.nav button { width: 36px; height: 36px; padding: 0; font-size: 15px; background: rgb(17 20 31 / .8); }
+.nav button { width: 44px; height: 44px; padding: 0; font-size: 16px; background: rgb(17 20 31 / .8); } /* 44pt: the smallest comfortable target */
 #more { font-weight: 700; color: var(--pick); border-color: rgb(255 233 184 / .5); }
 /* the sheet: what this screen shows, in the picture's words and in the model's numbers */
 #sheet { position: fixed; left: 0; right: 0; bottom: calc(70px + env(safe-area-inset-bottom, 0px)); z-index: 6; max-width: 640px; margin: 0 auto; max-height: 62vh; display: flex; flex-direction: column; background: rgb(14 17 28 / .97); border: 1px solid var(--line); border-radius: 16px 16px 0 0; box-shadow: 0 -10px 40px rgb(0 0 0 / .6); animation: sheetin .3s ease-out both; }
@@ -81,8 +81,9 @@ textarea { width: 100%; box-sizing: border-box; font: 500 18px/1.4 var(--mono); 
 /* the tooltip for anything tapped on the stage */
 #tip { position: fixed; z-index: 5; max-width: 260px; background: rgb(14 17 28 / .97); border: 1px solid rgb(255 255 255 / .18); border-radius: 10px; padding: 8px 10px; font: 13px/1.45 var(--body); color: #eef0fa; box-shadow: 0 8px 30px rgb(0 0 0 / .6); pointer-events: none; animation: sheetin .2s ease-out both; }
 #tip b { color: var(--pick); font-family: var(--mono); } #tip small { display: block; color: var(--ink2); }
-@media (max-width: 600px) { .autol span { display: none; } #cap { font-size: 18px; } }
+@media (max-width: 600px) { .autol span { display: none; } #cap { font-size: 18px; } #sub { font-size: 13px; line-height: 1.38; } #lbl { padding-right: 206px; } }
 body.kids #cap { font-size: clamp(20px, 2.8vw, 30px); } body.kids #sub { font-size: 15px; color: #c3c8e6; }
+body.tight #cap { font-size: 17px; line-height: 1.3; } body.tight #sub { font-size: 12.5px; line-height: 1.32; margin-top: 4px; } /* a long caption on a short screen: smaller, so the stage keeps its half */
 @media (prefers-reduced-motion: reduce) { #cap, #next.pulse { animation: none; } }
 </style>
 </head>
@@ -219,7 +220,7 @@ body.kids #cap { font-size: clamp(20px, 2.8vw, 30px); } body.kids #sub { font-si
     const qx = R3[0] * x + R3[3] * y + R3[6] * zz, qy = R3[1] * x + R3[4] * y + R3[7] * zz, qz = R3[2] * x + R3[5] * y + R3[8] * zz, z = 1 / (1 + qz * 0.55 + 0.75);
     const sc = Math.min(W, H) * 0.92 * cam.z, [cx, cy] = cam3Center(); return [qx * sc * z + cx, -qy * sc * z + cy];
   }
-  const cam3Center = () => { const sc = Math.min(W, H) * 0.92 * cam.z; return [W / 2 - (cam.x - 0.5) * sc, H / 2 - (cam.y - 0.5) * sc]; }; // the same pan as the flat map
+  const cam3Center = () => { const sc = Math.min(W, H) * 0.92 * cam.z; return [W / 2 - (cam.x - 0.5) * sc, stageMid() - (cam.y - 0.5) * sc]; }; // the same pan as the flat map
   function render3D() { // draws every queued request (full stage, or a panel) for this frame
     const gl = G3.gl; if (!gl) return; if (glc.width !== cv.width || glc.height !== cv.height) { glc.width = cv.width; glc.height = cv.height; }
     gl.viewport(0, 0, glc.width, glc.height); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT); gl.useProgram(G3.prog);
@@ -267,12 +268,12 @@ body.kids #cap { font-size: clamp(20px, 2.8vw, 30px); } body.kids #sub { font-si
   // ---------- the stage: a camera over the cloud (unit square), and things placed on it ----------
   const cam = { x: 0.5, y: 0.5, z: 1 }, camTo = { x: 0.5, y: 0.5, z: 1 }; let USER = false, SEL = -1, TILT = 0, tiltTo = 0; // TILT: the map laid down (0 flat .. 0.92), height = the chance // USER: the viewer moved the camera; SEL: a tapped token
   const scrId = (id, h = 0) => (G3.on ? (proj3(id) || [-1e4, -1e4]) : scr(MAP.x[id], MAP.y[id], h)); // a token's place on screen, flat or 3D
-  const scr = (x, y, h = 0) => { const s = Math.min(W, H) * 0.92 * cam.z, ct = Math.cos(TILT), st = Math.sin(TILT), m = Math.min(W, H); return [W / 2 + (x - cam.x) * s, H / 2 + (y - cam.y) * s * ct + m * 0.16 * st - h * m * 0.42 * st]; }; // h: height above the map, 0..1
+  const scr = (x, y, h = 0) => { const s = Math.min(W, H) * 0.92 * cam.z, ct = Math.cos(TILT), st = Math.sin(TILT), m = Math.min(W, H); return [W / 2 + (x - cam.x) * s, stageMid() + (y - cam.y) * s * ct + m * 0.16 * st - h * m * 0.42 * st]; }; // h: height above the map, 0..1
   const hOfQ = q => (q >= 70 ? Math.sqrt(pOfQ(q)) : 0); // a chance as a height
   const piecePos = i => { const id = R.ids[i]; return onMap(id) ? [MAP.x[id], MAP.y[id]] : [0.5 + (i - R.n / 2) * 0.03, 0.9]; };
   const scrPiece = i => (G3.on && onMap(R.ids[i]) ? scrId(R.ids[i]) : scr(...piecePos(i)));
   function drawCloudLayer(alpha, watch, glowAlpha, clip) {
-    if (G3.on) { G3.req.push({ alpha: Math.max(alpha, glowAlpha * 0.9), watch: glowAlpha > 0 ? watch : null, clip }); return; }
+    if (G3.on) { G3.req.push({ alpha: Math.max(alpha, glowAlpha * 0.9), watch: glowAlpha > 0 ? watch : null, clip: clip || { x: 0, y: stageTop() - 14, w: W, h: stageBottom() + 10 - (stageTop() - 14) } }); return; }
     if (!BASE) return;
     const [x0, y0] = scr(0, 0), [x1, y1] = scr(1, 1);
     c.globalAlpha = alpha; c.drawImage(BASE, x0, y0, x1 - x0, y1 - y0); c.globalAlpha = 1;
@@ -344,9 +345,16 @@ body.kids #cap { font-size: clamp(20px, 2.8vw, 30px); } body.kids #sub { font-si
     }
   }
   const PER = () => clamp(Math.round(9000 / M.L), 320, 1250); // milliseconds per layer in the descent: six layers linger, thirty move
-  const stageTop = () => Math.min(H * 0.45, ($('#capbox').getBoundingClientRect().bottom || H * 0.2) + 24); // under the caption, however long it is
+  // the stage: everything is drawn between the words and the bar, measured once per frame (the words may be nine lines on a phone)
+  const STG = { top: 0, bottom: 0, bar: 0 };
+  function measureStage() { const cb = $('#capbox').getBoundingClientRect(), b = $('#bar').getBoundingClientRect(), sn = $('#sentence');
+    STG.bar = b.height ? b.top : H - 70; STG.top = Math.min(H * 0.62, (cb.bottom || H * 0.2) + 20);
+    let y = Math.min(H * 0.84, STG.bar - 10); if (!sn.hidden) y = Math.min(y, sn.getBoundingClientRect().top - 10);
+    if (playing && !AG.on && SCENES[scene] && SCENES[scene].k === 'listen' && DETAIL && R.words[0]) y = Math.min(y, STG.bar - legendGeom().h - 6); // the head legend has the stage's foot
+    STG.bottom = Math.max(STG.top + 120, y); }
+  const stageTop = () => STG.top, stageBottom = () => STG.bottom, stageMid = () => (STG.top + STG.bottom) / 2, barTop = () => STG.bar;
   // the board: every layer as a band of its real knobs, the cloud lit beside it (below it on a phone)
-  const boardGeom = () => { const top = stageTop() + 6, bottom = H * 0.84, wide = W >= 700, sw = Math.min(W, 1000), sx = (W - sw) / 2;
+  const boardGeom = () => { const top = stageTop() + 6, bottom = stageBottom(), wide = W >= 700, sw = Math.min(W, 1000), sx = (W - sw) / 2;
     if (wide) { const bw = Math.round(sw * 0.56) - 30; return { wide, top, bx: sx + 20, bw, bh: bottom - top, cloud: { x: sx + 20 + bw + 24, y: top, w: sw - bw - 64, h: bottom - top } }; }
     const bh = Math.round((bottom - top) * 0.58); return { wide, top, bx: 16, bw: W - 32, bh, cloud: { x: 16, y: top + bh + 12, w: W - 32, h: bottom - top - bh - 12 } }; };
   const bandY = (g, l) => g.top + (l + 0.5) * (g.bh / M.L);
@@ -375,7 +383,7 @@ body.kids #cap { font-size: clamp(20px, 2.8vw, 30px); } body.kids #sub { font-si
     for (let k = 0; k < n; k++) { let at = Math.floor((k + 0.5) / n * tot), j = 0; while (at >= mats[j].length) at -= mats[j++].length; out.push(clamp(mats[j][at] / mats[j].sc, -1, 1)); }
     return (KR[key] = out); }
   function boardCam(g) { // the camera, so the cloud sits inside its panel
-    if (USER) return; const p = g.cloud, sc = Math.min(p.w, p.h) * 0.92; cam.z = sc / (Math.min(W, H) * 0.92); cam.x = 0.5 - (p.x + p.w / 2 - W / 2) / sc; cam.y = 0.5 - (p.y + p.h / 2 - H / 2) / sc; Object.assign(camTo, cam); }
+    if (USER) return; const p = g.cloud, sc = Math.min(p.w, p.h) * 0.92; cam.z = sc / (Math.min(W, H) * 0.92); cam.x = 0.5 - (p.x + p.w / 2 - W / 2) / sc; cam.y = 0.5 - (p.y + p.h / 2 - stageMid()) / sc; Object.assign(camTo, cam); }
   function cloudPanel(g, watch, glow, path, top) { // the cloud, lit by a layer's chances, with the path of its best guess
     const p = g.cloud; c.save(); c.beginPath(); c.roundRect(p.x, p.y, p.w, p.h, 10); c.clip();
     c.fillStyle = 'rgba(255,255,255,.025)'; c.fillRect(p.x, p.y, p.w, p.h); drawCloudLayer(0.85, watch, glow, p); piecesOnCloud(0.9, 0);
@@ -390,7 +398,7 @@ body.kids #cap { font-size: clamp(20px, 2.8vw, 30px); } body.kids #sub { font-si
     c.save(); c.globalAlpha = alpha; c.fillStyle = lit ? 'rgba(255,92,138,.08)' : 'rgba(157,144,255,.05)'; c.strokeStyle = lit ? '#ff5c8a' : 'rgba(157,144,255,.35)'; c.lineWidth = lit ? 1.5 : 1;
     if (lit) { c.shadowColor = '#ff5c8a'; c.shadowBlur = 14; }
     c.beginPath(); c.roundRect(g.bx, y0 + 1, g.bw, h - 2, 6); c.fill(); c.stroke(); c.restore();
-    const every = Math.max(1, Math.ceil(14 / h)); if (lit || l % every === 0 || l === M.L - 1) label(g.bx + 8, y0 + h / 2, `layer ${l + 1}`, lit ? '#fff' : 'rgba(199,184,255,.85)', alpha, 11);
+    const fs = h < 12 ? 9.5 : 11, every = Math.max(1, Math.ceil((fs + 3) / h)); if (lit || (l % every === 0 && l + every <= M.L) || l === M.L - 1) { if (lit && h < fs + 4) { font(fs, 600); const tw = c.measureText(`layer ${l + 1}`).width + 8; c.save(); c.fillStyle = 'rgba(7,8,13,.85)'; c.fillRect(g.bx + 4, y0 + h / 2 - fs / 2 - 2, tw, fs + 4); c.restore(); } label(g.bx + 8, y0 + h / 2, `layer ${l + 1}`, lit ? '#fff' : 'rgba(199,184,255,.85)', alpha, fs); }
     const rows = two ? [['att', y0 + h * 0.3, sweepA], ['ff', y0 + h * 0.7, sweepF]] : [['att', y0 + h * 0.5, Math.max(sweepA, sweepF)]];
     rows.forEach(([kind, y, sw]) => { const kn = knobRow(l, kind, n); kn.forEach((v, k) => { const x = x1 + (k + 0.5) * (x2 - x1) / n, on = sw > 0 && (k + 0.5) / n <= sw, fresh = on && (k + 0.5) / n > sw - 0.14; gauge(x, y, gr * (fresh ? 1.4 : 1), v, alpha * (on ? 1 : 0.65), on); }); });
     if (two && h >= 44 && g.bw > 520) { label(x1 - 4, y0 + h * 0.3, 'attention', 'rgba(255,255,255,.35)', alpha, 9, 'right'); label(x1 - 4, y0 + h * 0.7, 'feed-fwd', 'rgba(255,255,255,.35)', alpha, 9, 'right'); }
@@ -409,7 +417,7 @@ body.kids #cap { font-size: clamp(20px, 2.8vw, 30px); } body.kids #sub { font-si
     if (u > 0.15 && u < 0.5 && !fast) threads([x, y], lyr, t, 0.6 * Math.sin(seg(u, 0.15, 0.5) * Math.PI));
     numbersCard(x, y, cw, ch, vec, sc, 1, `${M.D} numbers`);
     // the peek after each layer, at the band's right end
-    for (let l = 0; l <= lyr; l++) { const a = l < lyr ? 0.75 : seg(u, 0.85, 1); if (a <= 0) continue; const gs = w.rec.layers[l].lens, txt = (labelW && two && (L <= 8 || l === lyr) ? gs.slice(0, 2) : gs.slice(0, 1)).map(q => `${M.tok.piece(q.id)} ${pct(q.p)}`).join('  ');
+    for (let l = 0; l <= lyr; l++) { const a = l < lyr ? 0.75 : seg(u, 0.85, 1); if (a <= 0 || (h < 16 && l !== lyr && !(labelW && l % Math.ceil(16 / h) === 0))) continue; const gs = w.rec.layers[l].lens, txt = (labelW && two && (L <= 8 || l === lyr) ? gs.slice(0, 2) : gs.slice(0, 1)).map(q => `${M.tok.piece(q.id)} ${pct(q.p)}`).join('  ');
       font(11, 600); const tw = c.measureText(txt).width + 10, ly = labelW ? g.top + (l + 0.5) * h : g.top + (l + 1) * h - 8; c.save(); c.globalAlpha = a; c.fillStyle = 'rgba(7,8,13,.8)'; c.fillRect(g.bx + g.bw - 6 - tw, ly - 8, tw, 16); c.restore(); label(g.bx + g.bw - 10, ly, txt, l === lyr ? '#fff' : '#c9b8ff', a, 11, 'right'); }
   }
   function label(x, y, txt, color, alpha, size = 13, align = 'left') { c.save(); c.globalAlpha = alpha; font(size, 600); c.fillStyle = color; c.textAlign = align; c.textBaseline = 'middle'; c.shadowColor = 'rgba(0,0,0,.9)'; c.shadowBlur = 8; c.fillText(txt, x, y); c.restore(); }
@@ -449,8 +457,8 @@ body.kids #cap { font-size: clamp(20px, 2.8vw, 30px); } body.kids #sub { font-si
     { k: 'listen', lbl: 'Listening back', cap: () => `Before guessing, the newest token, “${piece(R.n - 1)}”, compares itself with every earlier token and pulls in a weighted mix of them. This is attention (“listening back” is our picture for it).`, sub: () => { const h = R.words[0].rec.layers[0].heads; return `A head is one set of fixed knobs. It turns the newest token into a query (what it is looking for) and every earlier token into a key (what that token can be matched on) and a value (what it hands over). Query × key gives a score per earlier token; softmax turns the scores into weights that add up to 100%; the head's result is the values added up by those weights. ${h} heads do this at once, each with its own knobs, and their results are added onto the token. The threads are the weights: ${h} × ${R.n - 1} = ${h * (R.n - 1)} numbers. Thicker, more weight. Tap a token.`; }, dur: 3600,
       more: () => { const ly = R.words[0].rec.layers[0], Tn = R.n; const rows = Array.from({ length: ly.heads }, (_, h) => { let best = Tn > 1 ? 1 : 0; for (let jj = 1; jj < Tn - 1; jj++) if (ly.attn[h * Tn + jj] > ly.attn[h * Tn + best]) best = jj; return [`<span class="sw" style="background:hsl(${hhue(h, ly.heads)},90%,65%)"></span>head ${h + 1}`, `most weight on “${esc(piece(best))}”`, pct(ly.attn[h * Tn + best])]; });
         return `<p><b>What attention does, step by step.</b> For each head: (1) the newest token's ${M.D} numbers are multiplied by the head's <i>query</i> knobs, giving a short list, the query. (2) Every earlier token's numbers were multiplied by the head's <i>key</i> knobs and <i>value</i> knobs when it was read, giving a key and a value per token, kept in the cache. (3) The query is compared with each key: multiply pair by pair and add up, one score per earlier token. (4) Softmax turns the scores into weights that add up to 100%: these are the threads. (5) The head's result is the values added up by those weights. (6) All ${ly.heads} heads' results are joined, multiplied by the <i>output</i> knobs, and added onto the newest token's numbers. Nothing is sent or looked up; it is multiplication and addition over the numbers already in memory.</p><p>“Head 1 most weight on ·a 30%” means: in head 1, 30% of the 100% went to the token “·a”, so 30% of head 1's result is “·a”'s value. Heads differ because their knobs differ; what each one ends up responding to was set in training, not chosen by anyone.</p><h4>Layer 1, for “${esc(piece(Tn - 1))}”</h4>${table(rows)}<p class="pic">The first token, <code>${esc(piece(0))}</code>, gets ${pct(headPulls(0).reduce((a, b) => a + b, 0) / ly.heads)} on average: models park spare weight there (a resting spot), so it is drawn thin. The knobs themselves never move; only the weights, which come from your tokens' numbers, change from text to text.</p>`; },
-      enter() { const b = bounds(labelled()); camTo.x = b.cx; camTo.y = b.cy; camTo.z = clamp(0.55 / Math.max(b.w, b.h, 0.08), 1.2, 4); },
-      draw(t) { drawCloudLayer(0.55, null, 0); piecesOnCloud(1, 1); const [x, y] = scrPiece(R.n - 1); threads([x, y], 0, t, seg(t, 300, 1200)); numbersCard(clamp(x, 80, W - 80), Math.max(stageTop() + 24, y - 34), 150, 34, R.words[0].rec.layers[0].vec.xin, vecScale(), seg(t, 0, 600), `“${piece(R.n - 1)}”`); if (DETAIL) headLegend(); } },
+      enter() { const b = bounds(labelled()), mx = Math.max(b.w, b.h, 0.08), fit = (stageBottom() - stageTop() - 90) / (Math.min(W, H) * 0.92); camTo.x = b.cx; camTo.y = b.cy; camTo.z = clamp(Math.min(0.55, fit) / mx, 1.2, 4); },
+      draw(t) { drawCloudLayer(0.55, null, 0); piecesOnCloud(1, 1); const [x, y] = scrPiece(R.n - 1); threads([x, y], 0, t, seg(t, 300, 1200)); numbersCard(clamp(x, 80, W - 80), Math.max(stageTop() + 24, y - 34), 150, 34, R.words[0].rec.layers[0].vec.xin, vecScale(), seg(t, 0, 600), `“${piece(R.n - 1)}”`); } },
     { k: 'layers', lbl: 'Through every layer', cap: () => `Then its numbers pass through ${M.L} layers of fixed knobs, set in training and never moved by your words. Watch its numbers change as the knobs light up.`, sub: () => `Each band is one layer: ${nf(layerKnobs(0))} knobs in memory, a sample of them drawn as gauges (top row: the attention heads' knobs; bottom row: the feed-forward knobs every token goes through on its own). The card running along each band is the token's ${M.D} numbers, every one drawn as a colour and the first few written out; every knob it passes multiplies one of them, and you can see the numbers change. Beside it, the cloud lights up with what the model would say if it stopped after that layer. Tap a band or a dot.`, dur: () => M.L * PER() + 900,
       more: () => { const w = R.words[0]; return `<p>The ring of spokes is the piece's <b>${M.D} numbers</b>: orange out for above zero, blue in for below. Every layer changes them a little: listen back (attention), then push them through the layer's own knobs (the feed-forward block). ${nf(w.rec.layers.reduce((a, _, l) => a + layerKnobs(l), 0))} knobs in all, none of them moved by your words.</p><h4>Its best guess after each layer</h4>${table(w.rec.layers.map((q, l) => [`layer ${l + 1}`, q.lens.slice(0, 3).map(x => `${esc(M.tok.piece(x.id))} ${pct(x.p)}`).join(' · ')]))}<p class="pic">The guess after each layer is a peek we take by running the model's final scoring early (the "logit lens"). Early layers are not built to be read this way, so their guesses can look odd.</p>`; },
       enter() { camTo.x = 0.5; camTo.y = 0.52; camTo.z = 1; },
@@ -507,7 +515,7 @@ body.kids #cap { font-size: clamp(20px, 2.8vw, 30px); } body.kids #sub { font-si
     const ew = bw * M.mats.E.length / tot;
     if (t > 1500) label(x0, by + bh + 16, bw > 600 ? `${nf(M.V)} rows × ${M.D} numbers; row 0 at the left, row ${nf(M.V - 1)} at the right` : `${nf(M.V)} rows × ${M.D} numbers, row 0 at the left`, '#8ff0ff', seg(t, 1500, 2000), 12);
     // the rows your tokens pick out: a bright reader runs along the table to the row's address, then the row's numbers come out, left to right
-    const rows = Math.min(R.n, 12), ry0 = by + bh + 48, rh = clamp((H * 0.84 - ry0 - 34) / rows, 12, 28), lx = Math.min(96, bw * 0.22), sw = bw - lx, sc = vecScale();
+    const rows = Math.min(R.n, 12), ry0 = by + bh + 48, rh = clamp((stageBottom() - ry0 - 34) / rows, 12, 28), lx = Math.min(96, bw * 0.22), sw = bw - lx, sc = vecScale();
     for (let i = 0; i < rows; i++) {
       const t0 = 2000 + i * 230, seek = eo(seg(t, t0, t0 + 320)), read = seg(t, t0 + 320, t0 + 720); if (seek <= 0) continue;
       const y = ry0 + i * rh, fx = x0 + ew * (R.ids[i] / M.V), hx = lerp(x0, fx, seek);
@@ -524,7 +532,7 @@ body.kids #cap { font-size: clamp(20px, 2.8vw, 30px); } body.kids #sub { font-si
     if (t > tEnd) { label(x0, ry0 + rows * rh + 12, `each row: ${M.D} numbers, orange above zero, blue below. Tap a row.`, 'rgba(255,255,255,.55)', seg(t, tEnd, tEnd + 500), 11); label(x0, ry0 + rows * rh + 28, 'next: the whole table, laid out as a cloud', 'rgba(255,255,255,.55)', seg(t, tEnd + 300, tEnd + 900), 11); }
   }
   function splitExamples(t) { // under the chips: rare words cut by the real tokenizer, one after another
-    const [x0, bw] = stageX(), L = chipLayout(), y = Math.min(H - 150, Math.max(...L.map(p => p[1])) + 80), per = 1600, start = 1600; if (t < start) return;
+    const [x0, bw] = stageX(), L = chipLayout(), low = Math.max(...L.map(p => p[1])) + 26 * L[0][2], y = Math.min(stageBottom() - 24, low + 56), per = 1600, start = 1600; if (t < start || y - 36 < low) return;
     const k = Math.min(EXAMPLES.length - 1, Math.floor((t - start) / per)), u = seg(t - start - k * per, 0, 500), w = EXAMPLES[k], ids = M.tok.encode(' ' + w);
     label(x0 + bw / 2, y - 26, 'Rare words are cut into pieces it knows:', 'rgba(255,255,255,.6)', 1, 12, 'center');
     c.save(); c.globalAlpha = u; font(15, 600); c.fillStyle = '#fff'; c.textAlign = 'center'; c.textBaseline = 'middle';
@@ -541,19 +549,22 @@ body.kids #cap { font-size: clamp(20px, 2.8vw, 30px); } body.kids #sub { font-si
   }
   const CLOUD_SCENES = new Set(['cloud', 'listen', 'lights', 'layers', 'dice', 'again']);
   const BOARD_SCENES = new Set(['layers', 'again']); // the cloud sits in a panel beside the board
+  const legendGeom = () => { const ly = R.words[0].rec.layers[0], cols = W < 600 && ly.heads > 4 ? 2 : 1, lh = cols === 2 || ly.heads > 8 ? 14 : 18, rows = Math.ceil(ly.heads / cols); return { cols, lh, rows, h: rows * lh + 14 }; }; // the head legend: two columns on a phone
   function headLegend() { // Details: each head and the token it listens to most (layer 1)
-    const ly = R.words[0].rec.layers[0], Tn = R.n, x = 14, lh = ly.heads > 8 ? 14 : 18, y0 = H - 92 - env() - ly.heads * lh;
-    for (let h = 0; h < ly.heads; h++) { let best = Tn > 1 ? 1 : 0; for (let jj = 1; jj < Tn - 1; jj++) if (ly.attn[h * Tn + jj] > ly.attn[h * Tn + best]) best = jj;
-      c.save(); c.fillStyle = `hsl(${hhue(h, ly.heads)},90%,65%)`; c.beginPath(); c.arc(x + 5, y0 + h * lh, 4, 0, Math.PI * 2); c.fill(); c.restore();
-      label(x + 16, y0 + h * lh, `head ${h + 1}: ${pct(ly.attn[h * Tn + best])} of its weight on “${piece(best)}”`, '#eef0fa', 0.9, 12); }
+    const ly = R.words[0].rec.layers[0], Tn = R.n, x0 = Math.max(14, stageX()[0] - 6), { cols, lh, rows, h: lgh } = legendGeom(), y0 = barTop() - lgh + 7 + lh / 2, cw = (W - x0 - 14) / cols;
+    for (let h = 0; h < ly.heads; h++) { let best = Tn > 1 ? 1 : 0; for (let jj = 1; jj < Tn - 1; jj++) if (ly.attn[h * Tn + jj] > ly.attn[h * Tn + best]) best = jj; const x = x0 + (h % cols) * cw, y = y0 + Math.floor(h / cols) * lh;
+      c.save(); c.fillStyle = `hsl(${hhue(h, ly.heads)},90%,65%)`; c.beginPath(); c.arc(x + 5, y, 4, 0, Math.PI * 2); c.fill(); c.restore();
+      const pc = piece(best), short = pc.length > 9 ? pc.slice(0, 8) + '…' : pc; label(x + 16, y, cols === 2 ? `head ${h + 1}: ${pct(ly.attn[h * Tn + best])} on “${short}”` : `head ${h + 1}: ${pct(ly.attn[h * Tn + best])} of its weight on “${pc}”`, '#eef0fa', 0.9, cols === 2 ? 10.5 : 12); }
   }
-  const env = () => parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sab') || 0) || 0;
   // ---- scene helpers ----
+  function wrapLines(txt, maxW) { const words = txt.split(' '), lines = []; let line = ''; for (const w of words) { const test = line ? line + ' ' + w : w; if (c.measureText(test).width > maxW && line) { lines.push(line); line = w; } else line = test; } lines.push(line); return lines; }
   function wrap(txt, x, y, maxW, lh) { const words = txt.split(' '), lines = []; let line = ''; for (const w of words) { const test = line ? line + ' ' + w : w; if (c.measureText(test).width > maxW && line) { lines.push(line); line = w; } else line = test; } lines.push(line); lines.forEach((ln, i) => c.fillText(ln, x, y + (i - (lines.length - 1) / 2) * lh)); }
-  function chipLayout() { // the chips in rows, centred
-    const k = clamp(W / 520, 0.8, 1.3); font(17 * k, 600); const gap = 10 * k, rows = [[]]; let x = 0;
+  function chipLayout() { // the chips in rows, centred; smaller until every row fits in the stage
+    let k = clamp(W / 520, 0.8, 1.3), gap, rows; const avail = stageBottom() - 76 - stageTop() - 24 * k;
+    for (let pass = 0; pass < 8; pass++) { gap = 10 * k; rows = [[]]; let x = 0;
     for (let i = 0; i < R.n; i++) { font(17 * k, 600); let w = c.measureText(piece(i)).width; font(10 * k, 400); w = Math.max(w, c.measureText('#' + R.ids[i]).width) + 22 * k; if (x + w > W - 32 && rows[rows.length - 1].length) { rows.push([]); x = 0; } rows[rows.length - 1].push([i, w]); x += w + gap; }
-    const out = [], rh = 54 * k, y0 = H * 0.5 - (rows.length - 1) * rh / 2;
+      if (rows.length * 54 * k <= avail || k <= 0.5) break; k *= 0.88; }
+    const out = [], rh = 54 * k, y0 = Math.max(stageTop() + 30 * k, (stageTop() + stageBottom() - 70) / 2 - (rows.length - 1) * rh / 2);
     rows.forEach((row, r) => { const tot = row.reduce((a, [, w]) => a + w, 0) + gap * (row.length - 1); let cx = W / 2 - tot / 2; row.forEach(([i, w]) => { out[i] = [cx + w / 2, y0 + r * rh, k]; cx += w + gap; }); });
     return out;
   }
@@ -571,12 +582,12 @@ body.kids #cap { font-size: clamp(20px, 2.8vw, 30px); } body.kids #sub { font-si
     const keep = new Set([Tn - 1]); Array.from(a.keys()).filter(j => j > 0 && j < Tn - 1).sort((p, q) => a[q] - a[p]).slice(0, 6).forEach(j => keep.add(j)); return keep;
   }
   function piecesOnCloud(alpha, lbl) { const keep = labelled(); for (let i = 0; i < R.n; i++) { const [x, y] = scrPiece(i); hit(x, y, 14, pieceTip(i)); c.save(); c.globalAlpha = alpha; dot(x, y, i === R.n - 1 ? 6 : 4, kcol(i), piece(i), keep && !keep.has(i) ? 0 : lbl); c.restore(); } }
-  function bounds(only) { let x0 = 1, y0 = 1, x1 = 0, y1 = 0; for (let i = 0; i < R.n; i++) { if (only && !only.has(i)) continue; const [x, y] = piecePos(i); x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); } return { cx: (x0 + x1) / 2, cy: (y0 + y1) / 2, w: x1 - x0, h: y1 - y0 }; }
+  function bounds(only) { let x0 = 1, y0 = 1, x1 = 0, y1 = 0; const anyOn = R.ids.some(onMap); for (let i = 0; i < R.n; i++) { if ((only && !only.has(i)) || (anyOn && !onMap(R.ids[i]))) continue; const [x, y] = piecePos(i); x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); } return { cx: (x0 + x1) / 2, cy: (y0 + y1) / 2, w: x1 - x0, h: y1 - y0 }; }
   function topBounds() { let x0 = 1, y0 = 1, x1 = 0, y1 = 0; for (const cd of R.words[0].cands) { if (!onMap(cd.id)) continue; const x = MAP.x[cd.id], y = MAP.y[cd.id]; x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); } return { cx: (x0 + x1) / 2, cy: (y0 + y1) / 2, w: x1 - x0, h: y1 - y0 }; }
   function topLabels(alpha, k = 5) { const w = R.words[0], list = k > 5 ? topList(w, k).map(([id, p]) => ({ id, full: p, logit: w.logits[id] })) : w.cands; list.forEach((cd, i) => { if (!onMap(cd.id)) return; const [x, y] = scrId(cd.id, TILT > 0.05 ? Math.sqrt(cd.full) : 0); dot(x, y, 5 + 6 * Math.sqrt(cd.full), i ? '#ffd58a' : '#ffe9b8', `${M.tok.piece(cd.id)} ${pct(cd.full)}`, alpha); hit(x, y, 16, chanceTip(cd)); }); }
   function descent(t) { const w = R.words[0], per = PER(), sc = vecScale(), lyr = Math.min(M.L - 1, Math.floor(t / per)), u = seg(t - lyr * per, 0, per); layerPass(w, lyr, u, sc, t, false); }
   function dice(t, w, alpha) { // the five on a ring, sized by chance; a marker spins, slows, and lands on the real pick
-    const cx = W / 2, cy = Math.max(H * 0.5, stageTop() + Math.min(W, H) * 0.3 + 40), R0 = Math.min(W, H, 1000) * 0.3, n = w.cands.length;
+    const cx = W / 2, cy = stageMid(), R0 = Math.max(70, Math.min(Math.min(W, H, 1000) * 0.3, (stageBottom() - stageTop()) / 2 - 52)), n = w.cands.length;
     const spin = seg(t, 900, 2800), turns = 3 + w.pick / n, ang = -Math.PI / 2 + eo(spin) * turns * Math.PI * 2, landed = t > 2800;
     w.cands.forEach((cd, i) => {
       const a = -Math.PI / 2 + i / n * Math.PI * 2, x = cx + Math.cos(a) * R0, y = cy + Math.sin(a) * R0, r = (10 + 34 * Math.sqrt(cd.p)) * eo(seg(t, i * 100, 600 + i * 100));
@@ -646,10 +657,12 @@ body.kids #cap { font-size: clamp(20px, 2.8vw, 30px); } body.kids #sub { font-si
     if (skip) label(x0, y0 - 6, `… ${skip} earlier row${skip > 1 ? 's' : ''} above`, 'rgba(255,255,255,.4)', alpha, 10);
     return { pos, h: (rows - skip) * rh, rh };
   }
-  function agentLegend(y) { const [x0] = stageX(); let x = x0; for (const [k, nm] of [['system', 'hidden instructions'], ['user', 'your task'], ['marker', 'markers'], ['ai', 'the model wrote'], ['tool', "the shell's output"]]) { c.save(); c.fillStyle = AKCOL[k]; c.fillRect(x, y - 4, 8, 8); c.restore(); label(x + 12, y, nm, 'rgba(255,255,255,.6)', 1, 10.5); font(10.5, 600); x += 12 + c.measureText(nm).width + 14; } }
+  function agentLegend(y) { const [x0, bw] = stageX(); let x = x0, yy = y; const items = [['system', 'hidden instructions'], ['user', 'your task'], ['marker', 'markers'], ['ai', 'the model wrote'], ['tool', "the shell's output"]]; font(10.5, 600);
+    const widths = items.map(([, nm]) => 12 + c.measureText(nm).width + 14), rows = widths.reduce((a, w) => a + w, 0) > bw ? 2 : 1; if (rows === 2) yy -= 14;
+    items.forEach(([k, nm], i) => { if (x + widths[i] - 14 > x0 + bw && x > x0) { x = x0; yy += 14; } c.save(); c.fillStyle = AKCOL[k]; c.fillRect(x, yy - 4, 8, 8); c.restore(); label(x + 12, yy, nm, 'rgba(255,255,255,.6)', 1, 10.5); x += widths[i]; }); }
   // the model: every layer as a band of its sampled knobs (the recording's dials), lit in turn; the peek after each
   function agentBoard(T, t, per, fast) {
-    const [x0, bw] = stageX(), L = AG.runs.L, top = stageTop() + 6, bottom = H * 0.84, bh = (bottom - top) * 0.72, h = bh / L, lyr = Math.min(L, Math.floor(t / per)), u = seg(t - Math.min(lyr, L - 1) * per, 0, per);
+    const [x0, bw] = stageX(), L = AG.runs.L, top = stageTop() + 6, bottom = stageBottom(), bh = (bottom - top) * 0.72, h = bh / L, lyr = Math.min(L, Math.floor(t / per)), u = seg(t - Math.min(lyr, L - 1) * per, 0, per);
     for (let l = 0; l < L; l++) { const y0 = top + l * h, lit = l === lyr, past = l < lyr; c.save(); c.fillStyle = lit ? 'rgba(255,92,138,.08)' : 'rgba(157,144,255,.05)'; c.strokeStyle = lit ? '#ff5c8a' : 'rgba(157,144,255,.35)'; c.lineWidth = lit ? 1.5 : 1; c.beginPath(); c.roundRect(x0, y0 + 1, bw, h - 2, 5); c.fill(); c.stroke(); c.restore();
       if (lit || l % Math.max(1, Math.ceil(14 / h)) === 0 || l === L - 1) label(x0 + 8, y0 + h / 2, `layer ${l + 1}`, lit ? '#fff' : 'rgba(199,184,255,.85)', 1, 10.5);
       const kn = AG.runs.dials[l], gr = clamp(h * 0.32, 2, 7), gx0 = x0 + 62, gx1 = x0 + Math.min(bw * 0.5, 62 + kn.length * gr * 3.2); kn.forEach((v, k) => { const on = past || (lit && (k + 0.5) / kn.length <= u); gauge(gx0 + (k + 0.5) * (gx1 - gx0) / kn.length, y0 + h / 2, gr * (lit && on && (k + 0.5) / kn.length > u - 0.2 ? 1.4 : 1), clamp(v * 2.2, -1, 1), on ? 1 : 0.6, lit && on); });
@@ -663,7 +676,7 @@ body.kids #cap { font-size: clamp(20px, 2.8vw, 30px); } body.kids #sub { font-si
   function agentWrite(T, t, perTok) {
     const [x0, bw] = stageX(), top = stageTop() + 6, k = Math.min(T.tokens.length - 1, Math.max(0, Math.floor((t - 1200) / perTok))), tk = T.tokens[k], written = t < 1200 ? 0 : Math.min(T.tokens.length, k + 1);
     const shown = T.ctxEnd + Math.min(written, T.tokens.filter(x => !x.end).length), hi = new Set(); const att = tk.att; if (t >= 1200 && att) { const idx = []; for (let j = 1; j < Math.min(att.length, shown); j++) idx.push(j); idx.sort((a, b) => att[b] - att[a]); idx.slice(0, 4).filter(j => att[j] > 0.004).forEach(j => hi.add(j)); }
-    const tp = agentTape(top + 12, H * 0.36, shown, 1, hi); const ty = top + 12 + tp.h + 10;
+    const tp = agentTape(top + 12, Math.max(60, Math.min(H * 0.36, stageBottom() - top - 12 - 214)), shown, 1, hi); const ty = top + 12 + tp.h + 10;
     // the reply, as text
     const reply = T.tokens.slice(0, written).filter(x => !x.end).map(x => x.text).join(''), i = reply.indexOf('<tool_call>');
     c.save(); c.fillStyle = 'rgba(115,144,255,.1)'; c.strokeStyle = '#7390ff'; c.lineWidth = 1.5; c.beginPath(); c.roundRect(x0, ty, bw, 64, 10); c.fill(); c.stroke(); c.restore();
@@ -673,9 +686,9 @@ body.kids #cap { font-size: clamp(20px, 2.8vw, 30px); } body.kids #sub { font-si
     // threads from the newest token to what it attended to
     if (t >= 1200 && hi.size) { for (const j of hi) { const p = tp.pos[j]; if (!p) continue; const w = att[j]; c.save(); c.strokeStyle = `rgba(255,92,138,${(0.25 + Math.min(0.75, w * 2)).toFixed(2)})`; c.lineWidth = 1 + w * 8; c.beginPath(); c.moveTo(x0 + bw - 30, ty + 2); c.quadraticCurveTo((p[0] + x0 + bw - 30) / 2, (p[1] + ty) / 2 + 30, p[0], p[1] + tp.rh / 2 - 2); c.stroke(); c.restore(); } }
     // the top five for this token
-    const cy = ty + 80; if (t >= 1200) { label(x0, cy, `the wall of lights for token ${k + 1}: the five brightest of ${nf(QW.vocab)}`, 'rgba(255,255,255,.6)', 1, 10.5);
+    const cy = ty + 80; if (t >= 1200) { label(x0, cy, bw > 520 ? `the wall of lights for token ${k + 1}: the five brightest of ${nf(QW.vocab)}` : `token ${k + 1}: the five brightest of ${nf(QW.vocab)} lights`, 'rgba(255,255,255,.6)', 1, 10.5);
       tk.cands.forEach((cd, i) => { const yy = cy + 16 + i * 16, w = (bw - 190) * cd.full; c.save(); c.fillStyle = i ? '#7390ff' : '#ff5c8a'; c.fillRect(x0 + 120, yy - 5, Math.max(2, w), 10); c.restore(); label(x0, yy, apiece(cd.id), i ? '#c3c8e6' : '#fff', 1, 11); label(x0 + 126 + w, yy, pct(cd.full), '#fff', 1, 11); hit(x0 + 120 + w / 2, yy, 0, `<b>${esc(apiece(cd.id))}</b><small>${pct(cd.full)} of all ${nf(QW.vocab)} tokens</small>`, Math.max(40, w), 14); }); }
-    agentLegend(H * 0.84 - 4);
+    agentLegend(stageBottom() - 4);
   }
   // the program finds the request and takes out the command
   function agentProgram(T, t) {
@@ -684,12 +697,12 @@ body.kids #cap { font-size: clamp(20px, 2.8vw, 30px); } body.kids #sub { font-si
     label(x0 + 10, top + 12, "the model's words, handed to the program", 'rgba(255,255,255,.5)', 1, 10);
     font(12.5, 500); c.fillStyle = '#c3c8e6'; c.textAlign = 'left'; c.textBaseline = 'top'; const lines = reply.split('\n').slice(0, 4); lines.forEach((ln, i) => { let sl = ln; while (c.measureText(sl).width > bw - 20 && sl.length > 4) sl = sl.slice(0, -4) + '…'; c.fillStyle = t > 1200 && m && m[0].includes(ln) ? '#8ff0ff' : '#c3c8e6'; c.fillText(sl, x0 + 10, top + 28 + i * 18); });
     const steps = [[1200, 'line 2: a <tool_call> … </tool_call> is in the words: a request', 'line 2: no request in the words: these are the answer, stop'], [2000, 'line 4: read the JSON inside it'], [2800, `line 5: the command = “${cmd}”  (the only part of its words that will ever touch the computer)`]];
-    steps.forEach(([at, txt, alt], i) => { if (t < at) return; const a = seg(t, at, at + 400); label(x0, top + 134 + i * 24, (m || !alt) ? txt : alt, i === 2 ? '#fff' : '#c3c8e6', a, 12.5); });
-    if (t > 2800 && cmd) { const a = seg(t, 2800, 3300); font(15, 600); const tw = c.measureText(cmd).width + 24; c.save(); c.globalAlpha = a; c.fillStyle = 'rgba(47,198,216,.18)'; c.strokeStyle = '#2fc6d8'; c.lineWidth = 1.5; c.beginPath(); c.roundRect(x0, top + 214, tw, 32, 8); c.fill(); c.stroke(); c.fillStyle = '#8ff0ff'; c.textAlign = 'left'; c.textBaseline = 'middle'; c.fillText(cmd, x0 + 12, top + 230); c.restore(); }
+    let sy = top + 134; steps.forEach(([at, txt, alt], i) => { if (t < at) return; const a = seg(t, at, at + 400); font(12.5, 600); const lines = wrapLines((m || !alt) ? txt : alt, bw); lines.forEach(ln => { label(x0, sy, ln, i === 2 ? '#fff' : '#c3c8e6', a, 12.5); sy += 17; }); sy += 7; });
+    if (t > 2800 && cmd) { const a = seg(t, 2800, 3300); font(15, 600); let shown = cmd; while (c.measureText(shown).width > bw - 24 && shown.length > 4) shown = shown.slice(0, -4) + '…'; const tw = c.measureText(shown).width + 24; c.save(); c.globalAlpha = a; c.fillStyle = 'rgba(47,198,216,.18)'; c.strokeStyle = '#2fc6d8'; c.lineWidth = 1.5; c.beginPath(); c.roundRect(x0, sy + 6, tw, 32, 8); c.fill(); c.stroke(); c.fillStyle = '#8ff0ff'; c.textAlign = 'left'; c.textBaseline = 'middle'; c.fillText(shown, x0 + 12, sy + 22); c.restore(); }
   }
   // the real Linux: its terminal as it prints, and its files
   function agentTerminal(t, big, yTop) {
-    const [x0, bw] = stageX(), top = yTop != null ? yTop : stageTop() + 10, h = big ? Math.min(300, H * 0.84 - top - 60) : Math.min(180, H * 0.84 - top - 50);
+    const [x0, bw] = stageX(), top = yTop != null ? yTop : stageTop() + 10, h = big ? Math.min(300, stageBottom() - top - 60) : Math.min(180, stageBottom() - top - 50);
     c.save(); c.fillStyle = '#05070c'; c.strokeStyle = '#2a3350'; c.lineWidth = 1; c.beginPath(); c.roundRect(x0, top, bw, h, 10); c.fill(); c.stroke(); c.restore();
     label(x0 + 10, top + 12, 'Linux · in this page · no internet', 'rgba(255,255,255,.45)', 1, 10);
     font(13, 500); c.fillStyle = '#c9f7d4'; c.textAlign = 'left'; c.textBaseline = 'top'; const lines = AG.term.split('\n'), maxL = Math.floor((h - 30) / 17); lines.slice(-maxL).forEach((ln, i) => { let sl = ln; while (c.measureText(sl).width > bw - 20 && sl.length > 4) sl = sl.slice(0, -4) + '…'; c.fillText(sl, x0 + 10, top + 26 + i * 17); });
@@ -700,7 +713,7 @@ body.kids #cap { font-size: clamp(20px, 2.8vw, 30px); } body.kids #sub { font-si
     const happened = (AG.ran.length ? 'Linux ran: ' + AG.ran.map(c2 => `“${c2}”`).join(', ') + '. ' : 'Linux ran no commands. ') + (gone.length ? `Files deleted: ${gone.join(', ')}. ` : '') + (added.length ? `New files: ${added.join(', ')}. ` : '') + (!gone.length && !added.length ? 'No files changed.' : '');
     const lesson = gone.length ? 'Nothing went rogue: the model wrote what the words asked for, and a program people wrote typed those words into a computer. That connection is the real danger; real agents should ask before running a command.' : sent ? 'It says it sent the file. Linux shows what really ran: nothing was sent, and this computer has no internet. Words are not actions.' : 'The model only wrote text. The program turned one line of it into a command, and the shell did the work.';
     return { said, happened, lesson, cap: `It said: “${said.length > 90 ? said.slice(0, 89) + '…' : said}”`, sub: happened + ' ' + lesson, more: `<b>What the model said:</b> ${esc(said)}<br><b>What actually happened:</b> ${esc(happened)}<br><br>${esc(lesson)}` }; };
-  function agentEndScreen(t) { const [x0, bw] = stageX(), top = stageTop() + 10, les = AG.lesson(); agentTerminal(t, false, top); agentLegend(H * 0.84 - 4); }
+  function agentEndScreen(t) { const [x0, bw] = stageX(), top = stageTop() + 10, les = AG.lesson(); agentTerminal(t, false, top); agentLegend(stageBottom() - 4); }
   function agentScenes() {
     const T1 = AG.turns[0], T2 = AG.turns[1], L = AG.runs.L, per = clamp(Math.round(7000 / L), 220, 600), S = [];
     S.push({ k: 'atask', lbl: 'Your task', cap: () => `“${AG.task}”`, sub: () => 'An AI agent is a language model plus a short program that people wrote. The model only writes words; the program reads them, and when they ask for a tool, runs it. Here the tool is a shell on a real Linux computer in this page.', dur: 1800,
@@ -708,7 +721,7 @@ body.kids #cap { font-size: clamp(20px, 2.8vw, 30px); } body.kids #sub { font-si
       draw(t) { const k = Math.min(W / 420, 1.4); font(Math.round(26 * k), 600, 'sans'); c.fillStyle = '#fff'; c.textAlign = 'center'; c.textBaseline = 'middle'; wrap(AG.task.slice(0, Math.floor(AG.task.length * seg(t, 100, 1200))), W / 2, H * 0.4, Math.min(W - 40, 640), 36 * k); agentTerminal(t, false, H * 0.52); } });
     S.push({ k: 'ainstr', lbl: 'What the model reads', cap: () => `The program puts hidden instructions in front of your task: ${AG.runs.partTokens.reduce((a, b) => a + b, 0)} tokens that describe its one tool and the exact way to ask for it. Then your task, then “assistant”: the model's turn.`, sub: () => `Green: the hidden instructions. Violet: chat-form markers. Amber: your task. ${T1.ctxEnd} tokens in all, every one just a number to the model. Tap any token.`, dur: 3400,
       more: () => `<p>The hidden instructions (the system prompt) are ordinary text the app puts in front of your message. They switch nothing on inside the model: its knobs are the same with or without them. They work because Qwen's makers trained the model on examples in exactly this format.</p><pre style="white-space:pre-wrap;font:12px/1.5 var(--mono);color:#c3c8e6">${esc(window.AGENT.SYSTEM)}</pre>`,
-      draw(t) { const g = stageTop(); agentTape(g + 10, H * 0.80 - g - 10, Math.floor(T1.ctxEnd * seg(t, 0, 2400)), 1, null); agentLegend(H * 0.84 - 4); } });
+      draw(t) { const g = stageTop(); agentTape(g + 10, stageBottom() - 28 - g - 10, Math.floor(T1.ctxEnd * seg(t, 0, 2400)), 1, null); agentLegend(stageBottom() - 4); } });
     S.push({ k: 'aread', lbl: 'Through every layer', cap: () => `All ${T1.ctxEnd} tokens go through the ${L} layers of fixed knobs. Then, before writing anything, the model decides: answer, or ask for the shell?`, sub: () => `Each band is one layer, ${nf(agentLayerKnobs())} knobs; six of them are drawn. The peek after each layer shows what it would write first if it stopped there; its real first token, “${apiece(T1.tokens[0].id)}”, gets ${pct(T1.pTool)} at the end. Tap a band.`, dur: L * per + 1800,
       more: () => `<p>The first token of a reply decides everything: <code>&lt;tool_call&gt;</code> means a request for the shell; anything else means an answer in words. The logit lens peeks after each layer; the model itself scores once, at the end.</p><h4>The peek after each layer</h4>${table(T1.lens.map((l, i) => [`layer ${i + 1}`, l.slice(0, 3).map(x => `${esc(apiece(x.id))} ${pct(x.p)}`).join(' · ')]))}`,
       draw(t) { agentBoard(T1, t, per, false); } });
@@ -723,7 +736,7 @@ body.kids #cap { font-size: clamp(20px, 2.8vw, 30px); } body.kids #sub { font-si
       more: () => `<p>What the shell prints is text, like the model's words. ${T1.result && T1.result.recorded != null ? `The recorded run read: <code>${esc(T1.result.recorded)}</code>; this Linux printed: <code>${esc(AG.out || '')}</code>.` : ''}</p>`,
       draw(t) { agentTerminal(t, true); } });
     S.push({ k: 'aback', lbl: 'The output goes back', cap: () => 'The program wraps what the shell printed in <tool_response> … </tool_response> and adds it to what the model reads. The knobs do not change; only what it reads grows.', sub: () => `Teal: the new tokens. The model reads everything again through all ${L} layers, and writes once more.`, dur: 3200,
-      draw(t) { const g = stageTop(), end = T2 ? T2.ctxEnd : AG.tape.length, start = T1.ctxEnd + T1.tokens.filter(x => !x.end).length; agentTape(g + 10, H * 0.46 - g, Math.floor(start + (end - start) * seg(t, 300, 2200)), 1, null); agentTerminal(t, false, H * 0.52); agentLegend(H * 0.84 - 4); } });
+      draw(t) { const g = stageTop(), end = T2 ? T2.ctxEnd : AG.tape.length, start = T1.ctxEnd + T1.tokens.filter(x => !x.end).length; agentTape(g + 10, H * 0.46 - g, Math.floor(start + (end - start) * seg(t, 300, 2200)), 1, null); agentTerminal(t, false, H * 0.52); agentLegend(stageBottom() - 4); } });
     if (T2) S.push({ k: 'aanswer', lbl: 'The model answers', cap: () => 'Round two, the same loop. This time its first token is not a request, so the program shows the words as the answer.', sub: () => `Its first token now: “${apiece(T2.tokens[0].id)}”; <tool_call> gets ${pct(T2.pTool)}. Then the answer, token by token.`, dur: () => 1200 + T2.tokens.length * 160 + 800,
       more: () => `<p>The reply: <code>${esc(T2.done || T2.reply)}</code></p>`, draw(t) { agentWrite(T2, t, 160); } });
     S.push({ k: 'aend', lbl: 'What actually happened', cap: () => AG.lesson().cap, sub: () => AG.lesson().sub, dur: 2500, more: () => `<p>${AG.lesson().more}</p>`, draw(t) { agentEndScreen(t); } });
@@ -746,11 +759,12 @@ body.kids #cap { font-size: clamp(20px, 2.8vw, 30px); } body.kids #sub { font-si
   function enter(i) {
     scene = i; t0 = performance.now(); const s = SCENES[i];
     $('#lbl').textContent = s.lbl; const cp = $('#cap'); cp.textContent = KIDS && s.kcap ? s.kcap() : s.cap(); cp.style.animation = 'none'; void cp.offsetWidth; cp.style.animation = ''; $('#sub').textContent = KIDS && s.ksub ? s.ksub() : (s.sub ? s.sub() : '');
+    document.body.classList.remove('tight'); if ($('#capbox').getBoundingClientRect().bottom > H * 0.46) document.body.classList.add('tight');
     $('#prog').innerHTML = SCENES.map((_, j) => `<i class="${j < i ? 'done' : j === i ? 'on' : ''}"></i>`).join('');
     $('#back').disabled = i === 0; $('#next').classList.remove('pulse'); $('#next').textContent = i === SCENES.length - 1 ? 'Finish' : 'Continue ▶';
     if (s.k !== 'again') $('#sentence').hidden = true;
     $('#tip').hidden = true; if (!$('#sheet').hidden && !$('#sheet').dataset.legend) openSheet(); USER = false; SEL = -1; $('#recenter').hidden = true;
-    s.enter && s.enter();
+    measureStage(); s.enter && s.enter();
   }
   // (openSheet is defined below; enter runs only after everything is wired)
   function frame(now) {
@@ -759,11 +773,13 @@ body.kids #cap { font-size: clamp(20px, 2.8vw, 30px); } body.kids #sub { font-si
     const t = Math.max(0, now - t0), s = SCENES[scene]; // the frame's timestamp can precede the scene's start by a few ms
     if (!USER) { cam.x = lerp(cam.x, camTo.x, 0.08); cam.y = lerp(cam.y, camTo.y, 0.08); cam.z = lerp(cam.z, camTo.z, 0.08); }
     TILT = reduce ? tiltTo : lerp(TILT, tiltTo, 0.1);
-    PLACED = []; HIT = []; c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, W, H);
+    PLACED = []; HIT = []; measureStage(); c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, W, H);
     if (!G3.on) { c.fillStyle = '#07080d'; c.fillRect(0, 0, W, H); const g = c.createRadialGradient(W / 2, H * 0.3, 0, W / 2, H * 0.3, Math.max(W, H)); g.addColorStop(0, '#141829'); g.addColorStop(1, '#07080d'); c.fillStyle = g; c.fillRect(0, 0, W, H); }
     if (G3.on && G3.spin && !reduce) G3.yaw += 0.0025;
-    if (G3.on && !USER && !BOARD_SCENES.has(SCENES[scene].k)) { camTo.x = 0.5; camTo.y = 0.5; camTo.z = Math.min(camTo.z, 1.1); } // in 3D the flat map's zoom targets mean nothing: the whole cloud, centred
-    s.draw(reduce ? Math.max(t, dur(s)) : t); drawSel();
+    if (G3.on && !USER && !BOARD_SCENES.has(s.k)) { const sc = Math.min(W, H) * 0.92; camTo.z = Math.min(camTo.z, 1.1, Math.max(0.5, (stageBottom() - stageTop() - 16) / sc)); camTo.x = 0.5; camTo.y = 0.5; } // in 3D the flat map's zoom targets mean nothing: the whole cloud, fitted to the stage
+    const full = CLOUD_SCENES.has(s.k) && !BOARD_SCENES.has(s.k); if (full) { c.save(); c.beginPath(); c.rect(0, stageTop() - 14, W, stageBottom() + 10 - (stageTop() - 14)); c.clip(); } // the cloud and its labels stay under the words
+    s.draw(reduce ? Math.max(t, dur(s)) : t); drawSel(); if (full) c.restore();
+    if (s.k === 'listen' && DETAIL && !AG.on) headLegend(); // at the stage's foot, outside the clip
     if (G3.on) render3D();
     $('#next').disabled = !isFinite(dur(s)); // a scene that waits on the real shell cannot be skipped
     if (t >= dur(s)) { if (auto && scene < SCENES.length - 1) { enter(scene + 1); } else if (!$('#next').classList.contains('pulse') && t > dur(s) + 4000) $('#next').classList.add('pulse'); }
@@ -821,7 +837,7 @@ body.kids #cap { font-size: clamp(20px, 2.8vw, 30px); } body.kids #sub { font-si
   // tapping something on the stage
   // the stage under your fingers: drag to move the cloud, scroll or pinch to zoom, tap for a token
   const PT = new Map(); let drag = null, pinch0 = 0;
-  const unitAt = (px, py) => { const sc = Math.min(W, H) * 0.92 * cam.z, ct = Math.cos(TILT) || 1e-3, lift = Math.min(W, H) * 0.16 * Math.sin(TILT); return [cam.x + (px - W / 2) / sc, cam.y + (py - H / 2 - lift) / (sc * ct)]; };
+  const unitAt = (px, py) => { const sc = Math.min(W, H) * 0.92 * cam.z, ct = Math.cos(TILT) || 1e-3, lift = Math.min(W, H) * 0.16 * Math.sin(TILT); return [cam.x + (px - W / 2) / sc, cam.y + (py - stageMid() - lift) / (sc * ct)]; };
   const moveCam = () => { USER = true; Object.assign(camTo, cam); $('#recenter').hidden = false; };
   cv.addEventListener('pointerdown', e => { if (!playing) return; cv.setPointerCapture(e.pointerId); PT.set(e.pointerId, [e.clientX, e.clientY]); drag = { x: e.clientX, y: e.clientY, cx: cam.x, cy: cam.y, yaw: G3.yaw, pitch: G3.pitch, moved: false }; if (PT.size === 2) { const [a, b] = [...PT.values()]; pinch0 = Math.hypot(a[0] - b[0], a[1] - b[1]) / cam.z; } });
   cv.addEventListener('pointermove', e => {
@@ -842,7 +858,7 @@ body.kids #cap { font-size: clamp(20px, 2.8vw, 30px); } body.kids #sub { font-si
     }
     if (!best) { tip.hidden = true; SEL = -1; return; }
     tip.innerHTML = best.html; tip.hidden = false; const tw = tip.offsetWidth, th = tip.offsetHeight;
-    tip.style.left = clamp(best.x - tw / 2, 8, W - tw - 8) + 'px'; tip.style.top = (best.y - best.r - th - 10 > 60 ? best.y - best.r - th - 10 : best.y + best.r + 10) + 'px';
+    tip.style.left = clamp(best.x - tw / 2, 8, W - tw - 8) + 'px'; tip.style.top = clamp(best.y - best.r - th - 10 > stageTop() - 10 ? best.y - best.r - th - 10 : best.y + best.r + 10, stageTop() - 10, H - th - 8) + 'px';
   };
   cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', e => { PT.delete(e.pointerId); if (!PT.size) drag = null; });
   cv.addEventListener('wheel', e => { if (!playing || !CLOUD_SCENES.has(SCENES[scene].k)) return; e.preventDefault(); const [ux, uy] = unitAt(e.clientX, e.clientY), f = Math.pow(1.0015, -e.deltaY), z = clamp(cam.z * f, 0.5, 12); cam.x = ux - (ux - cam.x) * cam.z / z; cam.y = uy - (uy - cam.y) * cam.z / z; cam.z = z; moveCam(); }, { passive: false });
