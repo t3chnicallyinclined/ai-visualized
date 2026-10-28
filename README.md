@@ -18,7 +18,7 @@ An agent is the same machine with a person next to it: a program that reads the 
 
 ## The pages
 
-**The show** (`show.html`; on a phone the front page opens it) — one word, as a full-screen film on one canvas: your words shatter into pieces, fly to their spots in the cloud of every piece the model knows, the last piece listens back along six coloured threads (one per attention head), its numbers fall through the six layers as a ring of 288 spokes while the cloud lights up with each layer's guess, the wall of lights, the weighted dice, and the word drops into the sentence; then the next words run through the whole loop. Every frame is drawn from the model's own numbers for your sentence. Choose any of four models (TinyStories, Pythia, DistilGPT-2, or the SmolLM2 chat model, which reads your message in its chat form); a screen before the cloud shows the model as a block of numbers in memory and your tokens' rows read out of the embedding table. Drag, scroll or pinch the cloud and tap any dot for its neighbours; tap rings, lights and orbs for their numbers; ? explains each screen with the real numbers behind it. Continue, Back, swipe, or Autoplay.
+**The show** (`show.html`; on a phone the front page opens it) — one word, as a full-screen film on one canvas: your words shatter into pieces, fly to their spots in the cloud of every piece the model knows, the last piece listens back along six coloured threads (one per attention head), its numbers fall through the six layers as a ring of 288 spokes while the cloud lights up with each layer's guess, the wall of lights, the weighted dice, and the word drops into the sentence; then the next words run through the whole loop. Every frame is drawn from the model's own numbers for your sentence. Choose any of four models (TinyStories, Pythia, DistilGPT-2, or the SmolLM2 chat model, which reads your message in its chat form); a screen before the cloud shows the model as a block of numbers in memory and your tokens' rows read out of the embedding table. Drag, scroll or pinch the cloud, turn it in real 3D (a three-dimensional t-SNE of the same rows, `prep/cloud_layout3d.py`, drawn as WebGL points; the page says how many true neighbours each map keeps) and tap any dot for its neighbours; tap rings, lights and orbs for their numbers; ? explains each screen with the real numbers behind it. Continue, Back, swipe, or Autoplay.
 
 **Guided walk-through** (`index.html`) — one run of a real model, slowed down and lit one step at a time, in two modes. **Write**: words into pieces, each piece a spot in the cloud, one layer close up, every layer, the wall of lights, the dice, repeat. **Agent**: the same steps on Qwen2.5-0.5B-Instruct, plus the ones only an agent has (marked *agent* on the page).
 
@@ -82,6 +82,7 @@ Issues and pull requests welcome. No build step:
 | `linux/` | that Linux (`bzimage.bin`), how it is built, and where its source is |
 | `agent-runs.js` | recorded example runs (`prep/record_agent.mjs` remakes them) |
 | `cloud-*.js` | token maps, made by `prep/cloud_layout.py` |
+| `cloud3d-*.js` | the same vocabularies laid out in 3D, made by `prep/cloud_layout3d.py` |
 | `verify/` | checks of `llm.js` and the agent loop against `transformers` ([results](verify/README.md)) |
 
 Keep it that way, so anyone can open a file and read it.
