@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>The Show · AI Visualized</title>
-<meta name="description" content="One real language model writing one word, as a full-screen show: your words shatter into pieces, fly to their spots in a cloud of 32,000, listen back to each other, fall through six layers, light up the wall, and roll the dice. Every frame is drawn from the model's own numbers.">
+<meta name="description" content="One real language model writing one word, as a full-screen show: your words become pieces, fly to their spots in a cloud of every piece the model knows, listen back to each other, pass through its layers of fixed knobs, light up the wall, and roll the dice. Every frame is drawn from the model's own numbers, and a second act plays a real agent on a real Linux in the page.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%2712%27 fill=%27%23ffe9b8%27/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -320,17 +320,6 @@ body.tight #cap { font-size: 17px; line-height: 1.3; } body.tight #sub { font-si
       c.fillStyle = 'rgba(255,255,255,.4)'; c.fillText('…', Math.min(tx, w - 14), 9); }
     c.restore();
   }
-  function ball(x, y, rad, vec, scale, alpha) { // the token's numbers as a ring of 288 spokes: orange out for above zero, blue in for below
-    if (!vec) return; const n = vec.length; c.save(); c.globalAlpha = alpha; c.translate(x, y); c.lineWidth = Math.max(1, rad * 0.016);
-    for (let i = 0; i < n; i++) {
-      const a = i / n * Math.PI * 2, v = clamp(vec[i] / scale, -1, 1), len = Math.abs(v) * rad * 0.55;
-      c.strokeStyle = v >= 0 ? `rgba(242,154,74,${(0.35 + 0.65 * Math.abs(v)).toFixed(2)})` : `rgba(91,139,216,${(0.35 + 0.65 * Math.abs(v)).toFixed(2)})`;
-      const r0 = rad * 0.45, r1 = v >= 0 ? r0 + len : r0 - len * 0.8;
-      c.beginPath(); c.moveTo(Math.cos(a) * r0, Math.sin(a) * r0); c.lineTo(Math.cos(a) * r1, Math.sin(a) * r1); c.stroke();
-    }
-    c.strokeStyle = 'rgba(255,255,255,.35)'; c.lineWidth = 1; c.beginPath(); c.arc(0, 0, rad * 0.45, 0, Math.PI * 2); c.stroke();
-    c.restore();
-  }
   function threads(from, layer, t, alpha) { // the attention of the last piece, one coloured thread per head to each earlier piece
     const ly = R.words[0].rec.layers[layer], Tn = R.n, [fx, fy] = from;
     if (!ly.attn) return;
@@ -460,7 +449,7 @@ body.tight #cap { font-size: 17px; line-height: 1.3; } body.tight #sub { font-si
       enter() { const b = bounds(labelled()), mx = Math.max(b.w, b.h, 0.08), fit = (stageBottom() - stageTop() - 90) / (Math.min(W, H) * 0.92); camTo.x = b.cx; camTo.y = b.cy; camTo.z = clamp(Math.min(0.55, fit) / mx, 1.2, 4); },
       draw(t) { drawCloudLayer(0.55, null, 0); piecesOnCloud(1, 1); const [x, y] = scrPiece(R.n - 1); threads([x, y], 0, t, seg(t, 300, 1200)); numbersCard(clamp(x, 80, W - 80), Math.max(stageTop() + 24, y - 34), 150, 34, R.words[0].rec.layers[0].vec.xin, vecScale(), seg(t, 0, 600), `“${piece(R.n - 1)}”`); } },
     { k: 'layers', lbl: 'Through every layer', cap: () => `Then its numbers pass through ${M.L} layers of fixed knobs, set in training and never moved by your words. Watch its numbers change as the knobs light up.`, sub: () => `Each band is one layer: ${nf(layerKnobs(0))} knobs in memory, a sample of them drawn as gauges (top row: the attention heads' knobs; bottom row: the feed-forward knobs every token goes through on its own). The card running along each band is the token's ${M.D} numbers, every one drawn as a colour and the first few written out; every knob it passes multiplies one of them, and you can see the numbers change. Beside it, the cloud lights up with what the model would say if it stopped after that layer. Tap a band or a dot.`, dur: () => M.L * PER() + 900,
-      more: () => { const w = R.words[0]; return `<p>The ring of spokes is the piece's <b>${M.D} numbers</b>: orange out for above zero, blue in for below. Every layer changes them a little: listen back (attention), then push them through the layer's own knobs (the feed-forward block). ${nf(w.rec.layers.reduce((a, _, l) => a + layerKnobs(l), 0))} knobs in all, none of them moved by your words.</p><h4>Its best guess after each layer</h4>${table(w.rec.layers.map((q, l) => [`layer ${l + 1}`, q.lens.slice(0, 3).map(x => `${esc(M.tok.piece(x.id))} ${pct(x.p)}`).join(' · ')]))}<p class="pic">The guess after each layer is a peek we take by running the model's final scoring early (the "logit lens"). Early layers are not built to be read this way, so their guesses can look odd.</p>`; },
+      more: () => { const w = R.words[0]; return `<p>The card running along each band is the piece's <b>${M.D} numbers</b>: every one drawn as a colour (orange above zero, blue below) and the first few written out. Every layer changes them a little: listen back (attention), then push them through the layer's own knobs (the feed-forward block). ${nf(w.rec.layers.reduce((a, _, l) => a + layerKnobs(l), 0))} knobs in all, none of them moved by your words.</p><h4>Its best guess after each layer</h4>${table(w.rec.layers.map((q, l) => [`layer ${l + 1}`, q.lens.slice(0, 3).map(x => `${esc(M.tok.piece(x.id))} ${pct(x.p)}`).join(' · ')]))}<p class="pic">The guess after each layer is a peek we take by running the model's final scoring early (the "logit lens"). Early layers are not built to be read this way, so their guesses can look odd.</p>`; },
       enter() { camTo.x = 0.5; camTo.y = 0.52; camTo.z = 1; },
       draw(t) { descent(t); } },
     { k: 'lights', lbl: 'The wall of lights', cap: () => `At the end, every one of the ${nf(M.V)} tokens gets a light: the final numbers are compared with that token's own row in the cloud. Only ${above(R.words[0].rec.layers[M.L - 1].watch, 0.01)} shine above 1%.`, sub: () => `${nf(M.V)} comparisons, one per row of ${M.mats.Eout && M.mats.Eout !== M.mats.E ? 'the output table' : 'the same table you saw in memory'}: multiply the ${M.D} numbers pair by pair and add them up. Brighter means a closer match. The model never looks anything up. Tap a light.`, dur: 3000,
