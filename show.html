@@ -284,11 +284,11 @@ textarea { width: 100%; box-sizing: border-box; font: 500 18px/1.4 var(--mono); 
       more: () => `<p>The model is <b>TinyStories 15M</b>: ${nf(M.weightBytes / 2)} fixed numbers, set once by reading children's stories. It has no memory of you and no idea what you mean: it only gets these ${R.text.length} characters.</p><p class="pic">The picture: a machine with millions of volume knobs, set at the factory and glued. Your words go in; one word comes out. Then it runs again.</p>`,
       draw(t) { const k = Math.min(W / 420, 1.4); font(Math.round(26 * k), 600, 'sans'); c.fillStyle = '#fff'; c.textAlign = 'center'; c.textBaseline = 'middle';
         const shown = R.text.slice(0, Math.floor(R.text.length * seg(t, 100, 1200))); wrap(shown, W / 2, H * 0.5, Math.min(W - 40, 640), 36 * k); } },
-    { k: 'pieces', lbl: 'Pieces', cap: () => `The model can't read letters. Its tokenizer cuts your words into ${R.n} pieces it knows, called tokens, each with its number in a dictionary of ${nf(M.V)}.`, sub: () => `A token is just a number: its place in the tokenizer's list of ${nf(M.V)} pieces. From here on the model only sees these numbers. The dot means "starts with a space"; rare words are cut into several pieces. Tap a piece.`, dur: 2400,
+    { k: 'pieces', lbl: 'Pieces', cap: () => `The model can't read letters. Its tokenizer cuts your words into ${R.n} pieces it knows, called tokens, each with its number in a dictionary of ${nf(M.V)}.`, sub: () => `A token is just a number: its place in the tokenizer's list of ${nf(M.V)} pieces. From here on the model only sees these numbers. The dot means "starts with a space"; rare words are cut into several pieces, as the examples below show. Tap a piece.`, dur: 1600 + 1600 * 5,
       more: () => `<h4>Your tokens</h4>${table(R.ids.map((id, i) => [esc(piece(i)), '#' + id]))}<p>The dot means the piece starts with a space. ${M.meta.bos != null ? '<code>&lt;s&gt;</code> is the marker the model always gets first: "a text starts here".' : ''}</p><h4>Try a rare word</h4><div class="try"><input id="tryW" value="dragonfruit" maxlength="24" aria-label="A word to cut into pieces"><button type="button" id="tryGo">Cut it</button></div><p id="tryOut" class="pic">How the model would cut it.</p>`,
-      draw(t) { chipRow(t, 1); } },
-    { k: 'memory', lbl: 'In memory', cap: () => `The model is ${nf(M.weightBytes / 2)} numbers sitting in memory. ${nf(M.mats.E.length)} of them are the embedding table: one row of ${M.D} numbers for every token.`, sub: () => `Here the numbers sit in your computer's memory (${(M.weightBytes * 2 / 1e6).toFixed(0)} MB as 32-bit numbers); in a data centre they sit in a GPU's memory. They were set in training and do not change now. Your ${R.n} tokens pick out ${R.n} rows.`, dur: 4200,
-      more: () => `<p>Everything the model knows is this block of numbers, loaded once. Nothing else is stored: no text, no rules, no memory of past sentences.</p><h4>What is in the block</h4>${table([['the embedding table', `${nf(M.V)} rows × ${M.D} = ${nf(M.mats.E.length)} numbers`]].concat(Array.from({ length: M.L }, (_, l) => [`layer ${l + 1}`, `${nf(layerKnobs(l))} knobs`])).concat([['the output table', 'the embedding table again (shared)']]))}<p class="pic">Your tokens are not stored anywhere in it. A token number is an address: row #${R.ids[R.n - 1]} is “${esc(piece(R.n - 1))}”. The model reads that row's ${M.D} numbers, and that list is what the token becomes.</p>`,
+      draw(t) { chipRow(t, 1); splitExamples(t); } },
+    { k: 'memory', lbl: 'In memory', cap: () => `The model is ${nf(M.weightBytes / 2)} numbers sitting in memory. ${nf(M.mats.E.length)} of them are the embedding table: one row of ${M.D} numbers for every token.`, sub: () => `Here the numbers sit in your computer's memory (${(M.weightBytes * 2 / 1e6).toFixed(0)} MB as 32-bit numbers); in a data centre they sit in a GPU's memory. They were set in training and do not change now. Your ${R.n} tokens pick out ${R.n} rows.`, dur: () => 2000 + Math.min(R.n, 12) * 230 + 1700,
+      more: () => `<p>Everything the model knows is this block of numbers, loaded once. Nothing else is stored: no text, no rules, no memory of past sentences.</p><h4>What is in the block</h4>${table([['the embedding table', `${nf(M.V)} rows × ${M.D} = ${nf(M.mats.E.length)} numbers`]].concat(Array.from({ length: M.L }, (_, l) => [`layer ${l + 1}`, `${nf(layerKnobs(l))} knobs`])).concat([['the output table', 'the embedding table again (shared)']]))}<p class="pic">Your tokens are not stored anywhere in it. A token number is an address: row #${R.ids[R.n - 1]} is “${esc(piece(R.n - 1))}”. The model reads that row's ${M.D} numbers, and that list is what the token becomes.</p><h4>How the numbers were set: training</h4><p>Every number started random. The model was shown the stories one piece at a time; each time, its guess for the next piece was compared with the real one, and every number was nudged a little in the direction that would have made the real piece more likely. Millions of nudges later, training stopped and the numbers froze. That is this block. <a href="explore.html">The Explorer</a> shows a real training run, checkpoint by checkpoint.</p>`,
       draw(t) { memoryScene(t); } },
     { k: 'cloud', lbl: 'The cloud', cap: () => `Lay the table out so rows that point the same way sit close, and it becomes this cloud: one dot per token, ${nf(MAP ? MAP.cat.filter(v => v !== 255).length : M.V)} of them. This is the embedding.`, sub: () => `Each dot is one row of ${M.D} numbers. Tokens used alike got similar rows in training, so they sit together: “${piece(R.n - 1)}” sits near ${nbr(R.ids[R.n - 1]).slice(0, 3).map(x => x.split(' ')[0]).join(', ')}. Your tokens are the amber dots. Tap any token.`, dur: 3400,
       more: () => `<p>Every token in the dictionary has its own row of <b>${M.D} numbers</b>, its embedding. The rows were set during training and never change now: the cloud is frozen. Tokens that appeared in the same kinds of places got similar rows, so they sit near each other. It comes from how a word is <i>used</i>, not how it sounds or is spelled.</p><p>Your text has become ${R.n} points in this cloud. Everything that follows is arithmetic on those points.</p><h4>Your tokens and their nearest neighbours</h4>${table(R.ids.map((id, i) => [esc(piece(i)), esc(nbr(id).map(x => x.split(' ')[0]).join(' · '))]))}<p class="pic">The map is flat (made with t-SNE) and the real cloud has ${M.D} directions, so distances on it are rough. The number after a neighbour above (in the tooltips) is how closely the two addresses point the same way: 1 = identical.</p>`,
@@ -316,29 +316,44 @@ textarea { width: 100%; box-sizing: border-box; font: 500 18px/1.4 var(--mono); 
       enter() { camTo.z = 1; camTo.x = 0.5; camTo.y = 0.52; },
       draw(t) { again(t); } },
   ];
-  function memoryScene(t) { // the model as one block of numbers; the table lit; your tokens' rows pulled out of it, as colour
+  const EXAMPLES = ['dragonfruit', 'Timothy', 'unbelievable', 'spaceship', 'grandmother']; // rare words, cut live by the real tokenizer
+  const stageX = () => { const sw = Math.min(W, 1000); return [(W - sw) / 2 + 20, sw - 40]; }; // the stage's left edge and width: centred, never wider than 1000px
+  function memoryScene(t) { // the model as one block of numbers, filling up; then your tokens' rows read out of the table, one at a time
+    const [x0, bw] = stageX();
     const segs = [['the embedding table', M.mats.E.length, '#2fc6d8']].concat(Array.from({ length: M.L }, (_, l) => [`layer ${l + 1}`, layerKnobs(l), '#9d90ff']));
-    const tot = M.weightBytes / 2, x0 = 20, bw = W - 40, by = stageTop() + 22, bh = clamp(H * 0.05, 26, 44); let x = x0;
-    font(11, 500); c.textAlign = 'left'; c.textBaseline = 'bottom'; c.fillStyle = 'rgba(255,255,255,.6)'; c.fillText(`${nf(tot)} numbers in memory`, x0, by - 8);
-    segs.forEach(([name, n, col], i) => { const w = bw * n / tot, a = eo(seg(t, i * 140, i * 140 + 500)); if (a <= 0) return;
-      c.save(); c.globalAlpha = a; c.fillStyle = col; c.globalAlpha = a * (i === 0 ? 0.75 + 0.25 * Math.sin(t / 300) * (t > 1200 ? 1 : 0) : 0.45); c.fillRect(x, by, Math.max(1, w - 2), bh);
-      if (w > 44) { c.globalAlpha = a; c.fillStyle = '#07080d'; font(10, 600); c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(name, x + w / 2, by + bh / 2); }
+    const tot = M.weightBytes / 2, by = stageTop() + 22, bh = clamp(H * 0.05, 26, 44), fill = eo(seg(t, 0, 1400)); let x = x0;
+    font(11, 500); c.textAlign = 'left'; c.textBaseline = 'bottom'; c.fillStyle = 'rgba(255,255,255,.6)'; c.fillText(`${nf(Math.round(tot * fill))} numbers in memory`, x0, by - 8);
+    segs.forEach(([name, n, col], i) => { const w = bw * n / tot, a = clamp((fill * tot - (x - x0) / bw * tot) / n, 0, 1); if (a <= 0) return;
+      c.save(); c.globalAlpha = i === 0 ? 0.6 + 0.3 * (t > 1500 ? 0.5 + 0.5 * Math.sin(t / 260) : 0) : 0.45; c.fillStyle = col; c.fillRect(x, by, Math.max(1, (w - 2) * a), bh);
+      if (w * a > 44) { c.globalAlpha = 1; c.fillStyle = '#07080d'; font(10, 600); c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(name, x + w * a / 2, by + bh / 2); }
       c.restore(); x += w; });
     const ew = bw * M.mats.E.length / tot;
-    if (t > 1200) { label(x0, by + bh + 16, `${nf(M.V)} rows × ${M.D} numbers`, '#8ff0ff', seg(t, 1200, 1700), 12); }
-    // the rows your tokens pick out, drawn from the real table
-    const rows = Math.min(R.n, 12), ry0 = by + bh + 44, rh = clamp((H * 0.84 - ry0 - 30) / rows, 12, 28), lx = Math.min(90, W * 0.2), sw = W - 40 - lx;
+    if (t > 1500) label(x0, by + bh + 16, `${nf(M.V)} rows × ${M.D} numbers; row 0 at the left, row ${nf(M.V - 1)} at the right`, '#8ff0ff', seg(t, 1500, 2000), 12);
+    // the rows your tokens pick out: a bright reader runs along the table to the row's address, then the row's numbers come out, left to right
+    const rows = Math.min(R.n, 12), ry0 = by + bh + 48, rh = clamp((H * 0.84 - ry0 - 34) / rows, 12, 28), lx = Math.min(96, bw * 0.22), sw = bw - lx, sc = vecScale();
     for (let i = 0; i < rows; i++) {
-      const a = eo(seg(t, 1700 + i * 160, 2300 + i * 160)); if (a <= 0) continue;
-      const y = ry0 + i * rh, fx = x0 + ew * (R.ids[i] / M.V); // where in the table this row sits
-      c.save(); c.globalAlpha = a * 0.35; c.strokeStyle = '#2fc6d8'; c.lineWidth = 1; c.beginPath(); c.moveTo(fx, by + bh); c.lineTo(20 + lx, y + rh / 2); c.stroke(); c.restore();
-      label(20, y + rh / 2, piece(i), i === R.n - 1 ? '#ff5c8a' : '#f2a93b', a, 12);
-      const vals = M.embedding(R.ids[i], M.D), sc = vecScale(), n = vals.length, cw = sw / n;
-      c.save(); c.globalAlpha = a;
-      for (let k = 0; k < n; k++) { const v = clamp(vals[k] / sc, -1, 1); c.fillStyle = v >= 0 ? `rgba(242,154,74,${(0.15 + 0.85 * Math.abs(v)).toFixed(2)})` : `rgba(91,139,216,${(0.15 + 0.85 * Math.abs(v)).toFixed(2)})`; c.fillRect(20 + lx + k * cw, y + 2, Math.max(1, cw), rh - 5); }
-      c.restore();
+      const t0 = 2000 + i * 230, seek = eo(seg(t, t0, t0 + 320)), read = seg(t, t0 + 320, t0 + 720); if (seek <= 0) continue;
+      const y = ry0 + i * rh, fx = x0 + ew * (R.ids[i] / M.V), hx = lerp(x0, fx, seek);
+      c.save(); c.fillStyle = '#8ff0ff'; c.shadowColor = '#8ff0ff'; c.shadowBlur = 12; c.beginPath(); c.arc(hx, by + bh / 2, 4, 0, Math.PI * 2); c.fill(); c.restore(); // the reader on the table
+      if (seek >= 1) { c.save(); c.globalAlpha = 0.35 * read + 0.1; c.strokeStyle = '#2fc6d8'; c.lineWidth = 1; c.beginPath(); c.moveTo(fx, by + bh); c.lineTo(x0 + lx, y + rh / 2); c.stroke(); c.restore(); }
+      label(x0, y + rh / 2, bw > 700 ? `${piece(i)}  #${R.ids[i]}` : piece(i), i === R.n - 1 ? '#ff5c8a' : '#f2a93b', seek, 12);
+      hit(x0 + lx + sw / 2, y + rh / 2, rh, `<b>${esc(piece(i))}</b><small>row #${R.ids[i]} of the embedding table · ${M.D} numbers · starts ${nf(R.ids[i] * M.D * 4)} bytes in</small><small>first six: ${M.embedding(R.ids[i], 6).map(v => v.toFixed(2)).join(', ')}</small>`);
+      if (read <= 0) continue;
+      const vals = M.embedding(R.ids[i], M.D), n = vals.length, cw = sw / n, upto = Math.floor(n * read);
+      for (let k = 0; k < upto; k++) { const v = clamp(vals[k] / sc, -1, 1); c.fillStyle = v >= 0 ? `rgba(242,154,74,${(0.15 + 0.85 * Math.abs(v)).toFixed(2)})` : `rgba(91,139,216,${(0.15 + 0.85 * Math.abs(v)).toFixed(2)})`; c.fillRect(x0 + lx + k * cw, y + 2, Math.max(1, cw), rh - 5); }
+      if (read < 1) { c.fillStyle = '#fff'; c.fillRect(x0 + lx + upto * cw, y + 1, 2, rh - 3); }
     }
-    if (t > 2300) { label(20, ry0 + rows * rh + 10, `each row: ${M.D} numbers, orange above zero, blue below`, 'rgba(255,255,255,.55)', seg(t, 2300, 2900), 11); label(20, ry0 + rows * rh + 26, 'next: the whole table, laid out as a cloud', 'rgba(255,255,255,.55)', seg(t, 2600, 3200), 11); }
+    const tEnd = 2000 + rows * 230 + 720;
+    if (t > tEnd) { label(x0, ry0 + rows * rh + 12, `each row: ${M.D} numbers, orange above zero, blue below. Tap a row.`, 'rgba(255,255,255,.55)', seg(t, tEnd, tEnd + 500), 11); label(x0, ry0 + rows * rh + 28, 'next: the whole table, laid out as a cloud', 'rgba(255,255,255,.55)', seg(t, tEnd + 300, tEnd + 900), 11); }
+  }
+  function splitExamples(t) { // under the chips: rare words cut by the real tokenizer, one after another
+    const [x0, bw] = stageX(), y = H * 0.5 + 110, per = 1600, start = 1600; if (t < start) return;
+    const k = Math.min(EXAMPLES.length - 1, Math.floor((t - start) / per)), u = seg(t - start - k * per, 0, 500), w = EXAMPLES[k], ids = M.tok.encode(' ' + w);
+    label(x0 + bw / 2, y - 26, 'Rare words are cut into pieces it knows:', 'rgba(255,255,255,.6)', 1, 12, 'center');
+    c.save(); c.globalAlpha = u; font(15, 600); c.fillStyle = '#fff'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    const parts = ids.map(id => M.tok.piece(id)), line = `“${w}”  →  ${parts.join('  +  ')}`; c.fillText(line, x0 + bw / 2, y);
+    font(11, 500); c.fillStyle = 'rgba(255,255,255,.55)'; c.fillText(`${ids.length} piece${ids.length === 1 ? '' : 's'}: ${ids.map(id => '#' + id).join(', ')}`, x0 + bw / 2, y + 20);
+    c.restore();
   }
   function headLegend() { // Details: each head and the token it listens to most (layer 1)
     const ly = R.words[0].rec.layers[0], Tn = R.n, x = 14, y0 = H - 92 - env() - ly.heads * 18;
@@ -381,7 +396,7 @@ textarea { width: 100%; box-sizing: border-box; font: 500 18px/1.4 var(--mono); 
     for (let l = 0; l <= lyr; l++) { const g = lensOf(w, l), a = l < lyr ? 0.5 : seg(u, 0.5, 0.9); if (a > 0) lensLabel(l, DETAIL ? w.rec.layers[l].lens.slice(0, 3).map(x => `${M.tok.piece(x.id)} ${pct(x.p)}`).join('  ') : `${M.tok.piece(g.id)} ${pct(g.p)}`, l === lyr ? '#fff' : '#c9b8ff', a); }
   }
   function dice(t, w, alpha) { // the five on a ring, sized by chance; a marker spins, slows, and lands on the real pick
-    const cx = W / 2, cy = Math.max(H * 0.5, stageTop() + Math.min(W, H) * 0.3 + 40), R0 = Math.min(W, H) * 0.3, n = w.cands.length;
+    const cx = W / 2, cy = Math.max(H * 0.5, stageTop() + Math.min(W, H) * 0.3 + 40), R0 = Math.min(W, H, 1000) * 0.3, n = w.cands.length;
     const spin = seg(t, 900, 2800), turns = 3 + w.pick / n, ang = -Math.PI / 2 + eo(spin) * turns * Math.PI * 2, landed = t > 2800;
     w.cands.forEach((cd, i) => {
       const a = -Math.PI / 2 + i / n * Math.PI * 2, x = cx + Math.cos(a) * R0, y = cy + Math.sin(a) * R0, r = (10 + 34 * Math.sqrt(cd.p)) * eo(seg(t, i * 100, 600 + i * 100));
