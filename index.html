@@ -79,6 +79,18 @@ form { display: flex; gap: 10px; align-items: stretch; }
 .numrow { display: grid; grid-template-columns: 7.5em minmax(0, 1fr); gap: 10px; align-items: center; font: 600 14px var(--mono); animation: pop .3s ease-out both; }
 .numrow span { overflow: hidden; text-overflow: ellipsis; white-space: pre; }
 canvas.strip { width: 100%; height: 22px; border-radius: 5px; display: block; }
+canvas.strip[data-read] { cursor: crosshair; }
+.zoom { margin: 2px 0 16px; }
+.zrow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.zarr { font: 700 18px var(--mono); color: var(--s-ink3); }
+.zlab { font: 600 13px var(--mono); color: var(--s-ink2); }
+.ztiles { display: flex; gap: 4px; margin-top: 12px; flex-wrap: wrap; }
+.zt { font: 600 12.5px var(--mono); padding: 7px 8px 5px; border-radius: 6px; min-width: 4em; text-align: center; border: 1px solid rgb(255 255 255 / .1); animation: pop .3s ease-out both; display: flex; flex-direction: column; gap: 2px; }
+.zt small { font: 400 10px var(--mono); color: var(--s-ink2); }
+.zmap { position: relative; margin-top: 14px; }
+.zmap canvas.strip { height: 28px; }
+.zbr { position: absolute; top: -4px; left: 0; height: 36px; min-width: 7px; border: 2px solid var(--pick); border-radius: 4px; pointer-events: none; }
+.tip { position: fixed; z-index: 60; pointer-events: none; background: #0d1020; border: 1px solid rgb(255 255 255 / .2); color: var(--s-ink); font: 600 12px var(--mono); padding: 5px 8px; border-radius: 6px; box-shadow: 0 4px 14px rgb(0 0 0 / .5); }
 .knobs { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
 .knobs svg { width: 30px; height: 30px; }
 .twocol { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; } @media (max-width: 700px) { .twocol { grid-template-columns: 1fr; } }
@@ -177,7 +189,7 @@ body.playing .ctl .now { display: none; }
 .mbbox { margin-top: 14px; } .mbbar { display: flex; height: 16px; border-radius: 99px; overflow: hidden; background: var(--s-2); margin: 6px 0 8px; } .mbbar i { display: block; height: 100%; min-width: 2px; }
 .mbleg { display: grid; gap: 4px; font: 13px/1.4 var(--mono); color: var(--s-ink2); } .mbleg b { color: var(--s-ink); font-weight: 600; } .mbleg i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
 .explore { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
-@media (prefers-reduced-motion: reduce) { .sec, .lay { transition: none; } .chip, .numrow, .picks div { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .sec, .lay { transition: none; } .chip, .numrow, .picks div, .zt { animation: none; } }
 .modes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; max-width: 640px; }
 .modes button { text-align: left; border-radius: 14px; padding: 9px 14px; display: flex; flex-direction: column; gap: 1px; line-height: 1.25; }
 .modes button b { font: 700 17px var(--display); } .modes button small { font: 400 13px var(--body); color: var(--s-ink2); }
@@ -439,8 +451,9 @@ body.playing .ctl .now { display: none; }
       <section class="sec" id="s-pieces"><h2><i>1</i>Your words become pieces</h2><p class="lookback">Looking back at an earlier step. Press Continue to return to where you were.</p><p class="cap"></p><div class="chips" id="chips"></div>
         <p class="pic"><b>The picture:</b> a big list of pieces, each with a number. The list was built before training by finding the most common chunks of text, so common words are one piece and rare words are several. Every model has its own list, of its own size (GPT-2's has 50,257 pieces, Qwen2.5's 151,936), so the same sentence becomes different numbers in each; the idea is the same. The model never sees letters: only these numbers, which in memory are bits, 0s and 1s, like everything else in a computer.</p></section>
       <section class="sec" id="s-sounds"><h2><i>2</i>Each piece gets its spot in the cloud</h2><p class="lookback">Looking back at an earlier step. Press Continue to return to where you were.</p><p class="cap"></p>
+        <div class="zoom" id="zoom"></div>
         <div class="allgrid"><div class="rows" id="rows"></div><div class="cloudbox"><canvas id="cloud0" aria-label="The cloud: every piece in the dictionary as a dot, similar pieces close together; your pieces are marked"></canvas><p class="note" id="cloud0Note">Your pieces, each at its spot in the cloud.</p></div></div>
-        <p class="pic"><b>The picture:</b> a cloud with one dot for every piece in the dictionary. A piece's list of numbers is its address in the cloud, and pieces used alike sit close together: it comes from how a word is used, not how it sounds. The real cloud has one direction per number (from 128 to 768 in these models); the map squashes it flat, so distances on it are rough.</p></section>
+        <p class="pic"><b>The picture:</b> one table with a row of numbers for every piece in the dictionary, and a cloud with one dot per row. The strip and the dot are two views of the same numbers: the strip is the row read left to right, one column per number, and the dot is where that row puts the piece on the map. Pieces used alike end up with similar rows, so they sit close together: it comes from how a word is used, not how it sounds. The real cloud has one direction per number (from 128 to 768 in these models); the map squashes it flat, so distances on it are rough.</p></section>
       <section class="sec" id="s-one"><h2><i>3</i>One layer, up close</h2><p class="lookback">Looking back at an earlier step. Press Continue to return to where you were.</p><p class="cap"></p>
         <div class="chips" id="lookChips"></div>
         <div class="twocol" style="margin-top:14px">
@@ -449,21 +462,22 @@ body.playing .ctl .now { display: none; }
         </div>
         <p class="pic"><b>The picture:</b> rows of volume knobs, set at the factory and glued. Before each row, the newest word listens back to the earlier words (pink) and blends in what matters. That listening is the only step whose mixing depends on what you type.</p></section>
       <section class="sec" id="s-all"><h2><i>4</i>Through every layer</h2><p class="lookback">Looking back at an earlier step. Press Continue to return to where you were.</p><p class="cap"></p>
-        <div class="allgrid"><div class="layers" id="layers"></div><div class="cloudbox"><canvas id="cloud" aria-label="The thought cloud: every piece in the dictionary as a dot, similar pieces close together; the pieces it would say after this layer light up"></canvas><p class="note" id="cloudNote">The thought cloud: every piece in the dictionary is a dot, and pieces used alike sit close together.</p></div></div>
+        <div class="allgrid"><div class="layers" id="layers"></div><div class="cloudbox"><canvas id="cloud" aria-label="The cloud: every piece in the dictionary as a dot, similar pieces close together; the pieces it would say after this layer light up"></canvas><p class="note" id="cloudNote">The cloud: every piece in the dictionary is a dot, and pieces used alike sit close together.</p></div></div>
         <p class="pic"><b>The picture:</b> the same thing, row after row of knobs. Next to each layer: what it would say if it stopped there (the “logit lens”), and in the cloud, every piece it might say lights up. Early layers are not built to be read this way, so their guesses look odd. The guess after each layer is a peek we take by running the model's final scoring early: the model itself only scores once, after the last layer, and never looks anything up in between. The cloud is a flat map of the model's own embedding rows (made with t-SNE); distances on it are approximate.</p></section>
       <section class="sec" id="s-lights"><h2><i>5</i>The wall of lights</h2><p class="lookback">Looking back at an earlier step. Press Continue to return to where you were.</p><p class="cap"></p>
-        <div class="allgrid"><div class="lights" id="lights"></div><div class="cloudbox"><canvas id="cloud2" aria-label="The wall of lights laid out as the thought cloud: every piece's final chance as light"></canvas><p class="note">The same wall of lights, laid out as the thought cloud.</p></div></div><p class="note" id="lightsNote" style="margin-top:8px"></p>
-        <p class="pic"><b>The picture:</b> a wall with one light for every piece in the dictionary. Each glows by how closely the final list of numbers points the same way as that piece's row in the output table.</p></section>
+        <div class="allgrid"><div class="lights" id="lights"></div><div class="cloudbox"><canvas id="cloud2" aria-label="The wall of lights laid out as the cloud: every piece's final chance as light"></canvas><p class="note">The same wall of lights, laid out as the cloud.</p></div></div><p class="note" id="lightsNote" style="margin-top:8px"></p>
+        <p class="pic"><b>The picture:</b> a wall with one light for every piece in the dictionary. “Brighter” means “more likely to be the next piece”, nothing else: it is not how often a piece came up in the layers. Each light's brightness comes from a single score, the final list of numbers (evened out first, a step called normalisation) multiplied against that piece's row and added up.</p></section>
       <section class="sec" id="s-dice"><h2><i>6</i>The weighted dice</h2><p class="lookback">Looking back at an earlier step. Press Continue to return to where you were.</p><p class="cap"></p>
         <div class="lights" id="chances"></div>
         <div class="dice"><div class="die" id="die" aria-hidden="true">🎲</div><p class="note" id="diceNote"></p></div>
-        <p class="pic"><b>The picture:</b> a dice loaded by the brightest lights. Usually the brightest wins; sometimes a dimmer one does. That is why the same start can give different stories.</p></section>
+        <p class="pic"><b>The picture:</b> a dice with five faces, one per bright light, and bigger faces for brighter lights. Usually the brightest wins; sometimes a dimmer one does. That is why the same start can give different stories.</p></section>
       <section class="sec" id="s-again"><h2><i>7</i>Again, word by word</h2><p class="lookback">Looking back at an earlier step. Press Continue to return to where you were.</p><p class="cap"></p><div class="sentence" id="sentence"></div><div class="picks" id="picks" style="margin-top:10px"></div>
         <div class="box mbbox" id="mbBox" hidden></div>
         <div class="explore" style="margin-top:12px"><p class="note">That's the whole machine. Want every number at once, the chat model, attention arcs and the training view?</p><a href="explore.html"><button type="button">Open the Explorer →</button></a></div></section>
     </div>
   </div>
   <p class="note">Everything here is real: the pieces, the numbers, the knobs, the listening (attention, averaged over every head of the layer), the guesses after each layer, the scores and the dice. The model engine (<a href="https://github.com/t3chnicallyinclined/ai-visualized/blob/main/llm.js">llm.js</a>) is checked against the official transformers implementation, number by number inside every layer (<a href="https://github.com/t3chnicallyinclined/ai-visualized/blob/main/verify/README.md">the checks and their results</a>). Only the speed is changed.</p>
+<div class="tip" id="numTip" hidden></div>
 <div class="ctl" id="ctl" hidden><div class="in">
   <button type="button" id="wBack" disabled aria-label="Back to the previous step">◀</button>
   <button type="button" id="cont" class="go cont" disabled>Continue ▶</button>
@@ -590,6 +604,27 @@ body.playing .ctl .now { display: none; }
   </div>
 </main>
 
+<script>
+// Hover or tap any strip of numbers to read the one under the pointer. The numbers come from
+// the element itself (strip() leaves them there), so this works for every strip on the page.
+addEventListener('DOMContentLoaded', () => {
+  const tip = document.getElementById('numTip'); if (!tip) return;
+  const hide = () => { tip.hidden = true; };
+  const show = (cv, cx) => {
+    const vals = cv.__vals; if (!vals || !vals.length) return hide();
+    const r = cv.getBoundingClientRect(), i = Math.max(0, Math.min(vals.length - 1, Math.floor((cx - r.left) / r.width * vals.length)));
+    tip.textContent = `number ${i + 1} of ${vals.length}: ${(+vals[i]).toFixed(3)}`;
+    tip.hidden = false;
+    tip.style.left = Math.max(8, Math.min(innerWidth - 8 - tip.offsetWidth, cx - tip.offsetWidth / 2)) + 'px';
+    tip.style.top = Math.max(8, r.top - tip.offsetHeight - 8) + 'px';
+  };
+  const at = e => (e.target instanceof Element ? e.target.closest('canvas.strip[data-read]') : null);
+  addEventListener('pointermove', e => { const cv = at(e); cv ? show(cv, e.clientX) : hide(); }, { passive: true });
+  addEventListener('pointerdown', e => { const cv = at(e); if (cv) show(cv, e.clientX); }, { passive: true });
+  addEventListener('scroll', hide, { passive: true });
+  addEventListener('blur', hide);
+});
+</script>
 <script src="llm.js"></script>
 <script src="legend.js"></script>
 <script src="agent.js"></script>
@@ -660,6 +695,7 @@ body.playing .ctl .now { display: none; }
   function strip(cv, vals, scale) { // numbers as colours: orange above zero, blue below
     const W = cv.clientWidth || 400, H = 22, dpr = Math.min(2, devicePixelRatio || 1); cv.width = Math.round(W * dpr); cv.height = H * dpr;
     const c = cv.getContext('2d'), w = cv.width / vals.length;
+    cv.__vals = vals; cv.dataset.read = '1'; // the numbers stay on the element, so hovering a strip can read one out
     const sc = scale || (Array.from(vals, Math.abs).sort((a, b) => a - b)[Math.floor(vals.length * 0.98)] || 1);
     for (let i = 0; i < vals.length; i++) { const a = Math.max(-1, Math.min(1, vals[i] / sc)); c.fillStyle = a >= 0 ? `rgba(242,154,74,${0.1 + 0.9 * a})` : `rgba(91,139,216,${0.1 - 0.9 * a})`; c.fillRect(i * w, 0, Math.ceil(w), cv.height); }
   }
@@ -790,7 +826,7 @@ body.playing .ctl .now { display: none; }
   async function walk(text) {
     running = true; paused = false; $('#play').textContent = 'Pause'; $('#ctl').hidden = false; $('#walk').classList.add('live', 'imm');
     [$('#cloud0'), $('#cloud'), $('#cloud2')].forEach(cv => drawCloud(cv, null, null, null));
-    $('#mbBox').hidden = true; ['#chips', '#rows', '#lookChips', '#knobs', '#beforeAfter', '#layers', '#lights', '#chances', '#sentence', '#picks'].forEach(q => { $(q).innerHTML = ''; });
+    $('#mbBox').hidden = true; ['#chips', '#rows', '#zoom', '#lookChips', '#knobs', '#beforeAfter', '#layers', '#lights', '#chances', '#sentence', '#picks'].forEach(q => { $(q).innerHTML = ''; });
     document.querySelectorAll('#writeMode .cap').forEach(c => { c.textContent = ''; }); $('#knobNote').textContent = ''; $('#baNote').textContent = ''; $('#lightsNote').textContent = ''; $('#diceNote').textContent = '';
     const ids = (M.meta.bos != null ? [M.meta.bos] : []).concat(M.tok.encode(text)), n = ids.length, L = M.L, last = n - 1;
     // the real run: read every piece; the last one keeps everything (every layer's numbers, attention and guesses)
@@ -801,28 +837,47 @@ body.playing .ctl .now { display: none; }
     for (let i = 0; i < n; i++) { const c = document.createElement('span'); c.className = 'chip'; c.textContent = piece(ids[i]); const s = document.createElement('small'); s.textContent = '#' + ids[i]; c.appendChild(s); $('#chips').appendChild(c); await beat(220); }
     await slide(2600);
 
-    // 2 sounds
-    focus('sounds', `Each piece looks up its ${M.D} numbers, set in training. Orange is above zero, blue below.`);
+    // 2 one piece's row of numbers up close, then every piece's, then the cloud
+    const focusPiece = piece(ids[last]);
+    focus('sounds', `A number like #${ids[last]} says nothing on its own: it is a row number. The model keeps one big table with a row for each of its ${nf(M.V)} pieces, and every row holds ${M.D} numbers of its own, set in training and never changed by anything you type.`);
+    const zrow = M.embedding(ids[last], M.D), zsc = Array.from(zrow, Math.abs).sort((a, b) => a - b)[Math.floor(M.D * 0.98)] || 1;
+    $('#zoom').innerHTML = `<div class="zrow"><span class="chip"></span><span class="zarr">\u2192</span><span class="zlab">row ${nf(ids[last] + 1)} of ${nf(M.V)}, ${M.D} numbers long</span></div><div class="ztiles" id="ztiles"></div><div class="zmap" id="zmap" hidden><canvas class="strip"></canvas><i class="zbr"></i></div><p class="note" id="zNote" style="margin-top:10px"></p>`;
+    { const ch = $('#zoom .chip'); ch.textContent = focusPiece; const sm = document.createElement('small'); sm.textContent = '#' + ids[last]; ch.appendChild(sm); }
+    await slide(2600);
+    const NT = Math.min(M.D, innerWidth < 500 ? 6 : 8);
+    for (let i = 0; i < NT; i++) {
+      const v = zrow[i], a = Math.max(-1, Math.min(1, v / zsc)), t = document.createElement('span');
+      t.className = 'zt'; t.style.background = a >= 0 ? `rgba(242,154,74,${(0.1 + 0.55 * a).toFixed(2)})` : `rgba(91,139,216,${(0.1 - 0.55 * a).toFixed(2)})`;
+      t.innerHTML = `<b></b><small>no. ${i + 1}</small>`; t.querySelector('b').textContent = v.toFixed(3);
+      $('#ztiles').appendChild(t); await beat(300);
+    }
+    $('#zNote').textContent = `The first ${NT} numbers of “${focusPiece}”'s row, read straight out of the table. They are small, and that is normal: what matters is the pattern across all ${M.D} of them, never one on its own. Orange is above zero, blue below, paler is nearer zero.`;
+    await slide(3200);
+    $('#zmap').hidden = false; strip($('#zmap canvas'), zrow, zsc);
+    $('#zmap .zbr').style.width = (100 * NT / M.D).toFixed(2) + '%';
+    $('#zNote').textContent = `Now all ${M.D} of them, one thin column per number instead of a tile: the ${NT} above are the marked columns at the left. That is all a strip on this page ever is — a list of numbers, drawn so you can see its shape at a glance. Hover or tap any strip to read one number out.`;
+    await slide(4000);
+    cap('sounds', `Every piece of your sentence looks up its own row the same way. ${n} pieces, ${n} rows of ${M.D} numbers: that is your whole sentence as the model holds it.`);
     for (let i = 0; i < n; i++) { $('#rows').appendChild(rowEl(piece(ids[i]), M.embedding(ids[i], M.D))); await beat(260); }
     const marks = []; for (let i = last; i >= 0; i--) if (!marks.some(x => x[0] === ids[i]) && marks.length < ($('#cloud0').clientWidth < 500 ? 5 : 8) && !(M.meta.bos != null && i === 0)) marks.push([ids[i], piece(ids[i])]);
     drawCloud($('#cloud0'), null, marks, null);
     await beat(1200);
-    cap('sounds', `Those ${M.D} numbers are the piece's spot in the cloud. Pieces used alike sit close together.`);
+    cap('sounds', `Each row of ${M.D} numbers is also the piece's spot in the cloud beside them: the strip is the numbers one by one, the dot is where they land. Pieces used alike sit close together.`);
     await slide(2800);
 
     // 3 one layer up close (layer 1, the last piece)
-    const rec = res.rec, ly0 = rec.layers[0], w0 = meanAtt(ly0), focusPiece = piece(ids[last]);
-    focus('one', `Layer 1 of ${L}: “${focusPiece}” looks back at the earlier pieces. Longer pink bar, more attention.`);
+    const rec = res.rec, ly0 = rec.layers[0], w0 = meanAtt(ly0);
+    focus('one', `Every piece goes through every layer, but the next piece is guessed from the newest one, so we follow “${focusPiece}”. Layer 1 of ${L}: it looks back at the earlier pieces. Longer pink bar, more attention.`);
     let mx = 0; for (let j = last > 1 ? 1 : 0; j < last; j++) mx = Math.max(mx, w0[j]); // the first piece is left out of the scale: models park spare attention there
     for (let i = 0; i < n; i++) {
       const c = document.createElement('span'); c.className = 'chip' + (i === last ? ' focus' : ''); c.textContent = piece(ids[i]);
       if (i < last) { const bar = document.createElement('span'); bar.className = 'bar'; bar.style.width = Math.min(100, 100 * w0[i] / (mx || 1)).toFixed(0) + '%'; c.appendChild(bar); if (w0[i] >= mx * 0.6) { const pc = document.createElement('span'); pc.className = 'pc'; pc.textContent = pct(w0[i]); c.appendChild(pc); } }
       $('#lookChips').appendChild(c); await beat(120);
     }
-    if (last > 1 && w0[0] >= 0.1) cap('one', `Layer 1 of ${L}: “${focusPiece}” looks back at the earlier pieces. The first piece takes ${pct(w0[0])}: a resting spot, left out of the bars' scale.`);
+    if (last > 1 && w0[0] >= 0.1) cap('one', `We follow “${focusPiece}”, the newest piece, because the next piece is guessed from it. Layer 1 of ${L}: it looks back at the earlier pieces. The first piece takes ${pct(w0[0])}: a resting spot, left out of the bars' scale.`);
     await slide(3000);
     const grid = mainGrid(0), knobsN = layerKnobs(0); let ks = 0; for (let k = 0; k < 400; k++) ks = Math.max(ks, Math.abs(grid[(k * 7919) % grid.length]));
-    cap('one', `Then ${nf(knobsN)} fixed knobs reshape its numbers. Nothing you typed moves a single one.`);
+    cap('one', `All of this layer's work is done by ${nf(knobsN)} fixed knobs, the listening included. Each knob turns one number up or down (it multiplies it), and the results are added up into new numbers. Nothing you typed moves a single knob.`);
     for (let k = 0; k < 24; k++) { $('#knobs').insertAdjacentHTML('beforeend', knob(grid[(k * 104729) % grid.length] / ks * 2)); await beat(60); }
     $('#knobNote').textContent = `24 of layer 1's ${nf(knobsN)} knobs, at their real settings (a weight is just a number; the arc shows its size: orange clockwise above zero, blue the other way below).`;
     await slide(2200);
@@ -830,7 +885,7 @@ body.playing .ctl .now { display: none; }
     const scale = Array.from(after, Math.abs).sort((a, b) => a - b)[Math.floor(after.length * 0.98)] || 1;
     $('#beforeAfter').appendChild(rowEl('before', Array.from(before), scale)); await beat(700);
     $('#beforeAfter').appendChild(rowEl('after', Array.from(after), scale));
-    $('#baNote').textContent = `The listening and the knobs add changes onto its numbers, so it leaves the layer at a slightly different spot. If the model stopped right here, its best guess would be “${piece(ly0.lens[0].id)}” (${pct(ly0.lens[0].p)}).`;
+    $('#baNote').textContent = `The listening and the knobs add changes onto its numbers, so it leaves the layer at a slightly different spot. If the model stopped right here, its best guess would be “${piece(ly0.lens[0].id)}” (${pct(ly0.lens[0].p)}); step 5 shows how a guess is scored, and here we run that scoring early.`;
     await slide(4200);
 
     // 4 every layer
@@ -849,15 +904,19 @@ body.playing .ctl .now { display: none; }
       d.querySelector('.detail').textContent = `listened most to “${piece(ids[top])}” (${pct(w[top])}${j0 ? ', not counting the first piece, where models park spare attention' : ''}) · ${nf(layerKnobs(l))} knobs · would say “${piece(g.id)}” (${pct(g.p)})`;
       d.scrollIntoView({ block: 'nearest', behavior: reduce || SPEED > 3 ? 'auto' : 'smooth' });
       drawCloud($('#cloud'), q.watch, q.lens.slice(0, 3).map(x => [x.id, `${piece(x.id)} ${pct(x.p)}`]), rec.layers.slice(0, l + 1).map(x => x.lens[0].id));
-      $('#cloudNote').textContent = `After layer ${l + 1}: every piece it might say lights up, brighter for more likely. The line follows its best guess from layer to layer.`;
+      $('#cloudNote').textContent = `After layer ${l + 1}: every piece it might say lights up, brighter for more likely (the scoring from step 5, run early). The line follows its best guess from layer to layer.`;
       await beat(L > 12 ? 1100 : 2400);
     }
     rowsEls.forEach(e => { e.classList.remove('on'); e.classList.add('done'); });
-    cap('all', `After the last layer it points at “${piece(fin)}”` + (from < L - 1 ? `, and that guess first appeared in layer ${from + 1}.` : '. That guess only appeared at the very end.'));
+    cap('all', `After the last layer it points at “${piece(fin)}”` + (from < L - 1 ? `, and it has been the top guess since layer ${from + 1}.` : '. That guess only appeared at the very end.'));
     await slide(3200);
 
     // 5 the wall of lights (unembed): final norm, then one score per piece of the dictionary
-    focus('lights', `All ${nf(M.V)} pieces get a score: its final numbers against each piece's row. Here are the brightest.`);
+    const tied = !(M.mats.Eout && M.mats.Eout !== M.mats.E);
+    focus('lights', `Now every one of this model's ${nf(M.V)} pieces gets a score for “how well would you fit next?”. It uses one list of numbers for this: the ${M.D} numbers “${focusPiece}” carries out of layer ${L}. The layers only shaped that list; nothing was counted or tallied along the way.`);
+    await slide(3400);
+    cap('lights', `How one score is made: each piece has its own row of ${M.D} numbers` + (tied ? ` (the same row that gave it its spot in the cloud in step 2).` : ` in an output table, set in training.`) + ` Multiply the final list by that row, number by number, and add it all up. Where the two lists rise and fall together, the total is big: that is a high score.`);
+    await slide(3400);
     const lg = res.logits; let lmx = -Infinity; for (let i = 0; i < lg.length; i++) if (lg[i] > lmx) lmx = lg[i]; let z = 0; for (let i = 0; i < lg.length; i++) z += Math.exp(lg[i] - lmx);
     const top5 = LLM.sampleTopK(lg, 5, T, () => 0).cands;
     for (const c of top5) {
@@ -866,11 +925,12 @@ body.playing .ctl .now { display: none; }
     }
     drawCloud($('#cloud2'), rec.layers[L - 1].watch, top5.slice(0, 3).map(x => [x.id, `${piece(x.id)} ${pct(Math.exp(lg[x.id] - lmx) / z)}`]), null);
     let above = 0; for (let i = 0; i < lg.length; i++) if (Math.exp(lg[i] - lmx) / z >= 0.01) above++;
-    $('#lightsNote').textContent = `Scores turned into chances with softmax, over all ${nf(M.V)} pieces. Only ${above} of them have a chance of 1% or more; the rest of the wall is almost dark.`;
+    cap('lights', `Picture one light per piece, ${nf(M.V)} lights in all. A step called softmax turns the scores into chances that add up to 100%, and each light glows by its piece's chance. Above are the 5 brightest: the pieces most likely to come next.`);
+    $('#lightsNote').textContent = `Only ${above} of the ${nf(M.V)} pieces have a chance of 1% or more; the rest of the wall is almost dark.`;
     await slide(4200);
 
     // 6 the dice
-    focus('dice', `The 5 brightest go on the dice. Temperature ${T} sets how loaded it is.`);
+    focus('dice', `Only the 5 brightest go on the dice; every other piece is out. Their chances are shared out again so the five add up to 100%, which is why they differ from step 5. Temperature ${T} sets how loaded the dice is: below 1 favours the brightest even more, above 1 evens the five out.`);
     const { cands, pick } = LLM.sampleTopK(lg, 5, T, Math.random);
     cands.forEach((c, i) => { const d = document.createElement('div'); d.className = 'light'; d.style.setProperty('--g', Math.min(1, c.p * 1.2 + 0.05).toFixed(2)); d.innerHTML = `<i></i><span></span><span class="b"><em style="width:${(c.p * 100).toFixed(1)}%"></em></span><span>${pct(c.p)}</span>`; d.children[1].textContent = piece(c.id); $('#chances').appendChild(d); });
     await slide(2000);
@@ -880,7 +940,7 @@ body.playing .ctl .now { display: none; }
     await slide(3200);
 
     // 7 again
-    focus('again', `The dice gives a number, #${cands[pick].id}. The same list turns it back into text, “${M.tok.decode([cands[pick].id], true)}”, and the piece joins the sentence. Then it all runs again.`);
+    focus('again', `The dice gives a number, #${cands[pick].id}. The list of pieces from step 1 turns it back into text, “${M.tok.decode([cands[pick].id], true)}”, and the piece joins the sentence. Then the whole machine runs again on the longer sentence, to guess the piece after that.`);
     $('#sentence').innerHTML = esc(text) + `<span class="new">${esc(M.tok.decode([cands[pick].id], true))}</span>`;
     const addPick = (id, p, i) => { const d = document.createElement('div'); d.innerHTML = `word ${i}: <b></b> · its chance on the dice ${pct(p)}`; d.querySelector('b').textContent = piece(id); $('#picks').appendChild(d); };
     addPick(cands[pick].id, cands[pick].p, 1);
