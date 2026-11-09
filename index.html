@@ -925,7 +925,7 @@ addEventListener('DOMContentLoaded', () => {
     if (last > 1 && w0[0] >= 0.1) cap('one', `We follow “${focusPiece}”, the newest piece, because the next piece is guessed from it. Layer 1 of ${L} starts with “${focusPiece}” listening back: it copies in a blend of the earlier pieces' numbers, and each pink bar is that piece's share. The first piece takes ${pct(w0[0])}: models use it as a resting spot when nothing else is worth much, so it is left out of the bars' scale.`);
     await slide(3000);
     const grid = mainGrid(0), knobsN = layerKnobs(0); let ks = 0; for (let k = 0; k < 400; k++) ks = Math.max(ks, Math.abs(grid[(k * 7919) % grid.length]));
-    cap('one', `All of this layer's work is done by ${nf(knobsN)} fixed knobs, the listening included. Each knob turns one number up or down (it multiplies it), and the results are added up into new numbers. Nothing you typed moves a single knob.`);
+    cap('one', `Most of this layer's work is done by ${nf(knobsN)} fixed knobs, the listening included. Each knob turns one number up or down (it multiplies it), and the results are added up into new numbers. Between them sit a few fixed steps with no knobs at all, such as evening the numbers out. Nothing you typed moves a single knob.`);
     for (let k = 0; k < 24; k++) { $('#knobs').insertAdjacentHTML('beforeend', knob(grid[(k * 104729) % grid.length] / ks * 2)); await beat(60); }
     $('#knobNote').textContent = `24 of layer 1's ${nf(knobsN)} knobs, at their real settings (a weight is just a number; the arc shows its size: orange clockwise above zero, blue the other way below).`;
     await slide(2200);
