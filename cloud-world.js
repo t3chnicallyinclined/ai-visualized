@@ -35,16 +35,22 @@
   }
   function mul(a, b) { const o = new Float32Array(16); for (let c = 0; c < 4; c++) for (let r = 0; r < 4; r++) { let s = 0; for (let k = 0; k < 4; k++) s += a[k * 4 + r] * b[c * 4 + k]; o[c * 4 + r] = s; } return o; }
 
-  const VS = `attribute vec3 p; attribute vec3 col; attribute float lit; uniform mat4 VP; uniform float px, dpr; varying vec4 vc;
+  // Every piece is a solid, opaque dot with a sharp edge (like an SVG circle), drawn with a depth test so near dots
+  // cover far ones. Distance shows as fog: far dots fade toward the background colour, never toward see-through.
+  const BG = [0.027, 0.031, 0.051];
+  const VS = `attribute vec3 p; attribute vec3 col; attribute float lit; uniform mat4 VP; uniform float px, dpr; varying vec3 vc; varying float vs;
     void main() {
       vec4 c = VP * vec4(p, 1.0); gl_Position = c; float w = max(c.w, 1e-4);
-      gl_PointSize = clamp((0.0032 + 0.014 * lit * lit) * px / w, 1.1 * dpr, 48.0 * dpr);
-      float fog = clamp(1.25 - w * 0.42, 0.22, 1.0), nearFade = smoothstep(0.004, 0.06, w);
-      float a = (0.42 + 0.58 * lit) * fog * nearFade;
-      vc = vec4(mix(col, vec3(1.0, 0.95, 0.75), lit * 0.7) * a, a);
-      if (p.x > 50.0 || c.w <= 0.0) gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
+      vs = clamp((0.0032 + 0.014 * lit * lit) * px / w, 1.6 * dpr, 64.0 * dpr); gl_PointSize = vs;
+      float fog = clamp(1.3 - w * 0.4, 0.3, 1.0);
+      vec3 hot = mix(col, vec3(1.0, 0.95, 0.75), lit * 0.7);
+      vc = mix(vec3(${BG.join(', ')}), hot, (0.62 + 0.38 * lit) * fog);
+      if (p.x > 50.0 || c.w <= 0.012) gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
     }`;
-  const FS = `precision mediump float; varying vec4 vc; void main() { vec2 d = gl_PointCoord - 0.5; float r = dot(d, d) * 4.0; if (r > 1.0) discard; gl_FragColor = vc * (1.0 - r * 0.65); }`;
+  // edge: 1 device pixel of coverage (multisampled, so no halo and no sorting); a thin dark rim once a dot is big enough to see one
+  const FS = `precision mediump float; varying vec3 vc; varying float vs;
+    void main() { float R = vs * 0.5, d = length(gl_PointCoord - 0.5) * vs, a = clamp(R - d + 0.5, 0.0, 1.0); if (a <= 0.0) discard;
+      float rim = vs > 7.0 ? smoothstep(R - 1.6, R - 0.6, d) * 0.55 : 0.0; gl_FragColor = vec4(vc * (1.0 - rim), a); }`;
 
   const START = { yaw: 0.6, pitch: 0.32, dist: 1.55 };
   const reduce = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -61,7 +67,7 @@
     const W = { on: false, key: null, gl: null, prog: null, u: null, pts: null, litBuf: null, lit: null, state: { watch: null, labels: null, path: null, sel: -1 }, litFor: undefined,
       yaw: START.yaw, pitch: START.pitch, dist: START.dist, t: [0, 0, 0], spin: !reduce, keys: new Set(), raf: 0, dirty: true, VP: null, last: 0 };
 
-    function size() { const r = gcv.getBoundingClientRect(), dpr = Math.min(2, root.devicePixelRatio || 1), w = Math.max(1, Math.round(r.width * dpr)), h = Math.max(1, Math.round(r.height * dpr)); if (gcv.width !== w || gcv.height !== h) { gcv.width = ov.width = w; gcv.height = ov.height = h; } return dpr; }
+    function size() { const r = gcv.getBoundingClientRect(), dpr = Math.min(3, root.devicePixelRatio || 1), w = Math.max(1, Math.round(r.width * dpr)), h = Math.max(1, Math.round(r.height * dpr)); if (gcv.width !== w || gcv.height !== h) { gcv.width = ov.width = w; gcv.height = ov.height = h; } return dpr; }
     function eye() { const cp = Math.cos(W.pitch); return [W.t[0] + W.dist * cp * Math.sin(W.yaw), W.t[1] + W.dist * Math.sin(W.pitch), W.t[2] + W.dist * cp * Math.cos(W.yaw)]; }
     function basis() { // forward (into the screen), right and up, for flying and sliding
       const e = eye(), f = [W.t[0] - e[0], W.t[1] - e[1], W.t[2] - e[2]], l = Math.hypot(...f) || 1; f[0] /= l; f[1] /= l; f[2] /= l;
@@ -70,11 +76,11 @@
     }
     const FOV = 1.05;
     function initGL() {
-      const gl = gcv.getContext('webgl', { alpha: true, antialias: false, premultipliedAlpha: true }); if (!gl) return false; W.gl = gl;
+      const gl = gcv.getContext('webgl', { alpha: false, antialias: true, depth: true }); if (!gl) return false; W.gl = gl;
       const sh = (t, src) => { const o = gl.createShader(t); gl.shaderSource(o, src); gl.compileShader(o); if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(o)); return o; };
       const prog = gl.createProgram(); gl.attachShader(prog, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FS)); gl.linkProgram(prog); gl.useProgram(prog); W.prog = prog;
       W.u = { VP: gl.getUniformLocation(prog, 'VP'), px: gl.getUniformLocation(prog, 'px'), dpr: gl.getUniformLocation(prog, 'dpr') };
-      gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA); return true;
+      gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LEQUAL); gl.enable(gl.SAMPLE_ALPHA_TO_COVERAGE); return true;
     }
     function upload() {
       const gl = W.gl, P = W.pts;
@@ -87,7 +93,8 @@
       if (cw <= 0.01) return null; return [(cx / cw * 0.5 + 0.5) * ov.width, (0.5 - cy / cw * 0.5) * ov.height, cw];
     }
     function frame(now) {
-      W.raf = 0; if (!W.on || !W.pts) return;
+      W.raf = 0; if (!W.on || !W.pts || !W.vis) { W.last = 0; return; } // off screen: stop; the observer starts it again
+      if (!host.closest('.cw-full') && document.querySelector('.cw-full:not([hidden])')) { W.last = 0; W.raf = requestAnimationFrame(frame); return; } // under the full-screen view: idle
       const dt = Math.min(0.05, W.last ? (now - W.last) / 1000 : 0.016); W.last = now;
       let moving = false;
       if (W.spin) { W.yaw += dt * 0.12; moving = true; }
@@ -102,7 +109,7 @@
       const gl = W.gl, dpr = size(), P = W.pts, s = W.state;
       if (s.watch !== W.litFor) { const lit = W.lit; if (s.watch) for (let i = 0; i < P.n; i++) { const q = s.watch[i] || 0; lit[i] = q >= 60 ? Math.min(1, Math.sqrt((q - 60) / 195)) : 0; } else lit.fill(0); gl.bindBuffer(gl.ARRAY_BUFFER, W.litBuf); gl.bufferSubData(gl.ARRAY_BUFFER, 0, lit); W.litFor = s.watch; }
       W.VP = mul(perspective(FOV, gcv.width / gcv.height, 0.003, 30), lookAt(eye(), W.t, [0, 1, 0]));
-      gl.viewport(0, 0, gcv.width, gcv.height); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT); gl.useProgram(W.prog);
+      gl.viewport(0, 0, gcv.width, gcv.height); gl.clearColor(BG[0], BG[1], BG[2], 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); gl.useProgram(W.prog);
       gl.uniformMatrix4fv(W.u.VP, false, W.VP); gl.uniform1f(W.u.px, gcv.height / 2 / Math.tan(FOV / 2)); gl.uniform1f(W.u.dpr, dpr);
       gl.drawArrays(gl.POINTS, 0, P.n);
       overlay(dpr);
@@ -164,6 +171,8 @@
     function reset() { Object.assign(W, { yaw: START.yaw, pitch: START.pitch, dist: START.dist, spin: !reduce }); W.t = [0, 0, 0]; W.state.sel = -1; home.hidden = true; opts.tip(-1); kick(); draw(); }
     home.addEventListener('click', reset); home.hidden = true;
     const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(() => { if (W.on && W.pts) draw(); }) : null;
+    W.vis = true; const io = typeof IntersectionObserver === 'function' ? new IntersectionObserver(es => { W.vis = es[es.length - 1].isIntersecting; if (W.vis) kick(); }) : null;
+    if (io) io.observe(host);
 
     async function show(on) {
       W.on = on; host.classList.toggle('w3d', on);

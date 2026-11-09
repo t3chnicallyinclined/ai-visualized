@@ -107,7 +107,7 @@ canvas.strip[data-read] { cursor: crosshair; }
 .allgrid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 14px; align-items: start; }
 .cloudbox { position: sticky; top: 12px; } .cloudbox canvas { width: 100%; display: block; border-radius: 12px; background: #07080d; border: 1px solid var(--s-line); }
 .cvwrap { position: relative; } .cv3d { position: absolute; top: 8px; right: 8px; font: 600 11px var(--mono); padding: 4px 9px; background: rgb(19 23 38 / .85); } .cv3d[aria-pressed="true"] { background: var(--knob); border-color: var(--knob); color: #fff; }
-.cv3d { z-index: 2; } .cvfull { z-index: 2; position: absolute; top: 8px; right: 52px; font: 600 13px var(--mono); padding: 2px 8px; background: rgb(19 23 38 / .85); }
+.cv3d { z-index: 2; } .cvfull { z-index: 2; position: absolute; top: 8px; right: 66px; font: 600 13px var(--mono); padding: 2px 8px; background: rgb(19 23 38 / .85); }
 .cvwrap .cw-gl, .cvwrap .cw-ov, .cw-full .cw-gl, .cw-full .cw-ov { position: absolute; inset: 0; width: 100%; height: 100%; display: block; border-radius: 12px; }
 .cvwrap .cw-gl, .cw-full .cw-gl { background: radial-gradient(ellipse at 50% 45%, #10131f, #05060a 75%); cursor: grab; touch-action: none; outline: none; }
 .cvwrap .cw-gl:active, .cw-full .cw-gl:active { cursor: grabbing; }
@@ -768,10 +768,14 @@ addEventListener('DOMContentLoaded', () => {
     const b3 = document.createElement('button'); b3.type = 'button'; b3.className = 'cv3d'; b3.textContent = '3D'; b3.title = 'The cloud in 3D: drag to turn, scroll or pinch to fly in'; b3.setAttribute('aria-pressed', 'false'); wrap.appendChild(b3);
     const bf = document.createElement('button'); bf.type = 'button'; bf.className = 'cvfull'; bf.textContent = '⛶'; bf.title = 'Full screen: fly through the cloud in 3D'; bf.setAttribute('aria-label', bf.title); wrap.appendChild(bf);
     const redraw = () => { if (cv._args) drawCloud(cv, ...cv._args); };
-    b3.addEventListener('click', () => { if (!window.CloudWorld) return; const on = b3.getAttribute('aria-pressed') !== 'true'; b3.setAttribute('aria-pressed', on);
+    // the 3D world is the default; the button flips to the flat map and back
+    const set3d = on => { b3.setAttribute('aria-pressed', on); b3.textContent = on ? 'Flat' : '3D'; b3.title = on ? 'Show the cloud as a flat map' : 'The cloud in 3D: drag to turn, scroll or pinch to fly in'; };
+    const turn = on => { if (!window.CloudWorld) return; set3d(on);
       if (!cv._world) cv._world = CloudWorld.create(wrap, worldOpts());
-      if (on) { const a = cv._args || [null, null, null]; cv._world.setState(a[0], a[1], a[2], -1); cv._world.show(true).then(ok => { if (!ok) b3.setAttribute('aria-pressed', 'false'); }); } else { cv._world.show(false); redraw(); } });
+      if (on) { const a = cv._args || [null, null, null]; cv._world.setState(a[0], a[1], a[2], -1); cv._world.show(true).then(ok => { if (!ok) { set3d(false); redraw(); } }); } else { cv._world.show(false); redraw(); } };
+    b3.addEventListener('click', () => turn(b3.getAttribute('aria-pressed') !== 'true'));
     bf.addEventListener('click', () => openFull(cv));
+    if (window.CloudWorld) turn(true);
     const PT = new Map(); let drag = null, pinch0 = 0;
     const local = e => { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) * cv.width / r.width, (e.clientY - r.top) * cv.height / r.height]; };
     cv.addEventListener('pointerdown', e => { cv.setPointerCapture(e.pointerId); const [x, y] = local(e); PT.set(e.pointerId, [x, y]); const V = cv._v; drag = { x, y, px: V.px, py: V.py, moved: false }; if (PT.size === 2) { const [a, b] = [...PT.values()]; pinch0 = Math.hypot(a[0] - b[0], a[1] - b[1]) / V.z; } });
