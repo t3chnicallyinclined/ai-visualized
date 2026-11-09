@@ -107,7 +107,20 @@ canvas.strip[data-read] { cursor: crosshair; }
 .allgrid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 14px; align-items: start; }
 .cloudbox { position: sticky; top: 12px; } .cloudbox canvas { width: 100%; display: block; border-radius: 12px; background: #07080d; border: 1px solid var(--s-line); }
 .cvwrap { position: relative; } .cv3d { position: absolute; top: 8px; right: 8px; font: 600 11px var(--mono); padding: 4px 9px; background: rgb(19 23 38 / .85); } .cv3d[aria-pressed="true"] { background: var(--knob); border-color: var(--knob); color: #fff; }
-.cloudtip { position: fixed; z-index: 60; max-width: 260px; background: rgb(14 17 28 / .97); border: 1px solid rgb(255 255 255 / .18); border-radius: 10px; padding: 8px 10px; font: 13px/1.45 var(--body); color: #eef0fa; box-shadow: 0 8px 30px rgb(0 0 0 / .6); pointer-events: none; } .cloudtip b { color: var(--pick); font-family: var(--mono); } .cloudtip small { display: block; color: var(--s-ink2); }
+.cv3d { z-index: 2; } .cvfull { z-index: 2; position: absolute; top: 8px; right: 52px; font: 600 13px var(--mono); padding: 2px 8px; background: rgb(19 23 38 / .85); }
+.cvwrap .cw-gl, .cvwrap .cw-ov, .cw-full .cw-gl, .cw-full .cw-ov { position: absolute; inset: 0; width: 100%; height: 100%; display: block; border-radius: 12px; }
+.cvwrap .cw-gl, .cw-full .cw-gl { background: radial-gradient(ellipse at 50% 45%, #10131f, #05060a 75%); cursor: grab; touch-action: none; outline: none; }
+.cvwrap .cw-gl:active, .cw-full .cw-gl:active { cursor: grabbing; }
+.cvwrap .cw-ov, .cw-full .cw-ov { background: transparent; border-color: transparent; pointer-events: none; }
+.cw-home { position: absolute; top: 8px; left: 8px; font: 600 14px var(--mono); padding: 2px 9px; background: rgb(19 23 38 / .85); z-index: 2; }
+.cw-hint { display: none; }
+.cw-full { position: fixed; inset: 0; z-index: 100; background: #05060a; }
+.cw-full .cw-gl, .cw-full .cw-ov { border-radius: 0; border: 0; }
+.cw-full .cw-hint { display: block; position: absolute; left: 50%; bottom: max(16px, env(safe-area-inset-bottom)); transform: translateX(-50%); max-width: calc(100% - 32px); text-align: center; font: 500 12.5px/1.4 var(--body); color: #c3c8e6; background: rgb(7 8 13 / .78); border: 1px solid rgb(255 255 255 / .12); border-radius: 99px; padding: 7px 14px; pointer-events: none; }
+.cw-full .cw-home { top: max(12px, env(safe-area-inset-top)); left: 12px; min-height: 44px; min-width: 44px; }
+.cw-close { position: absolute; top: max(12px, env(safe-area-inset-top)); right: 12px; min-height: 44px; padding: 0 16px; font: 600 14px var(--body); background: rgb(19 23 38 / .9); z-index: 2; }
+.cw-title { z-index: 2; position: absolute; top: max(20px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); max-width: calc(100% - 220px); text-align: center; font: 600 13px var(--mono); color: #e7e9f3; pointer-events: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cloudtip { position: fixed; z-index: 200; max-width: 260px; background: rgb(14 17 28 / .97); border: 1px solid rgb(255 255 255 / .18); border-radius: 10px; padding: 8px 10px; font: 13px/1.45 var(--body); color: #eef0fa; box-shadow: 0 8px 30px rgb(0 0 0 / .6); pointer-events: none; } .cloudtip b { color: var(--pick); font-family: var(--mono); } .cloudtip small { display: block; color: var(--s-ink2); }
 .cloudbox .note { margin-top: 6px; font-size: 12.5px; }
 @media (max-width: 760px) { .allgrid { grid-template-columns: 1fr; } .cloudbox { position: static; order: -1; } }
 .light { display: grid; grid-template-columns: 1.6em minmax(0, 7em) minmax(0, 1fr) 4.2em; gap: 10px; align-items: center; font: 600 14px var(--mono); }
@@ -460,7 +473,7 @@ body.playing .ctl .now { display: none; }
           <div class="box"><h3>The knobs</h3><div class="knobs" id="knobs"></div><p class="note" id="knobNote"></p></div>
           <div class="box"><h3>Its numbers, before and after this layer</h3><div class="rows" id="beforeAfter"></div><p class="note" id="baNote"></p></div>
         </div>
-        <p class="pic"><b>The picture:</b> rows of volume knobs, set at the factory and glued. Before each row, the newest word listens back to the earlier words (pink) and blends in what matters. That listening is the only step whose mixing depends on what you type.</p></section>
+        <p class="pic"><b>The picture:</b> rows of volume knobs, set at the factory and glued. Before each row, the newest piece listens back: it copies in a blend of the earlier pieces' numbers, more from the ones that matter to it (pink). That listening is the only step whose mixing depends on what you type.</p></section>
       <section class="sec" id="s-all"><h2><i>4</i>Through every layer</h2><p class="lookback">Looking back at an earlier step. Press Continue to return to where you were.</p><p class="cap"></p>
         <div class="allgrid"><div class="layers" id="layers"></div><div class="cloudbox"><canvas id="cloud" aria-label="The cloud: every piece in the dictionary as a dot, similar pieces close together; the pieces it would say after this layer light up"></canvas><p class="note" id="cloudNote">The cloud: every piece in the dictionary is a dot, and pieces used alike sit close together.</p></div></div>
         <p class="pic"><b>The picture:</b> the same thing, row after row of knobs. Next to each layer: what it would say if it stopped there (the “logit lens”), and in the cloud, every piece it might say lights up. Early layers are not built to be read this way, so their guesses look odd. The guess after each layer is a peek we take by running the model's final scoring early: the model itself only scores once, after the last layer, and never looks anything up in between. The cloud is a flat map of the model's own embedding rows (made with t-SNE); distances on it are approximate.</p></section>
@@ -626,6 +639,7 @@ addEventListener('DOMContentLoaded', () => {
 });
 </script>
 <script src="llm.js"></script>
+<script src="cloud-world.js"></script>
 <script src="legend.js"></script>
 <script src="agent.js"></script>
 <script src="machine.js"></script>
@@ -718,13 +732,46 @@ addEventListener('DOMContentLoaded', () => {
     for (let gy = Math.max(0, cy - r); gy <= Math.min(G - 1, cy + r); gy++) for (let gx = Math.max(0, cx - r); gx <= Math.min(G - 1, cx + r); gx++) for (const id of cells[gy * G + gx]) { const d = (MAP.xy[2 * id] / 65534 - u) ** 2 + (MAP.xy[2 * id + 1] / 65534 - v) ** 2; if (d < bd) { bd = d; best = id; } } return best; }
   // every cloud on the page can be moved, zoomed, laid down in 3D and tapped
   let cloudTip = null;
+  function showTip(id, x, y, chance) {
+    if (!cloudTip) { cloudTip = document.createElement('div'); cloudTip.className = 'cloudtip'; }
+    const home = FULL && !FULL.el.hidden ? FULL.el : document.body; if (cloudTip.parentNode !== home) home.appendChild(cloudTip); // full screen is the top layer: the tip must sit inside it
+    if (id == null || id < 0 || !M) { cloudTip.hidden = true; return; }
+    cloudTip.innerHTML = `<b>${esc(M.tok.piece(id))}</b><small>token #${id} · neighbours: ${esc(M.neighbors(id, 4).map(n => `${M.tok.piece(n.id)} ${n.sim.toFixed(2)}`).join(', '))}</small>` + (chance ? `<small>its chance here: ${pct(chance)}</small>` : '');
+    cloudTip.hidden = false; const tw = cloudTip.offsetWidth; cloudTip.style.left = Math.max(8, Math.min(innerWidth - tw - 8, x - tw / 2)) + 'px'; cloudTip.style.top = Math.max(8, y - cloudTip.offsetHeight - 14) + 'px';
+  }
+  function hsl(h, sat, l) { const f = n => { const k = (n + h / 30) % 12, a = sat * Math.min(l, 1 - l); return l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)); }; return [f(0), f(8), f(4)]; }
+  const worldOpts = () => ({ key: () => key, onMap, colorOf: id => { const [h, r] = hue(id); return hsl(h, 0.25 + 0.55 * r, 0.62); }, piece: id => M.tok.piece(id), neighbors: (id, k) => M.neighbors(id, k), chanceOf: pOfQ, tip: showTip });
+  // the full-screen world: one for the page, showing whatever the cloud that opened it shows
+  let FULL = null;
+  function openFull(cv) {
+    if (!window.CloudWorld) return;
+    if (!FULL) {
+      const el = document.createElement('div'); el.className = 'cw-full'; el.hidden = true; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'The cloud in 3D, full screen');
+      const close = document.createElement('button'); close.type = 'button'; close.className = 'cw-close'; close.textContent = 'Close ✕';
+      const title = document.createElement('div'); title.className = 'cw-title';
+      el.append(close, title); document.body.appendChild(el);
+      FULL = { el, title, src: null, world: CloudWorld.create(el, worldOpts()) };
+      const shut = () => { if (FULL.el.hidden) return; FULL.el.hidden = true; FULL.world.show(false); FULL.src = null; document.body.style.overflow = ''; if (document.fullscreenElement === FULL.el && document.exitFullscreen) document.exitFullscreen().catch(() => {}); };
+      FULL.shut = shut; close.addEventListener('click', shut);
+      document.addEventListener('keydown', e => { if (e.key === 'Escape') shut(); });
+      document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && !FULL.el.hidden && FULL.wasFs) shut(); FULL.wasFs = document.fullscreenElement === FULL.el; });
+    }
+    FULL.src = cv; FULL.el.hidden = false; document.body.style.overflow = 'hidden';
+    FULL.title.textContent = M ? `${M.meta.name}: all ${nf(M.V)} pieces in 3D` : "";
+    if (FULL.el.requestFullscreen) FULL.el.requestFullscreen().catch(() => {});
+    const a = cv._args || [null, null, null]; FULL.world.setState(a[0], a[1], a[2], -1);
+    FULL.world.show(true).then(ok => { if (ok) FULL.world.focus(); else FULL.shut(); });
+  }
   function wireCloud(cv) {
     if (cv._wired) return; cv._wired = true; cv.style.touchAction = 'none'; cv.style.cursor = 'grab';
     const wrap = document.createElement('div'); wrap.className = 'cvwrap'; cv.replaceWith(wrap); wrap.appendChild(cv);
-    const b3 = document.createElement('button'); b3.type = 'button'; b3.className = 'cv3d'; b3.textContent = '3D'; b3.title = 'Lay the map down: height is the chance'; b3.setAttribute('aria-pressed', 'false'); wrap.appendChild(b3);
+    const b3 = document.createElement('button'); b3.type = 'button'; b3.className = 'cv3d'; b3.textContent = '3D'; b3.title = 'The cloud in 3D: drag to turn, scroll or pinch to fly in'; b3.setAttribute('aria-pressed', 'false'); wrap.appendChild(b3);
+    const bf = document.createElement('button'); bf.type = 'button'; bf.className = 'cvfull'; bf.textContent = '⛶'; bf.title = 'Full screen: fly through the cloud in 3D'; bf.setAttribute('aria-label', bf.title); wrap.appendChild(bf);
     const redraw = () => { if (cv._args) drawCloud(cv, ...cv._args); };
-    b3.addEventListener('click', () => { const V = cv._v, on = b3.getAttribute('aria-pressed') !== 'true'; b3.setAttribute('aria-pressed', on); const from = V.tilt, to = on ? 0.92 : 0, t0 = performance.now();
-      const stepT = now => { const u = Math.min(1, (now - t0) / 450); V.tilt = from + (to - from) * (u < 0.5 ? 2 * u * u : 1 - (-2 * u + 2) ** 2 / 2); redraw(); if (u < 1) requestAnimationFrame(stepT); }; requestAnimationFrame(stepT); });
+    b3.addEventListener('click', () => { if (!window.CloudWorld) return; const on = b3.getAttribute('aria-pressed') !== 'true'; b3.setAttribute('aria-pressed', on);
+      if (!cv._world) cv._world = CloudWorld.create(wrap, worldOpts());
+      if (on) { const a = cv._args || [null, null, null]; cv._world.setState(a[0], a[1], a[2], -1); cv._world.show(true).then(ok => { if (!ok) b3.setAttribute('aria-pressed', 'false'); }); } else { cv._world.show(false); redraw(); } });
+    bf.addEventListener('click', () => openFull(cv));
     const PT = new Map(); let drag = null, pinch0 = 0;
     const local = e => { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) * cv.width / r.width, (e.clientY - r.top) * cv.height / r.height]; };
     cv.addEventListener('pointerdown', e => { cv.setPointerCapture(e.pointerId); const [x, y] = local(e); PT.set(e.pointerId, [x, y]); const V = cv._v; drag = { x, y, px: V.px, py: V.py, moved: false }; if (PT.size === 2) { const [a, b] = [...PT.values()]; pinch0 = Math.hypot(a[0] - b[0], a[1] - b[1]) / V.z; } });
@@ -750,7 +797,8 @@ addEventListener('DOMContentLoaded', () => {
   function hue(id) { const dx = MAP.xy[2 * id] / 65534 - 0.5, dy = MAP.xy[2 * id + 1] / 65534 - 0.5; return [(Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360, Math.min(1, Math.hypot(dx, dy) * 2.3)]; }
   const FLOOR = Math.log(1e-6), pOfQ = q => (q ? Math.exp(FLOOR * (1 - q / 255)) : 0);
   function drawCloud(cv, watch, labels, path) {
-    if (!MAP) { cv.hidden = true; return; } cv.hidden = false; cv._args = [watch, labels, path]; wireCloud(cv); const V = cv._v || (cv._v = { z: 1, px: 0, py: 0, tilt: 0, sel: -1 });
+    if (!MAP) { cv.hidden = true; return; } cv.hidden = false; cv._args = [watch, labels, path]; wireCloud(cv);
+    if (cv._world && cv._world.on) cv._world.setState(watch, labels, path); if (FULL && FULL.src === cv) FULL.world.setState(watch, labels, path); const V = cv._v || (cv._v = { z: 1, px: 0, py: 0, tilt: 0, sel: -1 });
     const W = cv.clientWidth || 320, H = Math.round(Math.min(W * 0.8, 340)), dpr = Math.min(2, devicePixelRatio || 1);
     if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); cv.style.height = H + 'px'; MAP.base = null; }
     const c = cv.getContext('2d'), pad = 10 * dpr, bx = id => pad + MAP.xy[2 * id] / 65534 * (cv.width - 2 * pad), by = id => pad + MAP.xy[2 * id + 1] / 65534 * (cv.height - 2 * pad);
@@ -867,14 +915,14 @@ addEventListener('DOMContentLoaded', () => {
 
     // 3 one layer up close (layer 1, the last piece)
     const rec = res.rec, ly0 = rec.layers[0], w0 = meanAtt(ly0);
-    focus('one', `Every piece goes through every layer, but the next piece is guessed from the newest one, so we follow “${focusPiece}”. Layer 1 of ${L}: it looks back at the earlier pieces. Longer pink bar, more attention.`);
+    focus('one', `Every piece goes through every layer, but the next piece is guessed from the newest one, so we follow “${focusPiece}”. Layer 1 of ${L} starts with “${focusPiece}” listening back: to update its numbers, it copies in a blend of the earlier pieces' numbers. Each pink bar is that piece's share of the blend (the proper name is attention).`);
     let mx = 0; for (let j = last > 1 ? 1 : 0; j < last; j++) mx = Math.max(mx, w0[j]); // the first piece is left out of the scale: models park spare attention there
     for (let i = 0; i < n; i++) {
       const c = document.createElement('span'); c.className = 'chip' + (i === last ? ' focus' : ''); c.textContent = piece(ids[i]);
       if (i < last) { const bar = document.createElement('span'); bar.className = 'bar'; bar.style.width = Math.min(100, 100 * w0[i] / (mx || 1)).toFixed(0) + '%'; c.appendChild(bar); if (w0[i] >= mx * 0.6) { const pc = document.createElement('span'); pc.className = 'pc'; pc.textContent = pct(w0[i]); c.appendChild(pc); } }
       $('#lookChips').appendChild(c); await beat(120);
     }
-    if (last > 1 && w0[0] >= 0.1) cap('one', `We follow “${focusPiece}”, the newest piece, because the next piece is guessed from it. Layer 1 of ${L}: it looks back at the earlier pieces. The first piece takes ${pct(w0[0])}: a resting spot, left out of the bars' scale.`);
+    if (last > 1 && w0[0] >= 0.1) cap('one', `We follow “${focusPiece}”, the newest piece, because the next piece is guessed from it. Layer 1 of ${L} starts with “${focusPiece}” listening back: it copies in a blend of the earlier pieces' numbers, and each pink bar is that piece's share. The first piece takes ${pct(w0[0])}: models use it as a resting spot when nothing else is worth much, so it is left out of the bars' scale.`);
     await slide(3000);
     const grid = mainGrid(0), knobsN = layerKnobs(0); let ks = 0; for (let k = 0; k < 400; k++) ks = Math.max(ks, Math.abs(grid[(k * 7919) % grid.length]));
     cap('one', `All of this layer's work is done by ${nf(knobsN)} fixed knobs, the listening included. Each knob turns one number up or down (it multiplies it), and the results are added up into new numbers. Nothing you typed moves a single knob.`);
@@ -889,7 +937,7 @@ addEventListener('DOMContentLoaded', () => {
     await slide(4200);
 
     // 4 every layer
-    focus('all', `The same happens in all ${L} layers. Watch its best guess change, layer by layer.`);
+    focus('all', `The same happens in all ${L} layers: in each one, “${focusPiece}” listens back again, then that layer's knobs change its numbers. Watch its best guess change, layer by layer.`);
     const fin = rec.layers[L - 1].lens[0].id; let from = L - 1; for (let l = L - 1; l >= 0; l--) { if (rec.layers[l].lens[0].id === fin) from = l; else break; }
     const rowsEls = [];
     for (let l = 0; l < L; l++) {
@@ -901,7 +949,7 @@ addEventListener('DOMContentLoaded', () => {
       rowsEls.forEach((e, i) => { e.classList.toggle('on', i === l); e.classList.toggle('done', i < l); });
       strip(d.querySelector('canvas'), Array.from((q.vec && q.vec.xout) || q.first), sc2);
       const gEl = d.querySelector('.g'); gEl.textContent = `${piece(g.id)} ${pct(g.p)}`; gEl.classList.toggle('final', l >= from);
-      d.querySelector('.detail').textContent = `listened most to “${piece(ids[top])}” (${pct(w[top])}${j0 ? ', not counting the first piece, where models park spare attention' : ''}) · ${nf(layerKnobs(l))} knobs · would say “${piece(g.id)}” (${pct(g.p)})`;
+      d.querySelector('.detail').textContent = `“${focusPiece}” took most from “${piece(ids[top])}”: ${pct(w[top])} of the blend it copied in${j0 ? ' (the first piece, its resting spot, left out)' : ''} · ${nf(layerKnobs(l))} knobs · would say “${piece(g.id)}” (${pct(g.p)})`;
       d.scrollIntoView({ block: 'nearest', behavior: reduce || SPEED > 3 ? 'auto' : 'smooth' });
       drawCloud($('#cloud'), q.watch, q.lens.slice(0, 3).map(x => [x.id, `${piece(x.id)} ${pct(x.p)}`]), rec.layers.slice(0, l + 1).map(x => x.lens[0].id));
       $('#cloudNote').textContent = `After layer ${l + 1}: every piece it might say lights up, brighter for more likely (the scoring from step 5, run early). The line follows its best guess from layer to layer.`;
