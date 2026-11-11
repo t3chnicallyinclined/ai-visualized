@@ -139,6 +139,28 @@ canvas.strip[data-read] { cursor: crosshair; }
 .die.roll { animation: roll .8s ease-out; } @keyframes roll { 50% { transform: rotate(200deg) scale(1.2); } 100% { transform: rotate(360deg); } }
 .picks { display: flex; flex-direction: column; gap: 4px; font: 14px var(--mono); }
 .picks div { animation: pop .3s ease-out both; } .picks b { color: var(--pick); }
+/* you are here: the whole journey in words under the progress bars */
+.trail { display: none; }
+#writeMode .walk.imm .trail { display: flex; align-items: center; position: absolute; top: calc(20px + env(safe-area-inset-top, 0px)); left: 0; right: 0; height: 20px; padding: 0 92px 0 max(14px, env(safe-area-inset-left, 0px)); max-width: 1100px; margin: 0 auto; box-sizing: border-box; font: 600 11.5px var(--mono); color: var(--s-ink3); white-space: nowrap; overflow: hidden; }
+#writeMode #walk.imm > .secs { padding-top: 36px; }
+#writeMode .walk.imm .sec.on > h2 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); margin: 0; padding: 0; } /* the trail shows the step's name */
+.trail span { padding: 2px 0; flex: none; } .trail span + span::before { content: "→"; margin: 0 7px; color: rgb(255 255 255 / .22); font-weight: 400; }
+.trail span.done { color: var(--s-ink2); } .trail span.on { color: var(--attn); font-size: 12.5px; letter-spacing: .02em; overflow: hidden; text-overflow: ellipsis; flex: 0 1 auto; min-width: 0; } .trail span.on b { border-bottom: 2px solid var(--attn); padding-bottom: 1px; font-weight: 600; }
+.trail b { font-weight: inherit; }
+@media (max-width: 640px) { .trail span.far, .trail span.tprev { display: none; } .trail span.on::before { display: none; } }
+/* your guess, before the lights */
+.guess { margin-top: 4px; } .guess p { margin: 0 0 10px; }
+.gopts { display: flex; flex-wrap: wrap; gap: 8px; }
+.gopts button { font: 600 15px var(--mono); padding: 10px 16px; min-height: 44px; border-radius: 12px; white-space: pre; }
+.gopts button[aria-pressed="true"] { background: var(--pick); border-color: var(--pick); color: #14110a; }
+.gres { font: 600 15px/1.45 var(--body); color: #fff; margin-top: 10px; padding: 10px 14px; border-radius: 12px; background: rgb(255 233 184 / .08); border: 1px solid rgb(255 233 184 / .3); }
+/* your turn with the dice */
+.dplay { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; margin-top: 12px; }
+.dplay button { min-height: 44px; padding: 0 18px; font: 600 15px var(--body); border-radius: 12px; }
+.temp { display: grid; grid-template-columns: auto minmax(120px, 260px) auto; gap: 4px 10px; align-items: center; font: 500 12.5px var(--body); color: var(--s-ink2); }
+.temp input { width: 100%; accent-color: var(--attn); min-height: 32px; } .temp output { grid-column: 1 / -1; font: 600 13px var(--mono); color: #fff; }
+.tally { font: 13.5px/1.6 var(--mono); color: var(--s-ink2); margin-top: 8px; } .tally b { color: var(--pick); font-weight: 600; }
+#chances .light em { transition: width .25s ease; }
 .ctl { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: rgb(12 14 22 / .95); border-top: 1px solid var(--s-line); backdrop-filter: blur(8px); }
 .ctl .in { max-width: 1040px; margin: 0 auto; padding: 9px max(16px, env(safe-area-inset-left, 0px)) calc(9px + env(safe-area-inset-bottom, 0px)); display: flex; gap: 8px 12px; align-items: center; flex-wrap: wrap; }
 .walk.imm .sec:not(.on) { display: none; }
@@ -467,6 +489,7 @@ body.playing .ctl .now { display: none; }
       <li data-s="dice">The weighted dice</li>
       <li data-s="again">Again, word by word</li>
     </ol>
+    <div class="trail" id="trail" aria-hidden="true"><span data-s="pieces"><b>Pieces</b></span><span data-s="sounds"><b>Numbers</b></span><span data-s="one"><b>One layer</b></span><span data-s="all"><b>Every layer</b></span><span data-s="lights"><b>Lights</b></span><span data-s="dice"><b>Dice</b></span><span data-s="again"><b>Next word</b></span></div>
     <div class="secs">
       <section class="sec" id="s-pieces"><h2><i>1</i>Your words become pieces</h2><p class="lookback">Looking back at an earlier step. Press Continue to return to where you were.</p><p class="cap"></p><div class="chips" id="chips"></div>
         <p class="pic"><b>The picture:</b> a big list of pieces, each with a number. The list was built before training by finding the most common chunks of text, so common words are one piece and rare words are several. Every model has its own list, of its own size (GPT-2's has 50,257 pieces, Qwen2.5's 151,936), so the same sentence becomes different numbers in each; the idea is the same. The model never sees letters: only these numbers, which in memory are bits, 0s and 1s, like everything else in a computer.</p></section>
@@ -692,6 +715,7 @@ addEventListener('DOMContentLoaded', () => {
     viewK = k; const ks = railKeys(), ci = ks.indexOf(curK);
     document.querySelectorAll('#writeMode .sec').forEach(x => x.classList.toggle('on', x.id === 's-' + k));
     document.querySelectorAll('#rail li').forEach((li, i) => { li.classList.toggle('on', li.dataset.s === curK); li.classList.toggle('done', i < ci); li.classList.toggle('seen', li.dataset.s === k && k !== curK); });
+    { const vi = ks.indexOf(k); document.querySelectorAll('#trail span').forEach((s, i) => { s.classList.toggle('on', i === vi); s.classList.toggle('done', i < vi); const b = s.querySelector('b'); b.dataset.short ||= b.textContent; b.textContent = i === vi ? NAMES[s.dataset.s] : b.dataset.short; s.classList.toggle('far', Math.abs(i - vi) > 1); s.classList.toggle('tprev', i === vi - 1 && i > 0); }); }
     $('#walk').classList.toggle('viewing', k !== curK); $('#wBack').disabled = ks.indexOf(k) <= 0 || !$('#walk').classList.contains('imm');
     $('#walk').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
   }
@@ -719,6 +743,22 @@ addEventListener('DOMContentLoaded', () => {
     cv.__vals = vals; cv.dataset.read = '1'; // the numbers stay on the element, so hovering a strip can read one out
     const sc = scale || (Array.from(vals, Math.abs).sort((a, b) => a - b)[Math.floor(vals.length * 0.98)] || 1);
     for (let i = 0; i < vals.length; i++) { const a = Math.max(-1, Math.min(1, vals[i] / sc)); c.fillStyle = a >= 0 ? `rgba(242,154,74,${0.1 + 0.9 * a})` : `rgba(91,139,216,${0.1 - 0.9 * a})`; c.fillRect(i * w, 0, Math.ceil(w), cv.height); }
+  }
+  const ordinal = n => nf(n) + (n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th');
+  // before the lights come on, the reader guesses: four real pieces, from the model's top pick down to one it finds unlikely
+  async function askGuess(lg, text) {
+    if (!STEP) return null; // autoplay: nobody to ask
+    const order = Array.from(lg.keys()).sort((a, b) => lg[b] - lg[a]), wordy = id => /^·?[A-Za-z]{2,}$/.test(piece(id));
+    const firstFrom = r => { for (let i = r; i < order.length; i++) if (wordy(order[i]) && !opts.includes(order[i])) return order[i]; return null; };
+    const opts = [order[0]]; for (const r of [1, 40, 4000]) { const id = firstFrom(r); if (id != null) opts.push(id); }
+    for (let i = opts.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [opts[i], opts[j]] = [opts[j], opts[i]]; }
+    const box = document.createElement('div'); box.className = 'guess';
+    box.innerHTML = `<p class="note">Before the lights come on: which piece do you think comes next after “${esc(text.slice(-40))}”? Tap one.</p><div class="gopts"></div>`;
+    $('#lights').before(box); let chosen = null;
+    for (const id of opts) { const b = document.createElement('button'); b.type = 'button'; b.textContent = piece(id); b.setAttribute('aria-pressed', 'false');
+      b.addEventListener('click', () => { chosen = id; box.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b)); setTimeout(goW, 350); }); box.querySelector('.gopts').appendChild(b); }
+    const wait = slide(0); $('#now').firstChild.textContent = 'Tap your guess, or press Continue to skip'; await wait;
+    box.remove(); return chosen;
   }
   // where the table lives: a graphics card, then a zoom into one of its memory chips until the numbers show as a grid
   const RAM = [[66, 34], [66, 58], [66, 82], [66, 106], [224, 34], [224, 58], [224, 82], [224, 106]]; // x, y of each 30x18 chip
@@ -916,6 +956,7 @@ addEventListener('DOMContentLoaded', () => {
   async function walk(text) {
     running = true; paused = false; $('#play').textContent = 'Pause'; $('#ctl').hidden = false; $('#walk').classList.add('live', 'imm');
     [$('#cloud0'), $('#cloud'), $('#cloud2')].forEach(cv => drawCloud(cv, null, null, null));
+    document.querySelectorAll('#writeMode .gres, #writeMode .guess, #writeMode .mem, #writeMode .dplay, #writeMode .tally').forEach(e => e.remove());
     $('#mbBox').hidden = true; ['#chips', '#rows', '#zoom', '#lookChips', '#knobs', '#beforeAfter', '#layers', '#lights', '#chances', '#sentence', '#picks'].forEach(q => { $(q).innerHTML = ''; });
     document.querySelectorAll('#writeMode .cap').forEach(c => { c.textContent = ''; }); $('#knobNote').textContent = ''; $('#baNote').textContent = ''; $('#lightsNote').textContent = ''; $('#diceNote').textContent = '';
     const ids = (M.meta.bos != null ? [M.meta.bos] : []).concat(M.tok.encode(text)), n = ids.length, L = M.L, last = n - 1;
@@ -1009,6 +1050,7 @@ addEventListener('DOMContentLoaded', () => {
     cap('lights', `How one score is made: each piece has its own row of ${M.D} numbers` + (tied ? ` (the same row that gave it its spot in the cloud in step 2).` : ` in an output table, set in training.`) + ` Multiply the final list by that row, number by number, and add it all up. Where the two lists rise and fall together, the total is big: that is a high score.`);
     await slide(3400);
     const lg = res.logits; let lmx = -Infinity; for (let i = 0; i < lg.length; i++) if (lg[i] > lmx) lmx = lg[i]; let z = 0; for (let i = 0; i < lg.length; i++) z += Math.exp(lg[i] - lmx);
+    const guess = await askGuess(lg, text);
     const top5 = LLM.sampleTopK(lg, 5, T, () => 0).cands;
     for (const c of top5) {
       const p = Math.exp(lg[c.id] - lmx) / z, d = document.createElement('div'); d.className = 'light'; d.style.setProperty('--g', Math.min(1, p * 1.4 + 0.05).toFixed(2));
@@ -1018,16 +1060,41 @@ addEventListener('DOMContentLoaded', () => {
     let above = 0; for (let i = 0; i < lg.length; i++) if (Math.exp(lg[i] - lmx) / z >= 0.01) above++;
     cap('lights', `Picture one light per piece, ${nf(M.V)} lights in all. A step called softmax turns the scores into chances that add up to 100%, and each light glows by its piece's chance. Above are the 5 brightest: the pieces most likely to come next.`);
     $('#lightsNote').textContent = `Only ${above} of the ${nf(M.V)} pieces have a chance of 1% or more; the rest of the wall is almost dark.`;
+    if (guess != null) { // how the reader's guess did, from the same scores
+      let rank = 0; for (let i = 0; i < lg.length; i++) if (lg[i] > lg[guess]) rank++;
+      const p = Math.exp(lg[guess] - lmx) / z, chance = p < 0.001 ? `about 1 chance in ${nf(Math.round(1 / p))}` : pct(p);
+      const r = document.createElement('div'); r.className = 'gres';
+      r.textContent = `Your guess, “${piece(guess)}”: the model gives it ${chance}, ` + (rank === 0 ? `the brightest light on the wall. You and the model agree.` : `the ${ordinal(rank + 1)} brightest of ${nf(M.V)}.` + (rank < 5 ? ' It made the top 5.' : ''));
+      $('#lights').before(r);
+    }
     await slide(4200);
 
     // 6 the dice
     focus('dice', `Only the 5 brightest go on the dice; every other piece is out. Their chances are shared out again so the five add up to 100%, which is why they differ from step 5. Temperature ${T} sets how loaded the dice is: below 1 favours the brightest even more, above 1 evens the five out.`);
-    const { cands, pick } = LLM.sampleTopK(lg, 5, T, Math.random);
+    let T6 = T, { cands, pick } = LLM.sampleTopK(lg, 5, T6, Math.random);
     cands.forEach((c, i) => { const d = document.createElement('div'); d.className = 'light'; d.style.setProperty('--g', Math.min(1, c.p * 1.2 + 0.05).toFixed(2)); d.innerHTML = `<i></i><span></span><span class="b"><em style="width:${(c.p * 100).toFixed(1)}%"></em></span><span>${pct(c.p)}</span>`; d.children[1].textContent = piece(c.id); $('#chances').appendChild(d); });
     await slide(2000);
-    $('#die').classList.remove('roll'); void $('#die').offsetWidth; $('#die').classList.add('roll'); await beat(900);
-    $('#die').textContent = pick + 1; $('#chances').children[pick].style.outline = '2px solid var(--pick)';
+    const showPick = () => { [...$('#chances').children].forEach((d, i) => { d.style.outline = i === pick ? '2px solid var(--pick)' : ''; }); $('#die').textContent = pick + 1; };
+    const spin = () => { $('#die').classList.remove('roll'); void $('#die').offsetWidth; $('#die').classList.add('roll'); };
+    spin(); await beat(900); showPick();
     $('#diceNote').textContent = `It rolled “${piece(cands[pick].id)}”` + (pick ? `, not the top one: a dimmer light won this time.` : ', the brightest light.');
+    if (STEP) { // your turn: roll it yourself, and change how loaded it is
+      const play = document.createElement('div'); play.className = 'dplay';
+      play.innerHTML = `<button type="button" class="go" data-n="1">Roll it 🎲</button><button type="button" data-n="20">Roll 20 times</button>
+        <label class="temp"><span>more predictable</span><input type="range" min="0.1" max="2" step="0.1" value="${T}" aria-label="Temperature"><span>more surprising</span><output></output></label>`;
+      const tally = document.createElement('div'); tally.className = 'tally'; $('#s-dice .dice').after(play, tally);
+      let counts = [0, 0, 0, 0, 0], rolls = 0;
+      const tellT = () => { play.querySelector('output').textContent = `temperature ${T6.toFixed(1)}` + (Math.abs(T6 - 1) < 0.05 ? ': the five keep the wall\'s proportions, re-shared to add up to 100%' : T6 < 1 ? ': the brightest is favoured even more' : ': the five are evened out'); };
+      const tellTally = () => { tally.innerHTML = rolls ? `Your ${rolls} roll${rolls > 1 ? 's' : ''}: ` + cands.map((c, i) => `<b>${esc(piece(c.id))}</b> ${counts[i]}× <small>(chance ${pct(c.p)})</small>`).join(' · ') : 'Roll it a few times: the brighter faces come up more often, but not every time.'; };
+      tellT(); tellTally();
+      play.querySelectorAll('button').forEach(b => b.addEventListener('click', () => { const n = +b.dataset.n;
+        for (let k = 0; k < n; k++) { const r = LLM.sampleTopK(lg, 5, T6, Math.random); cands = r.cands; pick = r.pick; counts[pick]++; rolls++; }
+        spin(); showPick(); tellTally();
+        $('#diceNote').textContent = `It rolled “${piece(cands[pick].id)}”` + (pick ? ', not the top one.' : ', the brightest.') + ' The last roll is the piece the model will write.'; }));
+      play.querySelector('input').addEventListener('input', e => { T6 = +e.target.value; cands = LLM.sampleTopK(lg, 5, T6, () => 0).cands; counts = [0, 0, 0, 0, 0]; rolls = 0;
+        cands.forEach((c, i) => { const d = $('#chances').children[i]; d.style.setProperty('--g', Math.min(1, c.p * 1.2 + 0.05).toFixed(2)); d.querySelector('em').style.width = (c.p * 100).toFixed(1) + '%'; d.lastElementChild.textContent = pct(c.p); });
+        tellT(); tellTally(); });
+    }
     await slide(3200);
 
     // 7 again
